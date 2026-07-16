@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "SiteCraft"
+version = "1.0.0"
+id = "artifacts/sitecraft"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24001
+
+[services.development]
+run = "pnpm --filter @workspace/sitecraft run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sitecraft", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sitecraft/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24001"
+BASE_PATH = "/"

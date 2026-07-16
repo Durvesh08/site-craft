@@ -3,14 +3,142 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: SiteCraft AI Website Generation Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: Auth
+    description: Browser and mobile authentication endpoints
+  - name: auth
+    description: Authentication operations
+  - name: projects
+    description: Project management
+  - name: generation
+    description: AI generation operations
+  - name: jobs
+    description: AI job tracking
+  - name: assets
+    description: Asset management
+  - name: deployments
+    description: Deployment operations
+  - name: domains
+    description: Domain management
+  - name: analytics
+    description: Analytics and metrics
+  - name: prompts
+    description: Prompt library management
+  - name: versions
+    description: Version management
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+
 paths:
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      description: |
+        Returns a presigned GCS URL for direct upload. The client sends JSON
+        metadata here, then uploads the file directly to the returned URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadUrlRequest'
+      responses:
+        '200':
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadUrlResponse'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+      description: |
+        Unconditionally public — no authentication or ACL checks.
+        Searches PUBLIC_OBJECT_SEARCH_PATHS for the given file path.
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Relative file path within the public search paths.
+      responses:
+        '200':
+          description: Object content streamed with correct Content-Type.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: File not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Failed to serve public object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR
+      description: |
+        Serves object entities uploaded via presigned URLs. These can optionally
+        be protected with authentication or ACL checks based on the use case.
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Object path within the private object dir (e.g. `uploads/some-uuid`).
+      responses:
+        '200':
+          description: Object content streamed with correct Content-Type.
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          description: Failed to serve object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /healthz:
     get:
       operationId: healthCheck
@@ -24,7 +152,674 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      tags: [Auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+  /login:
+    get:
+      tags: [Auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the OIDC authorization endpoint.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /callback:
+    get:
+      tags: [Auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      responses:
+        '302':
+          description: Redirect on success or failure.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /logout:
+    get:
+      tags: [Auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '302':
+          description: Redirect to OIDC logout.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /mobile-auth/token-exchange:
+    post:
+      tags: [Auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile OIDC code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileTokenExchangeRequest'
+      responses:
+        '200':
+          description: Session created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileTokenExchangeSuccess'
+        '400':
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /mobile-auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      responses:
+        '200':
+          description: Logout processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutSuccess'
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects for current user
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, generating, ready, deployed, failed]
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectRequest"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get project by ID
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update project metadata
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectRequest"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Project deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/generate:
+    post:
+      operationId: generateProject
+      tags: [generation]
+      summary: Start AI generation for a project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateRequest"
+      responses:
+        "202":
+          description: Generation job started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIJob"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Generation already in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /projects/{id}/chat-edit:
+    post:
+      operationId: chatEditProject
+      tags: [generation]
+      summary: Send a chat edit instruction to modify the project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatEditRequest"
+      responses:
+        "202":
+          description: Edit job started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIJob"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/regenerate-section:
+    post:
+      operationId: regenerateSection
+      tags: [generation]
+      summary: Regenerate a specific section of the project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegenerateSectionRequest"
+      responses:
+        "202":
+          description: Regeneration job started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIJob"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get AI job status and progress
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Job status and progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIJob"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /assets:
+    get:
+      operationId: listAssets
+      tags: [assets]
+      summary: List assets for current user
+      parameters:
+        - name: projectId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [image, video, document, generated]
+      responses:
+        "200":
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetListResponse"
+
+    post:
+      operationId: uploadAsset
+      tags: [assets]
+      summary: Register an asset by URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetInput"
+      responses:
+        "201":
+          description: Asset registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+
+  /assets/{id}:
+    delete:
+      operationId: deleteAsset
+      tags: [assets]
+      summary: Delete an asset
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Asset deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/deploy:
+    post:
+      operationId: deployProject
+      tags: [deployments]
+      summary: Deploy a project to Hostinger FTP
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeployRequest"
+      responses:
+        "202":
+          description: Deployment started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deployment"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{id}/deployments:
+    get:
+      operationId: listProjectDeployments
+      tags: [deployments]
+      summary: List deployments for a project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: List of deployments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeploymentListResponse"
+
+  /deployments/{id}:
+    get:
+      operationId: getDeployment
+      tags: [deployments]
+      summary: Get deployment by ID
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Deployment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deployment"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /deployments/{id}/rollback:
+    post:
+      operationId: rollbackDeployment
+      tags: [deployments]
+      summary: Rollback to this deployment
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "202":
+          description: Rollback started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deployment"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /domains:
+    get:
+      operationId: listDomains
+      tags: [domains]
+      summary: List domains for current user
+      responses:
+        "200":
+          description: List of domains
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainListResponse"
+
+    post:
+      operationId: createDomain
+      tags: [domains]
+      summary: Add a custom domain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDomainRequest"
+      responses:
+        "201":
+          description: Domain added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Domain"
+
+  /domains/{id}:
+    delete:
+      operationId: deleteDomain
+      tags: [domains]
+      summary: Remove a domain
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Domain removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /analytics/dashboard:
+    get:
+      operationId: getDashboardAnalytics
+      tags: [analytics]
+      summary: Get dashboard-level analytics summary
+      responses:
+        "200":
+          description: Dashboard analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardAnalytics"
+
+  /analytics/projects/{id}:
+    get:
+      operationId: getProjectAnalytics
+      tags: [analytics]
+      summary: Get analytics for a specific project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Project analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectAnalytics"
+
+  /prompts:
+    get:
+      operationId: listPrompts
+      tags: [prompts]
+      summary: List all prompt templates in the library
+      responses:
+        "200":
+          description: List of prompt templates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromptListResponse"
+
+    post:
+      operationId: createPrompt
+      tags: [prompts]
+      summary: Create a new prompt template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePromptRequest"
+      responses:
+        "201":
+          description: Prompt created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+
+  /prompts/{id}:
+    patch:
+      operationId: updatePrompt
+      tags: [prompts]
+      summary: Update a prompt template (creates a new version)
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePromptRequest"
+      responses:
+        "200":
+          description: Prompt updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prompt"
+
+  /projects/{id}/versions:
+    get:
+      operationId: listProjectVersions
+      tags: [versions]
+      summary: List version history for a project
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: List of versions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionListResponse"
+
+  /projects/{id}/versions/{versionId}/restore:
+    post:
+      operationId: restoreProjectVersion
+      tags: [versions]
+      summary: Restore a project to a specific version
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Version restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
 components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      schema:
+        type: string
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +829,791 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+      required:
+        - error
+        - message
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        profileImage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        businessDescription:
+          type: string
+          nullable: true
+        industry:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [draft, generating, ready, deployed, failed]
+        theme:
+          type: string
+          nullable: true
+        previewUrl:
+          type: string
+          nullable: true
+        liveUrl:
+          type: string
+          nullable: true
+        generatedHtml:
+          type: string
+          nullable: true
+        designTokens:
+          nullable: true
+        seoScore:
+          type: number
+          nullable: true
+        accessibilityScore:
+          type: number
+          nullable: true
+        performanceScore:
+          type: number
+          nullable: true
+        visualScore:
+          type: number
+          nullable: true
+        activeJobId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - name
+        - status
+        - createdAt
+        - updatedAt
+
+    ProjectListResponse:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - projects
+        - total
+        - page
+        - limit
+
+    CreateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        businessDescription:
+          type: string
+      required:
+        - name
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    AIJob:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        type:
+          type: string
+          enum: [generate, chat-edit, regenerate-section]
+        status:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+        progress:
+          type: number
+          description: 0-100
+        currentStep:
+          type: string
+          nullable: true
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIJobStep"
+        error:
+          type: string
+          nullable: true
+        result:
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - projectId
+        - type
+        - status
+        - progress
+        - steps
+        - createdAt
+        - updatedAt
+
+    AIJobStep:
+      type: object
+      properties:
+        id:
+          type: string
+        jobId:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed, skipped]
+        order:
+          type: integer
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        output:
+          nullable: true
+        error:
+          type: string
+          nullable: true
+      required:
+        - id
+        - jobId
+        - name
+        - status
+        - order
+
+    GenerateRequest:
+      type: object
+      properties:
+        businessDescription:
+          type: string
+        targetAudience:
+          type: string
+        primaryCta:
+          type: string
+        additionalInstructions:
+          type: string
+      required:
+        - businessDescription
+
+    ChatEditRequest:
+      type: object
+      properties:
+        message:
+          type: string
+        contextJson:
+          type: string
+          nullable: true
+          description: JSON-encoded context object
+      required:
+        - message
+
+    RegenerateSectionRequest:
+      type: object
+      properties:
+        sectionId:
+          type: string
+        instruction:
+          type: string
+      required:
+        - sectionId
+
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        projectId:
+          type: string
+          nullable: true
+        name:
+          type: string
+        type:
+          type: string
+          enum: [image, video, document, generated]
+        url:
+          type: string
+        size:
+          type: integer
+        mimeType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - name
+        - type
+        - url
+        - size
+        - mimeType
+        - createdAt
+
+    AssetInput:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+          enum: [image, video, document, generated]
+        size:
+          type: integer
+        mimeType:
+          type: string
+        projectId:
+          type: string
+      required:
+        - name
+        - url
+        - type
+        - size
+        - mimeType
+
+    AssetListResponse:
+      type: object
+      properties:
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Asset"
+        total:
+          type: integer
+      required:
+        - assets
+        - total
+
+    Deployment:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        status:
+          type: string
+          enum: [pending, uploading, verifying, live, failed, rolled_back]
+        environment:
+          type: string
+          enum: [production, staging]
+        liveUrl:
+          type: string
+          nullable: true
+        screenshotUrl:
+          type: string
+          nullable: true
+        ftpHost:
+          type: string
+          nullable: true
+        lighthouseScore:
+          type: number
+          nullable: true
+        filesUploaded:
+          type: integer
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - projectId
+        - status
+        - environment
+        - createdAt
+
+    DeploymentListResponse:
+      type: object
+      properties:
+        deployments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Deployment"
+      required:
+        - deployments
+
+    DeployRequest:
+      type: object
+      properties:
+        environment:
+          type: string
+          enum: [production, staging]
+          default: production
+        ftpHost:
+          type: string
+        ftpUsername:
+          type: string
+        ftpPassword:
+          type: string
+        ftpPath:
+          type: string
+      required:
+        - ftpHost
+        - ftpUsername
+        - ftpPassword
+
+    Domain:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        projectId:
+          type: string
+          nullable: true
+        domain:
+          type: string
+        verified:
+          type: boolean
+        sslActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - domain
+        - verified
+        - sslActive
+        - createdAt
+
+    DomainListResponse:
+      type: object
+      properties:
+        domains:
+          type: array
+          items:
+            $ref: "#/components/schemas/Domain"
+      required:
+        - domains
+
+    CreateDomainRequest:
+      type: object
+      properties:
+        domain:
+          type: string
+        projectId:
+          type: string
+      required:
+        - domain
+
+    DashboardAnalytics:
+      type: object
+      properties:
+        totalProjects:
+          type: integer
+        totalDeployments:
+          type: integer
+        totalGenerations:
+          type: integer
+        successRate:
+          type: number
+        avgGenerationTime:
+          type: number
+        tokenUsageThisMonth:
+          type: integer
+        estimatedCostThisMonth:
+          type: number
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+        projectsByStatus:
+          type: object
+          properties:
+            draft:
+              type: integer
+            generating:
+              type: integer
+            ready:
+              type: integer
+            deployed:
+              type: integer
+            failed:
+              type: integer
+      required:
+        - totalProjects
+        - totalDeployments
+        - totalGenerations
+        - successRate
+        - avgGenerationTime
+        - tokenUsageThisMonth
+        - estimatedCostThisMonth
+        - recentActivity
+        - projectsByStatus
+
+    ProjectAnalytics:
+      type: object
+      properties:
+        projectId:
+          type: string
+        totalGenerations:
+          type: integer
+        totalDeployments:
+          type: integer
+        lastGenerated:
+          type: string
+          format: date-time
+          nullable: true
+        lastDeployed:
+          type: string
+          format: date-time
+          nullable: true
+        qualityScores:
+          type: object
+          properties:
+            visual:
+              type: number
+              nullable: true
+            seo:
+              type: number
+              nullable: true
+            accessibility:
+              type: number
+              nullable: true
+            performance:
+              type: number
+              nullable: true
+        chatMessages:
+          type: integer
+        versionsCount:
+          type: integer
+      required:
+        - projectId
+        - totalGenerations
+        - totalDeployments
+        - qualityScores
+        - chatMessages
+        - versionsCount
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+        projectId:
+          type: string
+          nullable: true
+        projectName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - description
+        - createdAt
+
+    Prompt:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        agentRole:
+          type: string
+        description:
+          type: string
+        systemPrompt:
+          type: string
+        userPromptTemplate:
+          type: string
+        model:
+          type: string
+          enum: [gemini-flash, gemini-pro]
+        temperature:
+          type: number
+        version:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - agentRole
+        - description
+        - systemPrompt
+        - userPromptTemplate
+        - model
+        - temperature
+        - version
+        - isActive
+        - createdAt
+        - updatedAt
+
+    PromptListResponse:
+      type: object
+      properties:
+        prompts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prompt"
+      required:
+        - prompts
+
+    CreatePromptRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        agentRole:
+          type: string
+        description:
+          type: string
+        systemPrompt:
+          type: string
+        userPromptTemplate:
+          type: string
+        model:
+          type: string
+          enum: [gemini-flash, gemini-pro]
+        temperature:
+          type: number
+      required:
+        - name
+        - agentRole
+        - systemPrompt
+        - userPromptTemplate
+        - model
+
+    UpdatePromptRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        systemPrompt:
+          type: string
+        userPromptTemplate:
+          type: string
+        model:
+          type: string
+          enum: [gemini-flash, gemini-pro]
+        temperature:
+          type: number
+        changelog:
+          type: string
+
+    Version:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        versionNumber:
+          type: integer
+        label:
+          type: string
+          nullable: true
+        generatedHtml:
+          type: string
+          nullable: true
+        designTokens:
+          nullable: true
+        qualityScores:
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - versionNumber
+        - createdAt
+
+    VersionListResponse:
+      type: object
+      properties:
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Version"
+      required:
+        - versions
+
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: "null"
+
+    MobileTokenExchangeRequest:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+        code_verifier:
+          type: string
+        redirect_uri:
+          type: string
+        state:
+          type: string
+        nonce:
+          type: string
+
+    MobileTokenExchangeSuccess:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    LogoutSuccess:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Original file name.
+        size:
+          type: integer
+          minimum: 1
+          description: File size in bytes.
+        contentType:
+          type: string
+          minLength: 1
+          description: MIME type of the file (e.g. `image/jpeg`).
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          description: Presigned GCS URL for PUT upload.
+        objectPath:
+          type: string
+          description: Normalized object path (e.g. `/objects/uploads/uuid`). Store this in your database.
+        metadata:
+          $ref: '#/components/schemas/UploadUrlRequest'
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
