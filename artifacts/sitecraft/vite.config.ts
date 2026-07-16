@@ -3,38 +3,26 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
-import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
-
-const rawPort = process.env.PORT;
-
-if (!rawPort) {
-  throw new Error(
-    'PORT environment variable is required but was not provided.',
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    'BASE_PATH environment variable is required but was not provided.',
-  );
-}
+// PORT and BASE_PATH are required for the dev server but not for `vite build`.
+// We read them with safe defaults so Vercel's build runner (which doesn't set
+// these vars) doesn't crash when evaluating this config file.
+const isDev = process.env.NODE_ENV !== 'production';
+const port = Number(process.env.PORT || '5173');
+const basePath = process.env.BASE_PATH || '/';
 
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== 'production' &&
-    process.env.REPL_ID !== undefined
+    // Runtime error overlay — dev only (Replit & local); skip for production builds
+    ...(isDev
+      ? [
+          (await import('@replit/vite-plugin-runtime-error-modal')).default(),
+        ]
+      : []),
+    // Replit-specific dev plugins — only loaded inside a Replit workspace
+    ...(isDev && process.env.REPL_ID !== undefined
       ? [
           await import('@replit/vite-plugin-cartographer').then((m) =>
             m.cartographer({
