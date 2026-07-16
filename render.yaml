@@ -13,36 +13,47 @@ services:
         value: production
       - key: PORT
         value: 10000
-      # ── Database ──────────────────────────────────────────────────────────
+
+      # ── Database (auto-provisioned) ────────────────────────────────────────
       - key: DATABASE_URL
         fromDatabase:
           name: sitecraft-db
           property: connectionString
-      # ── Auth ─────────────────────────────────────────────────────────────
+
+      # ── Auth ──────────────────────────────────────────────────────────────
       - key: SESSION_SECRET
         generateValue: true
       - key: OIDC_CLIENT_ID
-        sync: false          # set manually in Render dashboard
+        sync: false
       - key: OIDC_CLIENT_SECRET
         sync: false
       - key: OIDC_ISSUER_URL
         sync: false
+
       # ── AI ────────────────────────────────────────────────────────────────
       - key: GEMINI_API_KEY
-        sync: false          # set manually in Render dashboard
-      # ── Storage (AWS S3) ─────────────────────────────────────────────────
-      - key: AWS_ACCESS_KEY_ID
         sync: false
-      - key: AWS_SECRET_ACCESS_KEY
+
+      # ── Cloudflare R2 Image Storage (free) ────────────────────────────────
+      # Get these from Cloudflare Dashboard → R2 → your bucket → Manage R2 API Tokens
+      - key: R2_ACCOUNT_ID
         sync: false
-      - key: AWS_REGION
-        value: us-east-1
-      - key: AWS_S3_BUCKET
+      - key: R2_ACCESS_KEY_ID
         sync: false
-      # ── Frontend URL (for CORS) ───────────────────────────────────────────
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      # Enable Public Access on the bucket → copy the r2.dev URL here
+      - key: R2_PUBLIC_URL
+        sync: false
+
+      # ── CORS ──────────────────────────────────────────────────────────────
+      # Set to your Vercel URL, e.g. https://sitecraft.vercel.app
       - key: FRONTEND_URL
-        sync: false          # set to your Vercel URL, e.g. https://sitecraft.vercel.app
-      # ── Encryption ───────────────────────────────────────────────────────
+        sync: false
+
+      # ── Encryption ────────────────────────────────────────────────────────
       - key: SETTINGS_ENCRYPTION_KEY
         generateValue: true
 
