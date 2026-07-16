@@ -29,8 +29,11 @@ export function ImageUploader({
 
   const { uploadFile, isUploading, progress } = useUpload({
     onSuccess: (res) => {
-      // Construct the serving URL from the objectPath
-      onChange(`/api/storage${res.objectPath}`);
+      // objectPath is a full S3 URL for cloud deployments, or a /objects/... path for local.
+      const url = res.objectPath.startsWith('https://')
+        ? res.objectPath
+        : `/api/storage${res.objectPath}`;
+      onChange(url);
       setLocalError(null);
     },
     onError: (err) => {

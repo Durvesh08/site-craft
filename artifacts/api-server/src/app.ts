@@ -36,7 +36,34 @@ app.use(
   }),
 );
 
-app.use(cors({ credentials: true, origin: true }));
+// CORS — allow:
+//   • all origins in development
+//   • FRONTEND_URL in production (set this to your Vercel URL on Render)
+//   • always allow *.vercel.app preview deployments
+const allowedOrigins: (string | RegExp)[] = [
+  /^https:\/\/.*\.vercel\.app$/,
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (server-to-server, curl, etc.)
+      if (!origin) return callback(null, true);
+      // Development: allow all
+      if (process.env.NODE_ENV !== "production") return callback(null, true);
+      const allowed = allowedOrigins.some((pattern) =>
+        typeof pattern === "string" ? pattern === origin : pattern.test(origin),
+      );
+      callback(allowed ? null : new Error("Not allowed by CORS"), allowed);
+    },
+  }),
+);
+
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
