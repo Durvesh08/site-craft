@@ -27,7 +27,8 @@ const GENERATION_STEPS = [
   "Component Selection",
   "Motion & Interaction",
   "3D & Visual Effects",
-  "React Generation",
+  "Section Generation",
+  "Assembly",
   "Quality Review",
 ];
 
