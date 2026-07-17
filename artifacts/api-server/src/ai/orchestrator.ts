@@ -39,7 +39,7 @@ const GENERATION_STEPS = [
   { name: "Component Selection",  agent: "component-planner",       model: PRO        },
   { name: "Motion & Interaction", agent: "motion-designer",         model: FLASH      },
   { name: "3D & Visual Effects",  agent: "visual-effects-designer", model: FLASH      },
-  { name: "Section Generation",   agent: "section-generator",       model: PRO        },
+  { name: "Section Generation",   agent: "section-generator",       model: FLASH      },
   { name: "Assembly",             agent: "assembler",               model: FLASH      },
   { name: "Quality Review",       agent: "qa-reviewer",             model: FLASH_LITE },
 ];
@@ -246,7 +246,7 @@ export async function runGeneration(
               });
 
               try {
-                const code = await callGemini(genai, PRO, prompt, 8192, undefined, 0.8);
+                const code = await callGemini(genai, FLASH, prompt, 8192, undefined, 0.8);
                 return { plan: section, componentName, code: cleanComponentCode(code, componentName) } as SectionCode;
               } catch (err) {
                 logger.error({ err, sectionId: section.id }, "Section generation failed, using fallback");
