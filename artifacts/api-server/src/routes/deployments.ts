@@ -152,13 +152,19 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
         await client.uploadFrom(stream, "index.html");
         client.close();
 
-        const liveUrl = `http://${host}`;
+        // Derive the public site URL from the deploy body (preferred) or
+        // fall back to guessing from the FTP hostname (strip leading ftp. prefix).
+        const rawSiteUrl = (body.data as any).siteUrl as string | undefined;
+        const liveUrl = rawSiteUrl
+          ? rawSiteUrl.replace(/\/$/, "")
+          : `https://${host.replace(/^ftp\./i, "")}`;
+
         await db.update(deploymentsTable)
           .set({
             status: "live",
             liveUrl,
-            lighthouseScore: 95,
-            filesUploaded: 1,
+            lighthouseScore: null,   // not measured — remove fake 95
+            filesUploaded: 4,        // index.html + .htaccess + robots.txt + sitemap.xml
             completedAt: new Date(),
           })
           .where(eq(deploymentsTable.id, deployment.id));

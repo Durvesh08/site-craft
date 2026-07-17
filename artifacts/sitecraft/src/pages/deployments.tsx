@@ -3,10 +3,11 @@ import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Rocket, Globe, Server, CheckCircle, XCircle, Clock, ExternalLink } from "lucide-react";
+import { Rocket, Globe, Server, CheckCircle, XCircle, Clock, ExternalLink, Link2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -21,6 +22,7 @@ export default function Deployments() {
   const [ftpUsername, setFtpUsername] = useState("");
   const [ftpPassword, setFtpPassword] = useState("");
   const [ftpPath, setFtpPath] = useState("/");
+  const [siteUrl, setSiteUrl] = useState("");
 
   const projects = projectsData?.projects || [];
 
@@ -42,9 +44,10 @@ export default function Deployments() {
           ftpUsername: ftpUsername || "configured-in-settings",
           ftpPassword: ftpPassword || "configured-in-settings",
           ftpPath: ftpPath || "/",
-        }
+          siteUrl: siteUrl || undefined,
+        } as any
       });
-      toast.success("Deployment started successfully");
+      toast.success("Deployment started — uploading files…");
       setIsDeployModalOpen(false);
       refetch();
     } catch (error) {
@@ -119,11 +122,26 @@ export default function Deployments() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="production">Production Edge (SiteCraft Network)</SelectItem>
+                    <SelectItem value="production">Production (FTP)</SelectItem>
                     <SelectItem value="staging">Staging</SelectItem>
-                    <SelectItem value="ftp">Custom FTP Server</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  Live site URL <span className="text-muted-foreground font-normal">(optional)</span>
+                </label>
+                <Input
+                  placeholder="https://yoursite.com"
+                  value={siteUrl}
+                  onChange={e => setSiteUrl(e.target.value)}
+                  className="bg-background/50 font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used in the deployment record and generated sitemap. Leave blank to auto-detect from FTP host.
+                </p>
               </div>
             </div>
             <div className="flex justify-end gap-3">

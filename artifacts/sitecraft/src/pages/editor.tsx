@@ -8,8 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Send, Sparkles, Monitor, Tablet, Smartphone, 
-  RotateCcw, Download
+  RotateCcw, Download, FileCode2, FolderArchive, ChevronDown
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@workspace/replit-auth-web";
@@ -140,18 +147,21 @@ export default function ProjectEditor() {
     }
   };
 
-  const handleExport = () => {
+  const triggerDownload = (url: string) => {
     if (!project?.generatedHtml) {
       toast.error("Nothing to export yet — generation isn't finished.");
       return;
     }
     const link = document.createElement("a");
-    link.href = `/api/projects/${id}/export`;
+    link.href = url;
     link.download = "";
     document.body.appendChild(link);
     link.click();
     link.remove();
   };
+
+  const handleExportHtml = () => triggerDownload(`/api/projects/${id}/export`);
+  const handleExportZip  = () => triggerDownload(`/api/projects/${id}/export/zip`);
 
   const getViewportWidth = () => {
     switch(viewport) {
@@ -201,17 +211,38 @@ export default function ProjectEditor() {
               <RotateCcw className="h-3.5 w-3.5" />
               Reload Frame
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 h-8"
-              onClick={handleExport}
-              disabled={!project?.generatedHtml}
-              data-testid="button-export-html"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export HTML
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8"
+                  disabled={!project?.generatedHtml}
+                  data-testid="button-export"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={handleExportHtml} className="gap-2 cursor-pointer">
+                  <FileCode2 className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-sm">HTML file</p>
+                    <p className="text-xs text-muted-foreground">Single self-contained page</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportZip} className="gap-2 cursor-pointer">
+                  <FolderArchive className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-sm">ZIP package</p>
+                    <p className="text-xs text-muted-foreground">+ .htaccess · robots.txt · sitemap</p>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Select defaultValue="default">
               <SelectTrigger className="h-8 w-32 text-xs">
                 <SelectValue placeholder="Theme" />

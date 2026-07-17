@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import JSZip from "jszip";
 import { db } from "@workspace/db";
 import { projectsTable } from "@workspace/db";
 import { eq, desc, and, count } from "drizzle-orm";
@@ -139,7 +140,7 @@ router.get("/projects/:id", async (req: Request, res: Response) => {
   }
 });
 
-// GET /projects/:id/export
+// GET /projects/:id/export  — single HTML file download
 router.get("/projects/:id/export", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
@@ -158,25 +159,186 @@ router.get("/projects/:id/export", async (req: Request, res: Response) => {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
       return;
     }
-
     if (!project.generatedHtml) {
-      res.status(409).json({ error: "NotReady", message: "This project has no generated site yet" });
+      res.status(409).json({ error: "NotReady", message: "No generated site yet" });
       return;
     }
 
-    const slug = project.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || "site";
-
+    const slug = toSlug(project.name);
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${slug}.html"`);
     res.send(project.generatedHtml);
   } catch (err) {
-    req.log.error({ err }, "Failed to export project");
-    res.status(500).json({ error: "InternalError", message: "Failed to export project" });
+    req.log.error({ err }, "Failed to export project HTML");
+    res.status(500).json({ error: "InternalError", message: "Failed to export" });
   }
 });
+
+// GET /projects/:id/export/zip  — full deployment package
+router.get("/projects/:id/export/zip", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const params = GetProjectParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+    if (!project.generatedHtml) {
+      res.status(409).json({ error: "NotReady", message: "No generated site yet" });
+      return;
+    }
+
+    const slug      = toSlug(project.name);
+    const siteTitle = project.name || "My Site";
+    const siteUrl   = project.liveUrl || `https://${slug}.com`;
+    const now       = new Date().toISOString().split("T")[0];
+
+    // ── Build zip ──────────────────────────────────────────────────────────
+    const zip = new JSZip();
+    zip.file("index.html",  project.generatedHtml);
+    zip.file(".htaccess",   buildHtaccess(siteUrl));
+    zip.file("robots.txt",  buildRobots(siteUrl));
+    zip.file("sitemap.xml", buildSitemap(siteUrl, now));
+    zip.file("README.txt",  buildReadme(siteTitle, slug));
+
+    const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 9 } });
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${slug}.zip"`);
+    res.setHeader("Content-Length", buffer.length);
+    res.send(buffer);
+
+  } catch (err) {
+    req.log.error({ err }, "Failed to export project ZIP");
+    if (!res.headersSent) {
+      res.status(500).json({ error: "InternalError", message: "Failed to export ZIP" });
+    }
+  }
+});
+
+// ── File builders ──────────────────────────────────────────────────────────
+
+function toSlug(name: string): string {
+  return (name || "site").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "site";
+}
+
+function buildHtaccess(siteUrl: string): string {
+  const isHttps = siteUrl.startsWith("https://");
+  return `# ── Security headers ──────────────────────────────────────────────────
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+# ── Redirect HTTP → HTTPS ────────────────────────────────────────────────
+${isHttps ? `<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>` : "# HTTPS redirect disabled (no HTTPS URL configured)"}
+
+# ── Gzip compression ─────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript
+  AddOutputFilterByType DEFLATE application/json image/svg+xml
+</IfModule>
+
+# ── Browser caching ──────────────────────────────────────────────────────
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html                 "access plus 1 hour"
+  ExpiresByType application/javascript    "access plus 1 year"
+  ExpiresByType text/css                  "access plus 1 year"
+  ExpiresByType image/png                 "access plus 1 year"
+  ExpiresByType image/jpeg                "access plus 1 year"
+  ExpiresByType image/webp                "access plus 1 year"
+  ExpiresByType image/svg+xml             "access plus 1 year"
+  ExpiresByType font/woff2                "access plus 1 year"
+</IfModule>
+
+# ── Charset ──────────────────────────────────────────────────────────────
+AddDefaultCharset UTF-8
+
+# ── SPA fallback — serve index.html for all paths ────────────────────────
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ /index.html [L]
+</IfModule>
+`;
+}
+
+function buildRobots(siteUrl: string): string {
+  return `User-agent: *
+Allow: /
+
+Sitemap: ${siteUrl.replace(/\/$/, "")}/sitemap.xml
+`;
+}
+
+function buildSitemap(siteUrl: string, date: string): string {
+  const base = siteUrl.replace(/\/$/, "");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${base}/</loc>
+    <lastmod>${date}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+`;
+}
+
+function buildReadme(siteTitle: string, slug: string): string {
+  return `${siteTitle} — Generated by SiteCraft
+${"═".repeat(siteTitle.length + 22)}
+
+FILES IN THIS PACKAGE
+─────────────────────
+  index.html    Your complete landing page (self-contained, no server needed)
+  .htaccess     Apache web server config (compression, caching, HTTPS redirect)
+  robots.txt    Search engine crawler instructions
+  sitemap.xml   Page map for Google / Bing indexing
+  README.txt    This file
+
+HOW TO UPLOAD (FTP / cPanel / Plesk)
+──────────────────────────────────────
+  1. Connect to your hosting via FTP (FileZilla, Cyberduck, cPanel File Manager)
+  2. Navigate to your public root folder — usually:
+       public_html/        (cPanel)
+       www/                (Plesk)
+       htdocs/             (XAMPP / older hosts)
+  3. Upload ALL files from this ZIP (including .htaccess — it may be hidden)
+  4. Visit your domain to verify the site is live
+
+NOTES
+──────
+  • The .htaccess file requires Apache with mod_rewrite enabled.
+    Most shared hosts support this. Nginx users: ask your host for
+    equivalent rewrite rules.
+  • If .htaccess is not supported, the site still works — just delete it.
+  • The HTML file includes all scripts via CDN (React, Framer Motion, Three.js).
+    An internet connection is required for visitors to load those libraries.
+
+Generated: ${new Date().toUTCString()}
+Slug: ${slug}
+`;
+}
 
 // PATCH /projects/:id
 router.patch("/projects/:id", async (req: Request, res: Response) => {
