@@ -367,7 +367,21 @@ a { text-decoration: none; color: inherit; }
 // Final HTML assembler
 // ---------------------------------------------------------------------------
 
-export function assembleHTML(
+/**
+ * Assemble and transpile all section components into a self-contained HTML page.
+ *
+ * Strategy:
+ *  1. Combine all JSX section functions into one file with the App shell.
+ *  2. Transpile JSX → plain ES-module JS on the server with esbuild (fast, zero
+ *     download, catches syntax errors at generation time).
+ *  3. Emit a <script type="importmap"> pointing to jsDelivr (extremely reliable
+ *     global CDN, no Babel needed in the browser at all).
+ *  4. Emit a <script type="module"> with the pre-transpiled JS.
+ *
+ * This eliminates the 3 MB Babel standalone CDN download that was the primary
+ * cause of the "Page did not render within 12 seconds" error.
+ */
+export async function assembleHTML(
   sections: SectionCode[],
   context: {
     title: string;
@@ -375,19 +389,111 @@ export function assembleHTML(
     faviconUrl?: string;
     globalCSS: string;
   },
-): string {
+): Promise<string> {
+  const { transform } = await import("esbuild");
+
   const ordered = [...sections].sort((a, b) => a.plan.order - b.plan.order);
   const componentNames = ordered.map(s => s.componentName);
 
-  const componentBlocks = ordered
-    .map(s => `    // ── ${s.plan.type} (${s.componentName}) ${"─".repeat(Math.max(0, 52 - s.plan.type.length - s.componentName.length))}\n${indentCode(s.code.trim(), 4)}`)
-    .join("\n\n");
+  // ── Per-section validation ──────────────────────────────────────────────────
+  // Transpile each section individually so a single broken component gets
+  // replaced with a visible placeholder rather than crashing the whole page.
+  const validatedSections: string[] = [];
+  for (const s of ordered) {
+    try {
+      await transform(s.code.trim(), {
+        loader: "jsx",
+        jsxFactory: "React.createElement",
+        jsxFragment: "React.Fragment",
+        format: "esm",
+        target: "es2020",
+      });
+      validatedSections.push(
+        `// ── ${s.plan.type} (${s.componentName})\n${s.code.trim()}`,
+      );
+    } catch (err: any) {
+      // Replace broken section with a minimal safe placeholder
+      validatedSections.push(
+        `function ${s.componentName}() {\n` +
+        `  return React.createElement('section', {\n` +
+        `    style: { padding: '60px 24px', textAlign: 'center', color: 'var(--muted-foreground, #94a3b8)' }\n` +
+        `  }, React.createElement('p', null, '[${s.plan.type} — could not render]'));\n` +
+        `}`,
+      );
+    }
+  }
 
-  const appJSX = componentNames.map(n => `          <${n} />`).join("\n");
+  // ── Assemble the full JSX source ────────────────────────────────────────────
+  const fullSource = [
+    `import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';`,
+    `import { createRoot } from 'react-dom/client';`,
+    `import { motion, AnimatePresence, useScroll, useTransform, useInView, useMotionValue, useSpring } from 'framer-motion';`,
+    `import * as THREE from 'three';`,
+    ``,
+    ...validatedSections,
+    ``,
+    `function App() {`,
+    `  return React.createElement(React.Fragment, null,`,
+    componentNames.map((n, i) =>
+      `    React.createElement(${n}${i < componentNames.length - 1 ? ", null)" : ", null)"}`
+    ).join(",\n"),
+    `  );`,
+    `}`,
+    ``,
+    `try {`,
+    `  createRoot(document.getElementById('root')).render(React.createElement(App));`,
+    `} catch (err) {`,
+    `  var el = document.getElementById('_sc-error');`,
+    `  var msg = document.getElementById('_sc-error-msg');`,
+    `  if (el) el.classList.add('show');`,
+    `  if (msg) msg.textContent = String(err);`,
+    `}`,
+  ].join("\n");
+
+  // ── Server-side transpile (JSX → plain ESM JS) ──────────────────────────────
+  let transpiledJS: string;
+  try {
+    const result = await transform(fullSource, {
+      loader: "jsx",
+      jsxFactory: "React.createElement",
+      jsxFragment: "React.Fragment",
+      format: "esm",
+      target: "es2020",
+    });
+    transpiledJS = result.code;
+  } catch (err: any) {
+    // Ultimate fallback — a minimal plain-JS page that at least renders the title
+    transpiledJS = [
+      `import { createRoot } from 'react-dom/client';`,
+      `import React from 'react';`,
+      `function App() {`,
+      `  return React.createElement('div', {`,
+      `    style: { padding:'60px 24px', fontFamily:'system-ui', color:'#f1f5f9',`,
+      `             background:'#0a0a0f', minHeight:'100vh', display:'flex',`,
+      `             alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'1rem' }`,
+      `  },`,
+      `    React.createElement('h1', null, ${JSON.stringify(context.title)}),`,
+      `    React.createElement('p', { style:{ color:'#94a3b8' } }, 'Page generation had an error. Please try regenerating.')`,
+      `  );`,
+      `}`,
+      `createRoot(document.getElementById('root')).render(React.createElement(App));`,
+    ].join("\n");
+  }
 
   const favicon = context.faviconUrl
     ? `\n  <link rel="icon" href="${context.faviconUrl}">`
     : "";
+
+  // jsDelivr ESM CDN — highly reliable, globally distributed
+  const importMap = JSON.stringify({
+    imports: {
+      "react":              "https://cdn.jsdelivr.net/npm/react@18.3.1/+esm",
+      "react/jsx-runtime":  "https://cdn.jsdelivr.net/npm/react@18.3.1/jsx-runtime/+esm",
+      "react-dom/client":   "https://cdn.jsdelivr.net/npm/react-dom@18.3.1/client/+esm",
+      "framer-motion":      "https://cdn.jsdelivr.net/npm/framer-motion@11.15.0/+esm",
+      "three":              "https://cdn.jsdelivr.net/npm/three@0.170.0/+esm",
+    },
+  }, null, 2);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -397,17 +503,8 @@ export function assembleHTML(
   <title>${escHtml(context.title)}</title>
   <meta name="description" content="${escHtml(context.description)}">${favicon}
   <script type="importmap">
-  {
-    "imports": {
-      "react":            "https://esm.sh/react@18.3.1",
-      "react/jsx-runtime":"https://esm.sh/react@18.3.1/jsx-runtime",
-      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-      "framer-motion":    "https://esm.sh/framer-motion@11.15.0",
-      "three":            "https://esm.sh/three@0.170.0"
-    }
-  }
+${importMap}
   <\/script>
-  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"><\/script>
   <style>
 ${context.globalCSS}
   </style>
@@ -426,12 +523,11 @@ ${context.globalCSS}
   <div id="root"></div>
   <div id="_sc-error">
     <h2>⚠ Render Error</h2>
-    <p>Something went wrong while loading this page. This is usually caused by a slow network or a temporary CDN issue. Try reloading — if the problem persists, regenerate the page.</p>
+    <p>Something went wrong while loading this page. Try reloading — if the problem persists, regenerate the page.</p>
     <pre id="_sc-error-msg"></pre>
   </div>
 
   <script>
-    // Show error overlay on any uncaught JS error (covers CDN failures & JSX crashes)
     window.addEventListener('error', function(e) {
       var el = document.getElementById('_sc-error');
       var msg = document.getElementById('_sc-error-msg');
@@ -444,56 +540,19 @@ ${context.globalCSS}
       if (el) el.classList.add('show');
       if (msg) msg.textContent = String(e.reason || 'Unhandled promise rejection');
     });
-    // Timeout fallback: if root is still empty after 12 s, show the error overlay
     setTimeout(function() {
       var root = document.getElementById('root');
       if (root && root.childElementCount === 0) {
         var el = document.getElementById('_sc-error');
         var msg = document.getElementById('_sc-error-msg');
         if (el) el.classList.add('show');
-        if (msg) msg.textContent = 'Page did not render within 12 seconds. CDN resources may have failed to load.';
+        if (msg) msg.textContent = 'Page did not render within 12 seconds. A CDN resource may have failed to load.';
       }
     }, 12000);
-  </script>
+  <\/script>
 
-  <script type="text/babel" data-type="module" data-presets="react">
-    import React, {
-      useState, useRef, useEffect, useCallback, useMemo
-    } from 'react'
-    import { createRoot } from 'react-dom/client'
-    import {
-      motion, AnimatePresence,
-      useScroll, useTransform, useInView,
-      useMotionValue, useSpring
-    } from 'framer-motion'
-    import * as THREE from 'three'
-
-    /* ═══════════════════════════════════════════════════════════════════
-       SECTION COMPONENTS — generated in parallel by Gemini PRO
-       ═══════════════════════════════════════════════════════════════════ */
-
-${componentBlocks}
-
-    /* ═══════════════════════════════════════════════════════════════════
-       APP SHELL
-       ═══════════════════════════════════════════════════════════════════ */
-
-    function App() {
-      return (
-        <>
-${appJSX}
-        </>
-      )
-    }
-
-    try {
-      createRoot(document.getElementById('root')).render(<App />)
-    } catch (err) {
-      var el = document.getElementById('_sc-error')
-      var msg = document.getElementById('_sc-error-msg')
-      if (el) el.classList.add('show')
-      if (msg) msg.textContent = String(err)
-    }
+  <script type="module">
+${transpiledJS}
   <\/script>
 </body>
 </html>`;

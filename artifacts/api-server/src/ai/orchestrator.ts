@@ -291,7 +291,7 @@ export async function runGeneration(
           } catch { /* keep defaults */ }
 
           const globalCSS = buildGlobalCSS(agentOutputs["design-director"] ?? "{}", branding);
-          const html = assembleHTML(sections, {
+          const html = await assembleHTML(sections, {
             title,
             description,
             faviconUrl: branding["favicon_url"],
