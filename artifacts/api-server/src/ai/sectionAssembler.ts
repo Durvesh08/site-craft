@@ -149,16 +149,21 @@ ${context.previousOutputs}
 ━━━ RULES ━━━
 1. Write ONLY the named function — no import/export statements:
    function ${componentName}() { ... return (...) }
-2. ALL styling via inline style={{ }} objects — no external CSS classes, no Tailwind
-3. Reference brand colors via var(--primary) etc. in style objects
-4. Use Framer Motion for EVERY entrance animation:
+2. PURE JAVASCRIPT ONLY — absolutely NO TypeScript syntax:
+   Wrong: const [open, setOpen] = useState<boolean>(false)  → use useState(false)
+   Wrong: interface CardProps { title: string }              → remove entirely
+   Wrong: const label: string = "hello"                     → use const label = "hello"
+   No interfaces, no type aliases, no type annotations, no type casts, no generics
+3. ALL styling via inline style={{ }} objects — no external CSS classes, no Tailwind
+4. Reference brand colors via var(--primary) etc. in style objects
+5. Use Framer Motion for EVERY entrance animation:
    - whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 30 }}
      viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.6, ease: "easeOut" }}
    - Stagger children with { delay: index * 0.1 }
-5. Mobile-first: detect viewport with useState + useEffect(window.innerWidth) OR use a
+6. Mobile-first: detect viewport with useState + useEffect(window.innerWidth) OR use a
    <style> tag inside JSX with @media rules for layout-only concerns
-6. Use actual business copy extracted from the Copywriting context — no lorem ipsum
-7. Pull exact hex colors from the Color & Typography context — no made-up colors
+7. Use actual business copy extracted from the Copywriting context — no lorem ipsum
+8. Pull exact hex colors from the Color & Typography context — no made-up colors
 
 SECTION-TYPE SPECIFIC RULES:
 ${getSectionTypeRules(section.type)}
@@ -400,6 +405,9 @@ export function stripModuleStatements(code: string): string {
     .replace(/^(\s*)export\s+(async\s+)?(function|const|let|var|class)\b/gm, "$1$2$3")
     // export { ... } or export { ... } from '...'
     .replace(/^export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?\n?/gm, "")
+    // TypeScript interface declarations (may be multi-line) — esbuild tsx handles these,
+    // but stripping them here prevents any residual issues with the loader fallback path.
+    // We do NOT strip them now since tsx loader handles them natively.
     .trim();
 }
 
@@ -483,7 +491,7 @@ export async function assembleHTML(
       // We deliberately omit `format` so esbuild outputs clean script-style JS
       // with no IIFE/ESM/CJS wrapper — we add our own scoping IIFE below.
       const result = await transform(cleanedCode, {
-        loader: "jsx",
+        loader: "tsx",  // tsx handles TypeScript annotations Gemini generates (interfaces, generics, type casts)
         jsxFactory: "React.createElement",
         jsxFragment: "React.Fragment",
         target: "es2020",

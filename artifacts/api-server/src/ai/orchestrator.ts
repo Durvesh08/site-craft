@@ -282,7 +282,7 @@ export async function runGeneration(
               });
 
               try {
-                const code = await callGemini(genai, FLASH, prompt, 16384, undefined, 0.8);
+                const code = await callGemini(genai, PRO, prompt, 16384, undefined, 0.8);
                 return { plan: section, componentName, code: cleanComponentCode(code, componentName) } as SectionCode;
               } catch (err) {
                 logger.error({ err, sectionId: section.id }, "Section generation failed, using fallback");
@@ -609,7 +609,7 @@ async function transpileAndWrapSection(
 
   try {
     const result = await transform(cleanedCode, {
-      loader: "jsx",
+      loader: "tsx",  // tsx handles TypeScript annotations Gemini generates (interfaces, generics, type casts)
       jsxFactory: "React.createElement",
       jsxFragment: "React.Fragment",
       target: "es2020",
@@ -745,7 +745,86 @@ export async function runChatEdit(
       }
     }
 
-    const refinedHtml = extractHtml(agentOutputs["refinement-agent"] ?? "", "Edited Page");
+    // Apply CSS changes from the structured refinement-agent response.
+    // The refinement-agent now returns JSON with cssChanges (CSS var overrides)
+    // and textChanges (section-level descriptions), rather than re-generating
+    // the entire transpiled HTML blob. We apply CSS changes surgically.
+    let refinedHtml = input.currentHtml ?? "";
+
+    const refinementRaw = agentOutputs["refinement-agent"] ?? "";
+    try {
+      const parsed = JSON.parse(
+        refinementRaw
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/\s*```$/i, "")
+          .trim(),
+      );
+
+      // Apply CSS variable changes directly into the HTML :root block
+      if (parsed.cssChanges && typeof parsed.cssChanges === "object") {
+        refinedHtml = applyCssVarChanges(refinedHtml, parsed.cssChanges as Record<string, string>);
+        logger.info({ cssChangeCount: Object.keys(parsed.cssChanges).length }, "CSS changes applied");
+      }
+
+      // For text/content changes we queue individual section regenerations.
+      // Each textChange entry triggers runSectionRegeneration inline.
+      if (Array.isArray(parsed.textChanges) && parsed.textChanges.length > 0 && refinedHtml) {
+        for (const change of parsed.textChanges as { section: string; description: string }[]) {
+          if (!change.section || !change.description) continue;
+          try {
+            const escapedId = change.section.replace(/[.*+?^${}()|[\\]]/g, "\\$&");
+            const typeMatch = new RegExp(`\\/\\/ ── ([^\\s(]+) \\(${escapedId}\\)`).exec(refinedHtml);
+            const sectionType = typeMatch?.[1] ?? "content-section";
+
+            // Fetch branding for this user
+            const brandingRows = await db.select().from(settingsTable).where(eq(settingsTable.userId, userId));
+            const branding: Record<string, string> = {};
+            for (const r of brandingRows.filter(r => r.category === "branding")) branding[r.key] = r.value;
+
+            const [proj] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
+            const sectionPlan = {
+              id: change.section.replace(/Section$/, "").toLowerCase(),
+              type: sectionType,
+              order: 0,
+              brief: `${sectionType} section. User instruction: ${change.description}`,
+            };
+            const cssVars = extractCssVarsBlock(refinedHtml);
+            const planningContext = cssVars ? `Brand CSS variables:\n${cssVars}\nUser instruction: ${change.description}` : `User instruction: ${change.description}`;
+
+            const sectionPrompt = buildSectionPrompt(sectionPlan, change.section, 1, {
+              businessDescription: proj?.businessDescription ?? "",
+              targetAudience: "General consumers",
+              primaryCta: "Get Started",
+              previousOutputs: planningContext,
+              branding,
+            });
+            const raw = await callGemini(genai, PRO, sectionPrompt, 16384, undefined, 0.8);
+            const newCode = cleanComponentCode(raw, change.section);
+            const transpiledSection = await transpileAndWrapSection(newCode, change.section);
+            refinedHtml = replaceSectionInHtml(refinedHtml, change.section, sectionType, transpiledSection);
+            logger.info({ section: change.section }, "Text change applied via section regen");
+          } catch (err) {
+            logger.warn({ err, section: change.section }, "Text change section regen failed — skipping");
+          }
+        }
+      }
+
+      // If neither cssChanges nor textChanges produced useful output (e.g. structural
+      // change request), fall back to the old extractHtml approach.
+      if (!parsed.cssChanges && (!parsed.textChanges || parsed.textChanges.length === 0)) {
+        const fallback = extractHtml(refinementRaw, "Edited Page");
+        if (fallback.length > 200) refinedHtml = fallback;
+      }
+    } catch {
+      // JSON parse failed — Gemini may have returned raw HTML (old behaviour).
+      // Fall back gracefully.
+      const fallback = extractHtml(refinementRaw, "Edited Page");
+      if (fallback.length > 200) refinedHtml = fallback;
+    }
+
+    if (!refinedHtml || refinedHtml.length < 200) {
+      refinedHtml = input.currentHtml ?? buildPlaceholder("Edited Page");
+    }
 
     const existingVersions = await db.select().from(versionsTable).where(eq(versionsTable.projectId, projectId));
 
@@ -932,35 +1011,99 @@ Return ONLY valid JSON (no markdown fences):
   return prompts[agent] ?? `You are an AI agent. Process the following and return JSON:\n${ctx}`;
 }
 
+/**
+ * Extract CSS custom property block from assembled HTML.
+ * Returns the :root { ... } block as a string, or empty string.
+ */
+function extractCssVarsBlock(html: string): string {
+  const m = html.match(/:root\s*\{([^}]+)\}/);
+  return m ? `:root {\n${m[1]}\n}` : "";
+}
+
+/**
+ * Extract section outline from assembled HTML — just the type+name comments,
+ * not the full transpiled JS. Used to give Gemini page structure context
+ * without sending hundreds of KB of transpiled code.
+ */
+function extractSectionOutline(html: string): string {
+  const matches = [...html.matchAll(/\/\/ ── ([^\s(]+) \(([^)]+)\)/g)];
+  if (!matches.length) return "(no sections detected)";
+  return matches.map(([, type, comp]) => `  ${comp} — ${type}`).join("\n");
+}
+
+/**
+ * Apply CSS variable changes (returned as JSON by Gemini) directly into the
+ * HTML's :root block without touching any JavaScript.
+ */
+function applyCssVarChanges(html: string, changes: Record<string, string>): string {
+  let result = html;
+  for (const [prop, value] of Object.entries(changes)) {
+    // Match "--prop-name: <anything>;" inside the CSS
+    const escaped = prop.replace(/[.*+?^${}()|[\\]]/g, "\\$&");
+    result = result.replace(
+      new RegExp(`(${escaped}\\s*:)[^;]+;`),
+      `$1 ${value};`,
+    );
+  }
+  return result;
+}
+
 function buildChatEditPrompt(
   agent: string,
   message: string,
   currentHtml: string,
   previousOutputs: Record<string, string>,
 ): string {
-  const htmlPreview = currentHtml.slice(0, 3000);
+  // We intentionally do NOT send the full transpiled JS to Gemini:
+  // the assembled HTML can be 200–500 KB of React.createElement calls that
+  // Gemini cannot reliably modify and often corrupts. Instead we give Gemini
+  // just the CSS variables and section outline, then apply changes surgically.
+  const cssVars      = extractCssVarsBlock(currentHtml);
+  const pageOutline  = extractSectionOutline(currentHtml);
 
   const prompts: Record<string, string> = {
-    "intent-analyzer": `Analyse this edit request and classify the intent.
+    "intent-analyzer": `Analyse this landing page edit request and classify the intent.
 User request: "${message}"
-Return ONLY valid JSON: { "intent": string, "scope": "global"|"section"|"element", "targetSection": string | null, "changeType": string, "confidence": number }`,
+Return ONLY valid JSON (no markdown fences):
+{ "intent": string, "scope": "style"|"content"|"structural", "targetSection": string | null, "changeType": string, "confidence": number }`,
 
-    "section-detector": `Given the user's edit request and current HTML, identify which section(s) to modify.
+    "section-detector": `Given the user's edit request, identify which section(s) of the landing page to modify.
 User request: "${message}"
-Current HTML preview: ${htmlPreview}
+Page sections:
+${pageOutline}
 Previous analysis: ${previousOutputs["intent-analyzer"] ?? ""}
-Return ONLY valid JSON: { "targetSections": string[], "approach": string, "preserveSections": string[], "confidence": number }`,
+Return ONLY valid JSON (no markdown fences):
+{ "targetSections": string[], "approach": "css-change"|"content-change"|"regenerate", "preserveSections": string[], "confidence": number }`,
 
-    "refinement-agent": `You are an expert front-end developer. Apply the user's requested changes to the landing page HTML.
+    "refinement-agent": `You are an expert landing page designer. Apply the user's requested changes.
+
 User request: "${message}"
-Analysis: ${previousOutputs["intent-analyzer"] ?? ""} / ${previousOutputs["section-detector"] ?? ""}
-Current HTML:
-${currentHtml}
+Intent analysis: ${previousOutputs["intent-analyzer"] ?? ""}
+Section plan: ${previousOutputs["section-detector"] ?? ""}
 
-Apply the changes precisely. Return the COMPLETE updated HTML file — no explanation, no markdown fences, just the full HTML starting with <!DOCTYPE html>.`,
+Current CSS custom properties (these control colors, fonts, radii for the entire page):
+${cssVars}
 
-    "qa-reviewer": `Review the edited page for quality.
-Return ONLY valid JSON: { "visualScore": number, "seoScore": number, "accessibilityScore": number, "performanceScore": number, "issues": string[], "suggestions": string[] }`,
+Page sections:
+${pageOutline}
+
+INSTRUCTIONS:
+- For color/font/style changes: return updated CSS custom property values as JSON.
+- For text/copy changes: describe what to change in which section.
+- Do NOT attempt to rewrite JavaScript or HTML structure — only CSS vars and text are safe to change via this pipeline.
+
+Return ONLY valid JSON (no markdown fences):
+{
+  "cssChanges": { "--primary": "#hex", "--background": "#hex", ... } | null,
+  "textChanges": [{ "section": string, "description": string }] | null,
+  "summary": string
+}`,
+
+    "qa-reviewer": `Review the planned edits for quality and correctness.
+User request: "${message}"
+Planned changes: ${previousOutputs["refinement-agent"] ?? ""}
+Return ONLY valid JSON (no markdown fences):
+{ "visualScore": number, "seoScore": number, "accessibilityScore": number, "performanceScore": number, "issues": string[], "suggestions": string[] }`,
   };
 
   return prompts[agent] ?? `Process this edit request: "${message}"`;
