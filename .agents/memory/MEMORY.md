@@ -1,0 +1,1 @@
+- [SiteCraft bug fixes](sitecraft-fixes.md) — root cause of "[could not render]" placeholders and chat edit pipeline architecture.
