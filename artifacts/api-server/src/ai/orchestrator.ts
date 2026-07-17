@@ -18,6 +18,7 @@ import {
   buildSectionPrompt,
   buildGlobalCSS,
   assembleHTML,
+  stripModuleStatements,
   type SectionCode,
 } from "./sectionAssembler";
 
@@ -551,8 +552,13 @@ export async function runSectionRegeneration(
     const raw = await callGemini(genai, PRO, prompt, 16384, undefined, 0.8);
     const newCode = cleanComponentCode(raw, input.sectionId);
 
+    // Transpile + IIFE-wrap before inserting into the assembled HTML.
+    // The assembled HTML contains transpiled plain JS (not JSX), so inserting
+    // raw JSX directly would cause a browser parse error and blank the page.
+    const transpiledSection = await transpileAndWrapSection(newCode, input.sectionId);
+
     // Replace the section in the HTML
-    const updatedHtml = replaceSectionInHtml(html, input.sectionId, sectionType, newCode);
+    const updatedHtml = replaceSectionInHtml(html, input.sectionId, sectionType, transpiledSection);
 
     await markStep(1, "completed", { outputJson: JSON.stringify({ newCodeLen: newCode.length }) });
 
@@ -583,6 +589,57 @@ export async function runSectionRegeneration(
     await db.update(projectsTable)
       .set({ activeJobId: null, updatedAt: new Date() })
       .where(eq(projectsTable.id, projectId));
+  }
+}
+
+/**
+ * Transpile a single section's JSX → plain JS and wrap in a scoping IIFE,
+ * matching the format that assembleHTML produces.
+ *
+ * This MUST be called before inserting regenerated code into an existing
+ * assembled HTML page — the page script contains transpiled JS, not JSX.
+ * Inserting raw JSX would cause a browser parse error and blank the page.
+ */
+async function transpileAndWrapSection(
+  code: string,
+  componentName: string,
+): Promise<string> {
+  const { transform } = await import("esbuild");
+  const cleanedCode = stripModuleStatements(code.trim());
+
+  try {
+    const result = await transform(cleanedCode, {
+      loader: "jsx",
+      jsxFactory: "React.createElement",
+      jsxFragment: "React.Fragment",
+      target: "es2020",
+    });
+
+    const jsCode = result.code
+      .replace(/^export\s*\{\s*\}\s*;?\n?/gm, "")
+      .replace(/^export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?\n?/gm, "")
+      .replace(/^export\s+default\s+/gm, "")
+      .trim();
+
+    const indented = jsCode.split("\n").map((l) => "  " + l).join("\n");
+    return (
+      `var ${componentName} = (function () {\n` +
+      `${indented}\n` +
+      `  return ${componentName};\n` +
+      `}());`
+    );
+  } catch (err) {
+    logger.warn({ componentName, err }, "Section transpile failed during regen — using placeholder IIFE");
+    return (
+      `var ${componentName} = (function () {\n` +
+      `  function ${componentName}() {\n` +
+      `    return React.createElement("section", {\n` +
+      `      style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" }\n` +
+      `    }, React.createElement("p", null, "[${componentName} — regeneration failed]"));\n` +
+      `  }\n` +
+      `  return ${componentName};\n` +
+      `}());`
+    );
   }
 }
 
@@ -930,20 +987,62 @@ function cleanComponentCode(raw: string, componentName: string): string {
     return buildFallbackSection(componentName, "content-section");
   }
 
-  // If the code is already a valid function or arrow-function declaration, keep it as-is
+  // ── Primary check: does componentName appear as a named function or const anywhere?
+  //
+  // The AI frequently generates code with helper variables BEFORE the component:
+  //
+  //   const FEATURES = [...];          ← top-level helper
+  //   const styles = { card: {...} };  ← top-level style object
+  //   function FeaturesSection() {     ← component (not at line 1!)
+  //     return <section>...</section>
+  //   }
+  //
+  // Previously the check only looked at what the code STARTED with, so this
+  // pattern fell through to the "last resort" which wrapped the ENTIRE block
+  // (including function declarations) inside a JSX <div>. That produced broken
+  // JSX that esbuild would reject, turning every section into a grey placeholder.
+  //
+  // Now: if the componentName exists anywhere as a function or const assignment,
+  // the code is already valid — return it as-is.
+  if (code.includes(`function ${componentName}`) || code.includes(`${componentName} =`)) {
+    return code;
+  }
+
+  // componentName is absent — try to rename the primary function/arrow to match.
   const isFunction = /^function\s+\w+/.test(code);
   const isArrow    = /^const\s+\w+\s*=\s*(\([^)]*\)|[a-z_]\w*)\s*=>/.test(code);
   const isComment  = code.startsWith("//") || code.startsWith("/*");
 
-  if (isFunction || isArrow || isComment) return code;
+  if (isFunction) {
+    // Code starts with a function with a different name — rename it.
+    return code.replace(/^function\s+\w+/, `function ${componentName}`);
+  }
+  if (isArrow) {
+    return code.replace(/^(const\s+)\w+(\s*=)/, `$1${componentName}$2`);
+  }
+  if (isComment) return code;
+
+  // Code has helper vars + a function whose name differs from componentName.
+  // Locate the last function declaration in the block and rename every
+  // reference to it so the IIFE wrapper's `return ComponentName` will resolve.
+  const fnMatches = [...code.matchAll(/\bfunction\s+(\w+)\s*\(/g)];
+  if (fnMatches.length > 0) {
+    const lastFnName = fnMatches[fnMatches.length - 1][1];
+    if (lastFnName && lastFnName !== componentName) {
+      return code.replace(new RegExp(`\\b${lastFnName}\\b`, "g"), componentName);
+    }
+    // Function name already matches (shouldn't reach here, but just in case)
+    return code;
+  }
 
   // If it starts with a return statement or JSX, wrap it in a named function
   if (code.startsWith("return") || code.startsWith("<")) {
     return `function ${componentName}() {\n  ${code.startsWith("return") ? code : `return (\n    ${code}\n  )`}\n}`;
   }
 
-  // Last resort: treat the whole block as the function body
-  return `function ${componentName}() {\n  return (\n    <div style={{ padding: '40px 24px' }}>\n      ${code}\n    </div>\n  )\n}`;
+  // Last resort: return as-is and let esbuild catch any remaining issues
+  // (will produce a placeholder rather than a full-page failure).
+  return code;
 }
 
 function buildFallbackSection(componentName: string, type: string): string {
