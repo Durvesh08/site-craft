@@ -453,41 +453,85 @@ export async function assembleHTML(
     `var THREE        = window.THREE || {};`,
   ].join("\n");
 
-  // ── Per-section validation ──────────────────────────────────────────────────
-  const validatedSections: string[] = [];
+  // ── Per-section: transpile JSX → plain JS individually ─────────────────────
+  //
+  // OLD strategy (fragile):
+  //   1. validate each section with esbuild (keeping original JSX source)
+  //   2. concatenate ALL sections into one giant JSX bundle
+  //   3. run ONE combined esbuild transform on the entire bundle
+  //
+  // Problem: if two sections both declare `const FEATURE_DATA = [...]` or any
+  // other same-named top-level identifier, the combined esbuild transform throws
+  // "Cannot redeclare 'FEATURE_DATA'" and the WHOLE PAGE fails — even though
+  // every individual section was fine on its own. Individual sections passed
+  // validation because each was wrapped in its own IIFE at that stage, hiding
+  // conflicts. The combined transform had no such isolation.
+  //
+  // NEW strategy (resilient):
+  //   1. Transpile each section's JSX → plain JS individually
+  //   2. Wrap each in a scoping IIFE so all its top-level helpers/constants stay
+  //      local → zero cross-section variable conflicts possible
+  //   3. Assemble the final script from already-transpiled plain JS + PREAMBLE
+  //      + App + mount — no combined JSX transform needed at all
+  const transpiledSections: string[] = [];
+
   for (const s of ordered) {
-    // Strip any import/export lines the AI added (esbuild IIFE transform rejects them)
     const cleanedCode = stripModuleStatements(s.code.trim());
+
     try {
-      await transform(cleanedCode, {
+      // Transform this section's JSX → plain JS (React.createElement calls).
+      // We deliberately omit `format` so esbuild outputs clean script-style JS
+      // with no IIFE/ESM/CJS wrapper — we add our own scoping IIFE below.
+      const result = await transform(cleanedCode, {
         loader: "jsx",
         jsxFactory: "React.createElement",
         jsxFragment: "React.Fragment",
-        format: "iife",
         target: "es2020",
       });
-      validatedSections.push(`// ── ${s.plan.type} (${s.componentName})\n${cleanedCode}`);
+
+      // Strip any residual ESM artefacts (esbuild sometimes appends `export {}`)
+      const jsCode = result.code
+        .replace(/^export\s*\{\s*\}\s*;?\n?/gm, "")
+        .replace(/^export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?\n?/gm, "")
+        .replace(/^export\s+default\s+/gm, "")
+        .trim();
+
+      // Wrap in a scoping IIFE: every top-level helper / constant is local to
+      // this section, so identically-named helpers in other sections can never
+      // conflict.  The component function is returned and assigned to a `var`
+      // in the outer scope so App() can reference it.
+      const indented = jsCode.split("\n").map(l => "  " + l).join("\n");
+      transpiledSections.push(
+        `// ── ${s.plan.type} (${s.componentName})\n` +
+        `var ${s.componentName} = (function () {\n` +
+        `${indented}\n` +
+        `  return ${s.componentName};\n` +
+        `}());`
+      );
+
+      logger.info({ component: s.componentName, jsLen: jsCode.length }, "Section transpiled OK");
     } catch (err: any) {
       logger.warn(
         { sectionType: s.plan.type, component: s.componentName, esbuildError: err?.message },
-        "Section JSX validation failed — replacing with placeholder",
+        "Section JSX transpile failed — using placeholder",
       );
-      validatedSections.push(
+      // Fallback is pure React.createElement — no JSX, cannot fail
+      transpiledSections.push(
+        `// ── ${s.plan.type} (${s.componentName}) [placeholder]\n` +
         `function ${s.componentName}() {\n` +
-        `  return React.createElement('section', {\n` +
-        `    style: { padding: '60px 24px', textAlign: 'center', color: '#94a3b8' }\n` +
-        `  }, React.createElement('p', null, '[${s.plan.type} — could not render]'));\n` +
-        `}`,
+        `  return React.createElement("section", {\n` +
+        `    style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" }\n` +
+        `  }, React.createElement("p", null, "[${s.plan.type} — could not render]"));\n` +
+        `}`
       );
     }
   }
 
-  // ── Combine: preamble + sections + App + mount ──────────────────────────────
-  const fullSource = [
-    PREAMBLE,
-    ``,
-    ...validatedSections,
-    ``,
+  // ── Assemble final script (all plain JS — no combined esbuild needed) ────────
+  // Every section is already transpiled from JSX to React.createElement calls.
+  // App + mount were always plain JS. We wrap everything in a manual IIFE to
+  // scope the PREAMBLE globals and section vars away from the global window.
+  const appCode = [
     `function App() {`,
     `  return React.createElement(React.Fragment, null,`,
     componentNames.map((n, i) =>
@@ -495,55 +539,40 @@ export async function assembleHTML(
     ).join("\n"),
     `  );`,
     `}`,
-    ``,
+  ].join("\n");
+
+  const mountCode = [
     `try {`,
-    `  createRoot(document.getElementById('root')).render(React.createElement(App, null));`,
+    `  createRoot(document.getElementById("root")).render(React.createElement(App, null));`,
     `} catch (err) {`,
-    `  var _e = document.getElementById('_sc-error');`,
-    `  var _m = document.getElementById('_sc-error-msg');`,
-    `  if (_e) _e.classList.add('show');`,
+    `  var _e = document.getElementById("_sc-error");`,
+    `  var _m = document.getElementById("_sc-error-msg");`,
+    `  if (_e) _e.classList.add("show");`,
     `  if (_m) _m.textContent = String(err);`,
     `}`,
   ].join("\n");
 
-  // ── Server-side transpile (JSX → plain IIFE JS, no imports) ─────────────────
-  let transpiledJS: string;
-  try {
-    const result = await transform(fullSource, {
-      loader: "jsx",
-      jsxFactory: "React.createElement",
-      jsxFragment: "React.Fragment",
-      format: "iife",   // wraps in (function(){...})() — no module system needed
-      target: "es2020",
-    });
-    transpiledJS = result.code;
-  } catch (err: any) {
-    logger.error({ esbuildError: err?.message }, "Final JSX bundle transpile failed — serving error fallback");
-    transpiledJS =
-      `(function(){\n` +
-      `  try {\n` +
-      `    var R = window.React || {};\n` +
-      `    var root = window._sc_createRoot(document.getElementById('root'));\n` +
-      `    root.render(R.createElement('div',\n` +
-      `      { style:{padding:'60px 24px',textAlign:'center',color:'#94a3b8',fontFamily:'system-ui'} },\n` +
-      `      R.createElement('h1',{style:{color:'#f1f5f9',marginBottom:'1rem'}},${JSON.stringify(context.title)}),\n` +
-      `      R.createElement('p',null,'Page generation had an error. Please try regenerating.')\n` +
-      `    ));\n` +
-      `  } catch(e) {\n` +
-      `    var el = document.getElementById('_sc-error');\n` +
-      `    if (el) el.classList.add('show');\n` +
-      `    var msg = document.getElementById('_sc-error-msg');\n` +
-      `    if (msg) msg.textContent = String(e);\n` +
-      `  }\n` +
-      `})();`;
-  }
+  const ind = (code: string, n: number) =>
+    code.split("\n").map(l => " ".repeat(n) + l).join("\n");
+
+  const transpiledJS = [
+    `(function () {`,
+    ind(PREAMBLE, 2),
+    ``,
+    transpiledSections.map(s => ind(s, 2)).join("\n\n"),
+    ``,
+    ind(appCode, 2),
+    ``,
+    ind(mountCode, 2),
+    `}());`,
+  ].join("\n");
 
   const favicon = context.faviconUrl
     ? `\n  <link rel="icon" href="${context.faviconUrl}">`
     : "";
 
   // Detect Three.js usage — only load from CDN when actually needed
-  const usesThree = validatedSections.some(c => /\bTHREE\b|\bthree\b/.test(c));
+  const usesThree = transpiledSections.some(c => /\bTHREE\b/.test(c));
   const threeScript = usesThree
     ? `\n  <script src="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.min.js"><\/script>`
     : "";

@@ -935,7 +935,22 @@ function cleanComponentCode(raw: string, componentName: string): string {
   const isArrow    = /^const\s+\w+\s*=\s*(\([^)]*\)|[a-z_]\w*)\s*=>/.test(code);
   const isComment  = code.startsWith("//") || code.startsWith("/*");
 
-  if (isFunction || isArrow || isComment) return code;
+  if (isFunction) {
+    // AI sometimes generates `function Hero()` instead of `function HeroSection()`.
+    // Rename the primary function if the expected componentName is entirely absent.
+    if (!code.includes(`function ${componentName}`) && !code.includes(`${componentName} =`)) {
+      code = code.replace(/^function\s+\w+/, `function ${componentName}`);
+    }
+    return code;
+  }
+  if (isArrow) {
+    // Similarly normalise arrow-function components.
+    if (!code.includes(`${componentName} =`)) {
+      code = code.replace(/^(const\s+)\w+(\s*=)/, `$1${componentName}$2`);
+    }
+    return code;
+  }
+  if (isComment) return code;
 
   // If it starts with a return statement or JSX, wrap it in a named function
   if (code.startsWith("return") || code.startsWith("<")) {
