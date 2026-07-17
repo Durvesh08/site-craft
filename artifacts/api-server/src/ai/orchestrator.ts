@@ -5,7 +5,6 @@ import {
   aiJobStepsTable,
   projectsTable,
   versionsTable,
-  activityLogsTable,
   settingsTable,
   promptTemplatesTable,
 } from "@workspace/db";
@@ -282,7 +281,7 @@ export async function runGeneration(
               });
 
               try {
-                const code = await callGemini(genai, PRO, prompt, 16384, undefined, 0.8);
+                const code = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
                 return { plan: section, componentName, code: cleanComponentCode(code, componentName) } as SectionCode;
               } catch (err) {
                 logger.error({ err, sectionId: section.id }, "Section generation failed, using fallback");
@@ -420,12 +419,7 @@ export async function runGeneration(
       })
       .where(eq(aiJobsTable.id, jobId));
 
-    await db.insert(activityLogsTable).values({
-      userId,
-      type:        "generation",
-      description: `Generated landing page: ${input.businessDescription.slice(0, 80)}`,
-      projectId,
-    });
+    logger.info({ userId, projectId }, "Generation complete");
 
     logger.info({ jobId, projectId }, "Generation pipeline complete");
 
@@ -843,12 +837,7 @@ export async function runChatEdit(
       .set({ status: "completed", progress: 100, currentStep: "Complete", resultJson: JSON.stringify({ html: refinedHtml }), completedAt: new Date(), updatedAt: new Date() })
       .where(eq(aiJobsTable.id, jobId));
 
-    await db.insert(activityLogsTable).values({
-      userId,
-      type:        "chat_edit",
-      description: `Applied chat edit: ${input.message.slice(0, 80)}`,
-      projectId,
-    });
+    logger.info({ userId, projectId }, "Chat edit complete");
 
   } catch (err) {
     logger.error({ err, jobId }, "Chat edit failed");
