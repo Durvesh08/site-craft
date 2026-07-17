@@ -475,7 +475,7 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle>Gemini API Key</CardTitle>
                 <CardDescription>
-                  SiteCraft's AI pipeline runs 12 specialized agent steps, each already tuned to the right Gemini model
+                  SiteCraft's AI pipeline runs 13 specialized agent steps, each already tuned to the right Gemini model
                   and settings for its job — there's no single "default model" to pick. Add your own API key here to use
                   your own Gemini quota instead of the shared server key.
                 </CardDescription>

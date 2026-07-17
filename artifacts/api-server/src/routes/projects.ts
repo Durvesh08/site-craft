@@ -42,6 +42,7 @@ function toProjectResponse(p: typeof projectsTable.$inferSelect) {
     performanceScore: p.performanceScore ?? null,
     visualScore: p.visualScore ?? null,
     activeJobId: p.activeJobId ?? null,
+    logoUrl: p.logoUrl ?? null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };

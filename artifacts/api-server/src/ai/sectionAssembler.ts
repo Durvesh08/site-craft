@@ -261,14 +261,38 @@ export function buildGlobalCSS(
   designOutput: string,
   branding: Record<string, string>,
 ): string {
+  // Detect theme intent from raw output before parsing
+  const lowerOutput = designOutput.toLowerCase();
+  const wantsLight = lowerOutput.includes('"light"') || lowerOutput.includes("'light'")
+    || lowerOutput.includes("light theme") || lowerOutput.includes("light mode");
+
+  // Pick defaults based on detected theme intent
+  const darkDefaults = {
+    background: "#0a0a0f",
+    foreground: "#f1f5f9",
+    accent: "#818cf8",
+    muted: "#1e1e2e",
+    card: "rgba(255,255,255,0.03)",
+    border: "rgba(255,255,255,0.08)",
+  };
+  const lightDefaults = {
+    background: "#ffffff",
+    foreground: "#0f172a",
+    accent: "#6366f1",
+    muted: "#f1f5f9",
+    card: "rgba(0,0,0,0.02)",
+    border: "rgba(0,0,0,0.08)",
+  };
+  const defaults = wantsLight ? lightDefaults : darkDefaults;
+
   let primary    = branding["primary_color"] || "#6366f1";
   let primaryDark = primary;
-  let background = "#0a0a0f";
-  let foreground = "#f1f5f9";
-  let accent     = "#818cf8";
-  let muted      = "#1e1e2e";
-  let card       = "rgba(255,255,255,0.03)";
-  let border     = "rgba(255,255,255,0.08)";
+  let background = defaults.background;
+  let foreground = defaults.foreground;
+  let accent     = defaults.accent;
+  let muted      = defaults.muted;
+  let card       = defaults.card;
+  let border     = defaults.border;
   let fontSans   = "'Inter', system-ui, -apple-system, sans-serif";
   let fontMono   = "'JetBrains Mono', ui-monospace, monospace";
   let googleFontsUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap";

@@ -28,7 +28,7 @@ export const insertPromptTemplateSchema = createInsertSchema(promptTemplatesTabl
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}) as any;
 
 export type InsertPromptTemplate = z.infer<typeof insertPromptTemplateSchema>;
 export type PromptTemplate = typeof promptTemplatesTable.$inferSelect;

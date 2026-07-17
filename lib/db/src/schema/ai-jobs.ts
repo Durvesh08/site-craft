@@ -70,11 +70,11 @@ export const insertAiJobSchema = createInsertSchema(aiJobsTable).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}) as any;
 
 export const insertAiJobStepSchema = createInsertSchema(aiJobStepsTable).omit({
   id: true,
-});
+}) as any;
 
 export type InsertAiJob = z.infer<typeof insertAiJobSchema>;
 export type InsertAiJobStep = z.infer<typeof insertAiJobStepSchema>;

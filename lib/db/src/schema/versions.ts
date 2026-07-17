@@ -32,12 +32,12 @@ export const activityLogsTable = pgTable("activity_logs", {
 export const insertVersionSchema = createInsertSchema(versionsTable).omit({
   id: true,
   createdAt: true,
-});
+}) as any;
 
 export const insertActivityLogSchema = createInsertSchema(activityLogsTable).omit({
   id: true,
   createdAt: true,
-});
+}) as any;
 
 export type InsertVersion = z.infer<typeof insertVersionSchema>;
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;

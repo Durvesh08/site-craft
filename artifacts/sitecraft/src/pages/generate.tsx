@@ -7,23 +7,26 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Circle, Loader2, Sparkles, AlertTriangle, ArrowRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// The 10 AI steps in our platform
+// The 13 AI steps — must stay in sync with GENERATION_STEPS in api-server/src/ai/orchestrator.ts
 const GENERATION_STEPS = [
-  "Requirements Analysis",
-  "Brand Identity Extraction",
-  "Wireframe Structuring",
+  "Business Analysis",
+  "Audience Profiling",
+  "Brand Strategy",
+  "Color & Typography",
+  "Layout Planning",
   "Copywriting",
-  "Visual Design System",
-  "Component Development",
-  "Layout Assembly",
-  "Asset Generation",
-  "Quality Assurance",
-  "Final Review & Build"
+  "SEO Strategy",
+  "Component Selection",
+  "Motion & Interaction",
+  "3D & Visual Effects",
+  "Section Generation",
+  "Assembly",
+  "Quality Review",
 ];
 
 export default function GenerateProject() {
   const { id } = useParams<{ id: string }>();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const jobId = searchParams.get("jobId");
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
@@ -52,7 +55,7 @@ export default function GenerateProject() {
   const isFailed = job?.status === "failed" || project?.status === "failed";
   const progress = job?.progress || (isCompleted ? 100 : 0);
   
-  // Calculate current step index (0-9) based on job.currentStep string or progress
+  // Calculate current step index (0-12) based on job.currentStep string or progress
   let currentStepIndex = 0;
   if (job?.currentStep) {
     const idx = GENERATION_STEPS.findIndex(s => s.toLowerCase() === job.currentStep?.toLowerCase());

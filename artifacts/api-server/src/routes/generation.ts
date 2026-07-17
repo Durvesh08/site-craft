@@ -104,6 +104,7 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
         status: "generating",
         activeJobId: job.id,
         businessDescription: body.data.businessDescription,
+        logoUrl: body.data.logoUrl ?? null,
         updatedAt: new Date(),
       })
       .where(eq(projectsTable.id, params.data.id));
@@ -114,6 +115,7 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
       targetAudience: body.data.targetAudience,
       primaryCta: body.data.primaryCta,
       additionalInstructions: body.data.additionalInstructions,
+      logoUrl: body.data.logoUrl ?? undefined,
     }).catch((err) => {
       logger.error({ err, jobId: job.id }, "Generation failed");
     });

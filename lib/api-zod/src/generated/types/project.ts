@@ -25,6 +25,7 @@ export interface Project {
   performanceScore?: number | null;
   visualScore?: number | null;
   activeJobId?: string | null;
+  logoUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

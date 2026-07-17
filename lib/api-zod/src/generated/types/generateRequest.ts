@@ -11,4 +11,6 @@ export interface GenerateRequest {
   targetAudience?: string;
   primaryCta?: string;
   additionalInstructions?: string;
+  /** Optional logo URL to use as the brand logo in the generated site (overrides branding settings for this generation) */
+  logoUrl?: string | null;
 }

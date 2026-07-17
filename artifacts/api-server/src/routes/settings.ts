@@ -33,11 +33,15 @@ router.get("/settings", async (req: Request, res: Response) => {
       }
       
       let val = row.value;
-      if (row.isEncrypted && val) {
+      const isSensitive = SENSITIVE_KEYS.includes(row.key);
+
+      if (isSensitive) {
+        // Always mask sensitive keys in the general listing
+        val = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
+      } else if (row.isEncrypted && val) {
+        // Non-sensitive key was somehow stored encrypted — decrypt safely
         try {
-          // Sensitive keys are masked in general output, or decrypted if requested?
-          // To be secure, we return a masked placeholder (e.g. "••••••••") for sensitive keys
-          val = SENSITIVE_KEYS.includes(row.key) ? "••••••••" : decrypt(val);
+          val = decrypt(val);
         } catch {
           val = "";
         }
@@ -69,9 +73,15 @@ router.get("/settings/:category", async (req: Request, res: Response) => {
     const settings: Record<string, string> = {};
     for (const row of rows) {
       let val = row.value;
-      if (row.isEncrypted && val) {
+      const isSensitive = SENSITIVE_KEYS.includes(row.key);
+
+      if (isSensitive) {
+        // Mask sensitive keys even in per-category reads
+        val = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
+      } else if (row.isEncrypted && val) {
+        // Non-sensitive key stored encrypted — decrypt safely
         try {
-          val = SENSITIVE_KEYS.includes(row.key) ? "••••••••" : decrypt(val);
+          val = decrypt(val);
         } catch {
           val = "";
         }

@@ -14,7 +14,7 @@ interface AuthState {
 }
 
 function getBasePath() {
-  return import.meta.env.BASE_URL.replace(/\/+$/, '') || '/';
+  return (import.meta as any).env?.BASE_URL?.replace(/\/+$/, '') || '/';
 }
 
 export function useAuth(): AuthState {

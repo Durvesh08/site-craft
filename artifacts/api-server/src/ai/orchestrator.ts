@@ -160,6 +160,7 @@ export async function runGeneration(
     targetAudience?: string;
     primaryCta?: string;
     additionalInstructions?: string;
+    logoUrl?: string;
   },
 ): Promise<void> {
   logger.info({ jobId, projectId }, "Starting generation pipeline");
@@ -185,6 +186,18 @@ export async function runGeneration(
 
     const branding: Record<string, string> = {};
     for (const row of brandingRows) branding[row.key] = row.value;
+
+    // Fetch project to see if it has a project-specific logoUrl
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(eq(projectsTable.id, projectId))
+      .limit(1);
+
+    const logoToUse = input.logoUrl || project?.logoUrl || undefined;
+    if (logoToUse) {
+      branding["logo_url"] = logoToUse;
+    }
 
     const agentOutputs: Record<string, string> = {};
 
@@ -350,7 +363,7 @@ export async function runGeneration(
     await db.update(projectsTable)
       .set({
         generatedHtml,
-        status:            "completed",
+        status:            "ready",
         activeJobId:       null,
         visualScore:       scores.visual,
         seoScore:          scores.seo,
@@ -432,7 +445,7 @@ export async function runSectionRegeneration(
     const html = input.currentHtml;
 
     // Extract the existing section code block (between its comment and the next one)
-    const escapedId = input.sectionId.replace(/[.*+?^${}()|[\]\\]/g, "\\// ── Chat edit pipeline ────────────────────────────────────────────────────────");
+    const escapedId = input.sectionId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const sectionBlockRegex = new RegExp(
       `(\\/\\/ ── [^\\n]*\\(${escapedId}\\)[^\\n]*\\n)([\\s\\S]*?)(?=\\s*\\/\\/ ── |\\s*\\/\\* ═══)`,
     );
@@ -461,6 +474,10 @@ export async function runSectionRegeneration(
       .where(eq(settingsTable.userId, userId));
     const branding: Record<string, string> = {};
     for (const r of brandingRows.filter(r => r.category === "branding")) branding[r.key] = r.value;
+
+    if (project?.logoUrl) {
+      branding["logo_url"] = project.logoUrl;
+    }
 
     await markStep(0, "completed", { outputJson: JSON.stringify({ sectionType, existingCodeLen: existingCode.length }) });
 
@@ -541,7 +558,7 @@ function replaceSectionInHtml(
   sectionType: string,
   newCode: string,
 ): string {
-  const escaped = componentName.replace(/[.*+?^${}()|[\]\\]/g, "\\// ── Chat edit pipeline ────────────────────────────────────────────────────────");
+  const escaped = componentName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(
     `(\\/\\/ ── [^\\n]*\\(${escaped}\\)[^\\n]*\\n)([\\s\\S]*?)(?=\\s*\\/\\/ ── |\\s*\\/\\* ═══)`,
   );

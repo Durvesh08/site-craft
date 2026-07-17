@@ -18,7 +18,7 @@ export const insertSettingsSchema = createInsertSchema(settingsTable).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}) as any;
 
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type Settings = typeof settingsTable.$inferSelect;

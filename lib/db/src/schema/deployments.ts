@@ -53,12 +53,12 @@ export const domainsTable = pgTable("domains", {
 export const insertDeploymentSchema = createInsertSchema(deploymentsTable).omit({
   id: true,
   createdAt: true,
-});
+}) as any;
 
 export const insertDomainSchema = createInsertSchema(domainsTable).omit({
   id: true,
   createdAt: true,
-});
+}) as any;
 
 export type InsertDeployment = z.infer<typeof insertDeploymentSchema>;
 export type InsertDomain = z.infer<typeof insertDomainSchema>;

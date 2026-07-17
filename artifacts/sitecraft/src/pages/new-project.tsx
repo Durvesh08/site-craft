@@ -85,22 +85,18 @@ export default function NewProject() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      // Inject uploaded logo URL into description so the AI picks it up
-      const enrichedDescription = logoUrl
-        ? `${values.businessDescription}\n\n[Brand logo URL: ${logoUrl}]`
-        : values.businessDescription;
-
       const project = await createProject.mutateAsync({
         data: {
           name: values.name,
-          businessDescription: enrichedDescription,
+          businessDescription: values.businessDescription,
         },
       });
 
       const job = await generateProject.mutateAsync({
         id: project.id,
         data: {
-          businessDescription: enrichedDescription,
+          businessDescription: values.businessDescription,
+          logoUrl: logoUrl || undefined,
         },
       });
 

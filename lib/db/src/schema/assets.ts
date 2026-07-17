@@ -28,7 +28,7 @@ export const assetsTable = pgTable("assets", {
 export const insertAssetSchema = createInsertSchema(assetsTable).omit({
   id: true,
   createdAt: true,
-});
+}) as any;
 
 export type InsertAsset = z.infer<typeof insertAssetSchema>;
 export type Asset = typeof assetsTable.$inferSelect;

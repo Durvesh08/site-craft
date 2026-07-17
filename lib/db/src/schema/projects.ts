@@ -38,6 +38,7 @@ export const projectsTable = pgTable("projects", {
   performanceScore: real("performance_score"),
   visualScore: real("visual_score"),
   activeJobId: text("active_job_id"),
+  logoUrl: text("logo_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -46,7 +47,7 @@ export const insertProjectSchema = createInsertSchema(projectsTable).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}) as any;
 
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projectsTable.$inferSelect;

@@ -197,6 +197,7 @@ export const ListProjectsResponse = zod.object({
   "performanceScore": zod.number().nullish(),
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })),
@@ -232,6 +233,7 @@ export const CreateProjectResponse = zod.object({
   "performanceScore": zod.number().nullish(),
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -262,6 +264,7 @@ export const GetProjectResponse = zod.object({
   "performanceScore": zod.number().nullish(),
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -297,6 +300,7 @@ export const UpdateProjectResponse = zod.object({
   "performanceScore": zod.number().nullish(),
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -325,7 +329,8 @@ export const GenerateProjectBody = zod.object({
   "businessDescription": zod.string(),
   "targetAudience": zod.string().optional(),
   "primaryCta": zod.string().optional(),
-  "additionalInstructions": zod.string().optional()
+  "additionalInstructions": zod.string().optional(),
+  "logoUrl": zod.string().nullish().describe('Optional logo URL to use as the brand logo in the generated site (overrides branding settings for this generation)')
 })
 
 export const GenerateProjectResponse = zod.object({
@@ -857,6 +862,7 @@ export const RestoreProjectVersionResponse = zod.object({
   "performanceScore": zod.number().nullish(),
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })

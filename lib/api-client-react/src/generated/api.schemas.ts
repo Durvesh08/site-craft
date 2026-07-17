@@ -59,6 +59,7 @@ export interface Project {
   performanceScore?: number | null;
   visualScore?: number | null;
   activeJobId?: string | null;
+  logoUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -144,6 +145,8 @@ export interface GenerateRequest {
   targetAudience?: string;
   primaryCta?: string;
   additionalInstructions?: string;
+  /** Optional logo URL to use as the brand logo in the generated site (overrides branding settings for this generation) */
+  logoUrl?: string | null;
 }
 
 export interface ChatEditRequest {

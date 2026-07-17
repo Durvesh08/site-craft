@@ -921,6 +921,9 @@ components:
         activeJobId:
           type: string
           nullable: true
+        logoUrl:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -1065,6 +1068,10 @@ components:
           type: string
         additionalInstructions:
           type: string
+        logoUrl:
+          type: string
+          nullable: true
+          description: Optional logo URL to use as the brand logo in the generated site (overrides branding settings for this generation)
       required:
         - businessDescription
 
