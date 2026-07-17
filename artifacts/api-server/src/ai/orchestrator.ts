@@ -22,7 +22,8 @@ import {
 } from "./sectionAssembler";
 
 // ── Models ────────────────────────────────────────────────────────────────────
-const FLASH_LITE = "gemini-2.0-flash-lite";
+// gemini-2.0-flash-lite was removed by Google on 2026-07-17; use gemini-2.0-flash instead.
+const FLASH_LITE = "gemini-2.0-flash";
 const FLASH      = "gemini-2.5-flash";
 const PRO        = "gemini-2.5-pro";
 

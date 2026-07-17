@@ -370,6 +370,39 @@ a { text-decoration: none; color: inherit; }
 // Pre-built React 18 + framer-motion IIFE bundle (zero CDN dependency).
 // Regenerate with: node build-runtime.mjs  (or pnpm run build:runtime)
 import { REACT_RUNTIME_JS } from "./reactRuntime";
+import { logger } from "../lib/logger";
+
+/**
+ * Strip import / export statements the AI sometimes adds despite the prompt
+ * telling it not to. esbuild transform with format:'iife' rejects any ESM
+ * imports, so they must be removed before transpilation.
+ *
+ * Also removes multi-line import continuations and blank lines left behind.
+ */
+function stripModuleStatements(code: string): string {
+  // Remove full import lines (including those that span multiple lines via backslash or
+  // open-brace continuation). A simple approach: remove every line that starts with
+  // `import ` or `export ` or is a continuation of such (starts with whitespace inside
+  // braces after an import).
+  const lines = code.split("\n");
+  const out: string[] = [];
+  let insideImport = false;
+  for (const line of lines) {
+    const trimmed = line.trimStart();
+    if (/^import\s/.test(trimmed) || /^export\s+default\s+/.test(trimmed) || /^export\s*\{/.test(trimmed)) {
+      insideImport = true;
+    }
+    if (insideImport) {
+      // End of multi-line import when line contains a semicolon or closing }
+      if (/;/.test(line) || (/}/.test(line) && !/^\s*\/\//.test(line))) {
+        insideImport = false;
+      }
+      continue; // skip this line
+    }
+    out.push(line);
+  }
+  return out.join("\n").trim();
+}
 
 /**
  * Assemble and transpile all section components into a self-contained HTML page.
@@ -424,16 +457,22 @@ export async function assembleHTML(
   // ── Per-section validation ──────────────────────────────────────────────────
   const validatedSections: string[] = [];
   for (const s of ordered) {
+    // Strip any import/export lines the AI added (esbuild IIFE transform rejects them)
+    const cleanedCode = stripModuleStatements(s.code.trim());
     try {
-      await transform(s.code.trim(), {
+      await transform(cleanedCode, {
         loader: "jsx",
         jsxFactory: "React.createElement",
         jsxFragment: "React.Fragment",
         format: "iife",
         target: "es2020",
       });
-      validatedSections.push(`// ── ${s.plan.type} (${s.componentName})\n${s.code.trim()}`);
-    } catch {
+      validatedSections.push(`// ── ${s.plan.type} (${s.componentName})\n${cleanedCode}`);
+    } catch (err: any) {
+      logger.warn(
+        { sectionType: s.plan.type, component: s.componentName, esbuildError: err?.message },
+        "Section JSX validation failed — replacing with placeholder",
+      );
       validatedSections.push(
         `function ${s.componentName}() {\n` +
         `  return React.createElement('section', {\n` +
@@ -479,7 +518,8 @@ export async function assembleHTML(
       target: "es2020",
     });
     transpiledJS = result.code;
-  } catch {
+  } catch (err: any) {
+    logger.error({ esbuildError: err?.message }, "Final JSX bundle transpile failed — serving error fallback");
     transpiledJS =
       `(function(){\n` +
       `  try {\n` +
