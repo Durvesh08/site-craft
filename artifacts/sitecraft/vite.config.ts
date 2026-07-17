@@ -60,6 +60,15 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    // Proxy /api calls to the API server so relative fetch('/api/...') works
+    // in the Vite dev server without CORS issues.
+    proxy: {
+      '/api': {
+        target: `http://localhost:8080`,
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   preview: {
     port,
