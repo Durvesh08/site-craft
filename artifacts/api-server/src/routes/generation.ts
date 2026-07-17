@@ -10,7 +10,7 @@ import {
   RegenerateSectionParams,
   RegenerateSectionBody,
 } from "@workspace/api-zod";
-import { runGeneration, runChatEdit } from "../ai/orchestrator";
+import { runGeneration, runChatEdit, runSectionRegeneration } from "../ai/orchestrator";
 import { logger } from "../lib/logger";
 import { toJobResponse } from "./jobs";
 
@@ -192,10 +192,11 @@ router.post("/projects/:id/regenerate-section", async (req: Request, res: Respon
       .set({ activeJobId: job.id, updatedAt: new Date() })
       .where(eq(projectsTable.id, params.data.id));
 
-    // Treat as a focused chat edit
-    runChatEdit(job.id, params.data.id, req.user!.id, {
-      message: `Regenerate the ${body.data.sectionId} section${body.data.instruction ? `. ${body.data.instruction}` : ""}`,
-      currentHtml: project.generatedHtml ?? undefined,
+    // Single Gemini PRO call — much faster than the full chat-edit pipeline
+    runSectionRegeneration(job.id, params.data.id, req.user!.id, {
+      sectionId:   body.data.sectionId,
+      instruction: body.data.instruction,
+      currentHtml: project.generatedHtml ?? "",
     }).catch((err) => {
       logger.error({ err, jobId: job.id }, "Section regeneration failed");
     });

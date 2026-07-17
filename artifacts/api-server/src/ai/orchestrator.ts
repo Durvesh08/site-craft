@@ -391,6 +391,179 @@ export async function runGeneration(
   }
 }
 
+// ── Section regeneration pipeline ────────────────────────────────────────────
+// Single Gemini PRO call — ~5-10x faster than the full chat-edit pipeline.
+
+export async function runSectionRegeneration(
+  jobId: string,
+  projectId: string,
+  userId: string,
+  input: {
+    sectionId: string;       // ComponentName e.g. "HeroSection"
+    instruction?: string;
+    currentHtml: string;
+  },
+): Promise<void> {
+  logger.info({ jobId, projectId, sectionId: input.sectionId }, "Starting section regeneration");
+
+  const dbSteps = await db
+    .select()
+    .from(aiJobStepsTable)
+    .where(eq(aiJobStepsTable.jobId, jobId))
+    .orderBy(aiJobStepsTable.order);
+
+  const markStep = async (idx: number, status: "running" | "completed" | "failed", extra?: Record<string, unknown>) => {
+    const s = dbSteps[idx];
+    if (!s) return;
+    await db.update(aiJobStepsTable)
+      .set({ status, ...(status === "running" ? { startedAt: new Date() } : { completedAt: new Date() }), ...extra })
+      .where(eq(aiJobStepsTable.id, s.id));
+  };
+
+  try {
+    await db.update(aiJobsTable)
+      .set({ status: "running", updatedAt: new Date() })
+      .where(eq(aiJobsTable.id, jobId));
+
+    // ── Step 1: Section Analysis (fast — parsing only) ──────────────────────
+    await markStep(0, "running");
+    await db.update(aiJobsTable).set({ progress: 10, currentStep: "Section Analysis", updatedAt: new Date() }).where(eq(aiJobsTable.id, jobId));
+
+    const html = input.currentHtml;
+
+    // Extract the existing section code block (between its comment and the next one)
+    const escapedId = input.sectionId.replace(/[.*+?^${}()|[\]\\]/g, "\\// ── Chat edit pipeline ────────────────────────────────────────────────────────");
+    const sectionBlockRegex = new RegExp(
+      `(\\/\\/ ── [^\\n]*\\(${escapedId}\\)[^\\n]*\\n)([\\s\\S]*?)(?=\\s*\\/\\/ ── |\\s*\\/\\* ═══)`,
+    );
+    const sectionMatch = sectionBlockRegex.exec(html);
+    const existingCode = sectionMatch ? sectionMatch[2].trim() : "";
+
+    // Extract :root CSS variables for brand context
+    const cssRootMatch = html.match(/:root\s*\{([^}]+)\}/);
+    const cssVars = cssRootMatch ? cssRootMatch[1].trim() : "";
+
+    // Extract all section comments to know the full page structure
+    const allSections = [...html.matchAll(/\/\/ ── ([^\s(]+) \(([^)]+)\)/g)]
+      .map(([, type, comp]) => `${comp} (${type})`)
+      .join(", ");
+
+    // Infer section type from existing comment
+    const typeMatch = new RegExp(`\\/\\/ ── ([^\\s(]+) \\(${escapedId}\\)`).exec(html);
+    const sectionType = typeMatch?.[1] ?? "content-section";
+
+    // Get business description from project
+    const [project] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
+    const businessDesc = project?.businessDescription ?? "";
+
+    // Fetch branding
+    const brandingRows = await db.select().from(settingsTable)
+      .where(eq(settingsTable.userId, userId));
+    const branding: Record<string, string> = {};
+    for (const r of brandingRows.filter(r => r.category === "branding")) branding[r.key] = r.value;
+
+    await markStep(0, "completed", { outputJson: JSON.stringify({ sectionType, existingCodeLen: existingCode.length }) });
+
+    // ── Step 2: Targeted Regeneration (single Gemini PRO call) ─────────────
+    await markStep(1, "running");
+    await db.update(aiJobsTable).set({ progress: 30, currentStep: "Targeted Regeneration", updatedAt: new Date() }).where(eq(aiJobsTable.id, jobId));
+
+    const genai = await getGenAiClient(userId);
+
+    const totalSections = allSections.split(",").length;
+    const sectionPlan = {
+      id: input.sectionId.replace(/Section$/, "").toLowerCase(),
+      type: sectionType,
+      order: 0,
+      brief: input.instruction
+        ? `${sectionType} section. Instruction: ${input.instruction}`
+        : `${sectionType} section — regenerate with improved quality and brand consistency`,
+    };
+
+    const planningContext = [
+      cssVars ? `Brand CSS variables (use these exact values):\n:root {\n${cssVars}\n}` : "",
+      allSections ? `Full page sections: ${allSections}` : "",
+      businessDesc ? `Business: ${businessDesc}` : "",
+      existingCode ? `Current section code to IMPROVE upon:\n${existingCode.slice(0, 2000)}` : "",
+      input.instruction ? `User instruction: ${input.instruction}` : "",
+    ].filter(Boolean).join("\n\n");
+
+    const prompt = buildSectionPrompt(sectionPlan, input.sectionId, totalSections, {
+      businessDescription: businessDesc,
+      targetAudience: "General consumers",
+      primaryCta: "Get Started",
+      previousOutputs: planningContext,
+      branding,
+    });
+
+    const raw = await callGemini(genai, PRO, prompt, 8192, undefined, 0.8);
+    const newCode = cleanComponentCode(raw, input.sectionId);
+
+    // Replace the section in the HTML
+    const updatedHtml = replaceSectionInHtml(html, input.sectionId, sectionType, newCode);
+
+    await markStep(1, "completed", { outputJson: JSON.stringify({ newCodeLen: newCode.length }) });
+
+    // ── Save to DB ──────────────────────────────────────────────────────────
+    const existingVersions = await db.select().from(versionsTable).where(eq(versionsTable.projectId, projectId));
+    await db.insert(versionsTable).values({
+      projectId,
+      versionNumber: existingVersions.length + 1,
+      label: `v${existingVersions.length + 1} — Regenerated ${input.sectionId.replace(/Section$/, "")}`,
+      generatedHtml: updatedHtml,
+    });
+
+    await db.update(projectsTable)
+      .set({ generatedHtml: updatedHtml, activeJobId: null, updatedAt: new Date() })
+      .where(eq(projectsTable.id, projectId));
+
+    await db.update(aiJobsTable)
+      .set({ status: "completed", progress: 100, currentStep: "Complete", resultJson: JSON.stringify({ htmlLen: updatedHtml.length }), completedAt: new Date(), updatedAt: new Date() })
+      .where(eq(aiJobsTable.id, jobId));
+
+    logger.info({ jobId, sectionId: input.sectionId }, "Section regeneration complete");
+
+  } catch (err) {
+    logger.error({ err, jobId }, "Section regeneration failed");
+    await db.update(aiJobsTable)
+      .set({ status: "failed", error: String(err), updatedAt: new Date(), completedAt: new Date() })
+      .where(eq(aiJobsTable.id, jobId));
+    await db.update(projectsTable)
+      .set({ activeJobId: null, updatedAt: new Date() })
+      .where(eq(projectsTable.id, projectId));
+  }
+}
+
+/** Replace a section's code block in the assembled HTML */
+function replaceSectionInHtml(
+  html: string,
+  componentName: string,
+  sectionType: string,
+  newCode: string,
+): string {
+  const escaped = componentName.replace(/[.*+?^${}()|[\]\\]/g, "\\// ── Chat edit pipeline ────────────────────────────────────────────────────────");
+  const pattern = new RegExp(
+    `(\\/\\/ ── [^\\n]*\\(${escaped}\\)[^\\n]*\\n)([\\s\\S]*?)(?=\\s*\\/\\/ ── |\\s*\\/\\* ═══)`,
+  );
+
+  const indent = (code: string, n: number) =>
+    code.split("\n").map(l => (l.trim() === "" ? "" : " ".repeat(n) + l)).join("\n");
+
+  // Rebuild the comment line with the correct type
+  const commentLine = `    // ── ${sectionType} (${componentName}) ${"─".repeat(Math.max(0, 50 - sectionType.length - componentName.length))}\n`;
+
+  if (pattern.test(html)) {
+    return html.replace(pattern, `${commentLine}${indent(newCode.trim(), 4)}\n\n    `);
+  }
+
+  // Fallback: append before App block
+  logger.warn({ componentName }, "Section comment not found in HTML — appending before App");
+  return html.replace(
+    /(\s*\/\* ═══[^=]*APP SHELL)/,
+    `\n${commentLine}${indent(newCode.trim(), 4)}\n\n    $1`,
+  );
+}
+
 // ── Chat edit pipeline ────────────────────────────────────────────────────────
 
 export async function runChatEdit(
