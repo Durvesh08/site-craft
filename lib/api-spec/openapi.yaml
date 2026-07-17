@@ -1419,7 +1419,7 @@ components:
           type: string
         model:
           type: string
-          enum: [gemini-flash, gemini-pro]
+          enum: [gemini-flash, gemini-pro, gemini-flash-fast, gemini-1.5-flash]
         temperature:
           type: number
         version:
@@ -1471,7 +1471,7 @@ components:
           type: string
         model:
           type: string
-          enum: [gemini-flash, gemini-pro]
+          enum: [gemini-flash, gemini-pro, gemini-flash-fast, gemini-1.5-flash]
         temperature:
           type: number
       required:
@@ -1492,7 +1492,7 @@ components:
           type: string
         model:
           type: string
-          enum: [gemini-flash, gemini-pro]
+          enum: [gemini-flash, gemini-pro, gemini-flash-fast, gemini-1.5-flash]
         temperature:
           type: number
         changelog:

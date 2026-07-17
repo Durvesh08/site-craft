@@ -22,10 +22,16 @@ import {
 } from "./sectionAssembler";
 
 // ── Models ────────────────────────────────────────────────────────────────────
-// gemini-2.0-flash-lite was removed by Google on 2026-07-17; use gemini-2.0-flash instead.
-const FLASH_LITE = "gemini-2.0-flash";
-const FLASH      = "gemini-2.5-flash";
-const PRO        = "gemini-2.5-pro";
+// gemini-2.0-flash-lite was removed by Google on 2026-07-17.
+// FLASH_LITE / FLASH_FAST → gemini-2.0-flash: no thinking overhead, very fast — ideal for
+//   simple JSON-output planning steps where we only need structured data.
+// FLASH → gemini-2.5-flash: thinking disabled via thinkingBudget:0 so all output tokens
+//   go to content (not internal reasoning). Best balance of quality & speed.
+// PRO   → gemini-2.5-pro: brief thinking budget (1024) for complex JSX/code generation.
+const FLASH_LITE = "gemini-2.0-flash"; // fast, zero thinking overhead
+const FLASH_FAST = "gemini-2.0-flash"; // alias — use where speed matters most
+const FLASH      = "gemini-2.5-flash"; // thinking disabled at call site
+const PRO        = "gemini-2.5-pro";   // limited thinking for complex codegen
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.
@@ -113,8 +119,11 @@ async function getAgentPromptAndModel(
 
   if (template) {
     let model = defaultModel;
-    if (template.model === "gemini-flash") model = FLASH;
-    else if (template.model === "gemini-pro") model = PRO;
+    // Map DB enum values → real Gemini API model identifiers
+    if (template.model === "gemini-flash")      model = FLASH;       // gemini-2.5-flash, thinking disabled
+    else if (template.model === "gemini-pro")   model = PRO;         // gemini-2.5-pro
+    else if (template.model === "gemini-flash-fast") model = FLASH_FAST; // gemini-2.0-flash — no thinking overhead
+    else if (template.model === "gemini-1.5-flash")  model = "gemini-1.5-flash"; // legacy, still available
 
     return {
       prompt: interpolatePrompt(template.userPromptTemplate, params),
@@ -136,6 +145,21 @@ async function callGemini(
   temperature = 0.7,
 ): Promise<string> {
   logger.info({ model, promptLen: prompt.length }, "Calling Gemini");
+
+  // Thinking config strategy:
+  //   gemini-2.0-flash  → no thinking support at all; omit thinkingConfig entirely.
+  //   gemini-2.5-flash  → disable thinking (thinkingBudget:0) so all output tokens
+  //                        go to content instead of internal reasoning.
+  //   gemini-2.5-pro    → allow a small thinking budget (1 024 tokens) for complex
+  //                        codegen tasks; pro requires at least 128.
+  const isFlash25 = model === FLASH;
+  const isPro25   = model === PRO;
+  const thinkingConfig = isFlash25
+    ? { thinkingBudget: 0 }
+    : isPro25
+      ? { thinkingBudget: 1024 }
+      : undefined; // gemini-2.0-flash — no thinking config
+
   const response = await genai.models.generateContent({
     model,
     contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -143,9 +167,19 @@ async function callGemini(
       maxOutputTokens: maxTokens,
       systemInstruction: systemInstruction || undefined,
       temperature,
+      ...(thinkingConfig ? { thinkingConfig } : {}),
     },
   });
-  const text = response.text ?? "";
+
+  // response.text is a getter that can throw when the response is blocked or
+  // malformed. Wrap it so a single failed step doesn't crash the pipeline.
+  let text: string;
+  try {
+    text = response.text ?? "";
+  } catch (err) {
+    logger.warn({ model, err }, "response.text getter threw — treating as empty");
+    text = "";
+  }
   logger.info({ model, outputLen: text.length }, "Gemini responded");
   return text;
 }
@@ -247,7 +281,7 @@ export async function runGeneration(
               });
 
               try {
-                const code = await callGemini(genai, FLASH, prompt, 8192, undefined, 0.8);
+                const code = await callGemini(genai, FLASH, prompt, 16384, undefined, 0.8);
                 return { plan: section, componentName, code: cleanComponentCode(code, componentName) } as SectionCode;
               } catch (err) {
                 logger.error({ err, sectionId: section.id }, "Section generation failed, using fallback");
@@ -514,7 +548,7 @@ export async function runSectionRegeneration(
       branding,
     });
 
-    const raw = await callGemini(genai, PRO, prompt, 8192, undefined, 0.8);
+    const raw = await callGemini(genai, PRO, prompt, 16384, undefined, 0.8);
     const newCode = cleanComponentCode(raw, input.sectionId);
 
     // Replace the section in the HTML

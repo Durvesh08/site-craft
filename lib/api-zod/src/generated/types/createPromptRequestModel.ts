@@ -12,4 +12,6 @@ export type CreatePromptRequestModel = typeof CreatePromptRequestModel[keyof typ
 export const CreatePromptRequestModel = {
   'gemini-flash': 'gemini-flash',
   'gemini-pro': 'gemini-pro',
+  'gemini-flash-fast': 'gemini-flash-fast',
+  'gemini-15-flash': 'gemini-1.5-flash',
 } as const;

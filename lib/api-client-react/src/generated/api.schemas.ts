@@ -333,6 +333,8 @@ export type PromptModel = typeof PromptModel[keyof typeof PromptModel];
 export const PromptModel = {
   'gemini-flash': 'gemini-flash',
   'gemini-pro': 'gemini-pro',
+  'gemini-flash-fast': 'gemini-flash-fast',
+  'gemini-15-flash': 'gemini-1.5-flash',
 } as const;
 
 export interface Prompt {
@@ -360,6 +362,8 @@ export type CreatePromptRequestModel = typeof CreatePromptRequestModel[keyof typ
 export const CreatePromptRequestModel = {
   'gemini-flash': 'gemini-flash',
   'gemini-pro': 'gemini-pro',
+  'gemini-flash-fast': 'gemini-flash-fast',
+  'gemini-15-flash': 'gemini-1.5-flash',
 } as const;
 
 export interface CreatePromptRequest {
@@ -378,6 +382,8 @@ export type UpdatePromptRequestModel = typeof UpdatePromptRequestModel[keyof typ
 export const UpdatePromptRequestModel = {
   'gemini-flash': 'gemini-flash',
   'gemini-pro': 'gemini-pro',
+  'gemini-flash-fast': 'gemini-flash-fast',
+  'gemini-15-flash': 'gemini-1.5-flash',
 } as const;
 
 export interface UpdatePromptRequest {
