@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://site-craft-4o6p.onrender.com/api/:path*"
+      "destination": "https://site-craft-1.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
