@@ -373,35 +373,34 @@ import { REACT_RUNTIME_JS } from "./reactRuntime";
 import { logger } from "../lib/logger";
 
 /**
- * Strip import / export statements the AI sometimes adds despite the prompt
- * telling it not to. esbuild transform with format:'iife' rejects any ESM
- * imports, so they must be removed before transpilation.
+ * Remove ESM import/export statements that esbuild rejects in IIFE format.
  *
- * Also removes multi-line import continuations and blank lines left behind.
+ * Handles all patterns the AI commonly generates despite the prompt:
+ *   import X from '…'              → removed (single-line)
+ *   import { a, b } from '…'       → removed (multi-line too)
+ *   import * as X from '…'         → removed
+ *   import '…'                     → removed (side-effect)
+ *   export default function Foo()   → function Foo()   (kept)
+ *   export function Foo()           → function Foo()   (kept)
+ *   export const / let / var / class → const / let / var / class (kept)
+ *   export { … } [from '…']        → removed
+ *   export default <expr>           → removed
  */
 function stripModuleStatements(code: string): string {
-  // Remove full import lines (including those that span multiple lines via backslash or
-  // open-brace continuation). A simple approach: remove every line that starts with
-  // `import ` or `export ` or is a continuation of such (starts with whitespace inside
-  // braces after an import).
-  const lines = code.split("\n");
-  const out: string[] = [];
-  let insideImport = false;
-  for (const line of lines) {
-    const trimmed = line.trimStart();
-    if (/^import\s/.test(trimmed) || /^export\s+default\s+/.test(trimmed) || /^export\s*\{/.test(trimmed)) {
-      insideImport = true;
-    }
-    if (insideImport) {
-      // End of multi-line import when line contains a semicolon or closing }
-      if (/;/.test(line) || (/}/.test(line) && !/^\s*\/\//.test(line))) {
-        insideImport = false;
-      }
-      continue; // skip this line
-    }
-    out.push(line);
-  }
-  return out.join("\n").trim();
+  return code
+    // Multi-line or single-line:  import ... from '...';
+    .replace(/^import\b[\s\S]*?from\s*['"][^'"]+['"]\s*;?\n?/gm, "")
+    // Side-effect only:  import '...'
+    .replace(/^import\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    // export default function/class  →  function/class  (strip keywords, keep body)
+    .replace(/^(\s*)export\s+default\s+(async\s+)?(function|class)\b/gm, "$1$2$3")
+    // export default <expression>  →  drop entirely
+    .replace(/^export\s+default\s+[^\n]+\n?/gm, "")
+    // export function/const/let/var/class  →  strip 'export '
+    .replace(/^(\s*)export\s+(async\s+)?(function|const|let|var|class)\b/gm, "$1$2$3")
+    // export { ... } or export { ... } from '...'
+    .replace(/^export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .trim();
 }
 
 /**
