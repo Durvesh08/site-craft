@@ -43,7 +43,7 @@ const GENERATION_STEPS = [
   { name: "Layout Planning",      agent: "ux-strategist",           model: FLASH      },
   { name: "Copywriting",          agent: "copywriter",              model: FLASH      },
   { name: "SEO Strategy",         agent: "seo-agent",               model: FLASH_LITE },
-  { name: "Component Selection",  agent: "component-planner",       model: PRO        },
+  { name: "Component Selection",  agent: "component-planner",       model: FLASH      },
   { name: "Motion & Interaction", agent: "motion-designer",         model: FLASH      },
   { name: "3D & Visual Effects",  agent: "visual-effects-designer", model: FLASH      },
   { name: "Section Generation",   agent: "section-generator",       model: FLASH      },
@@ -281,10 +281,19 @@ export async function runGeneration(
               });
 
               try {
-                const code = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
-                return { plan: section, componentName, code: cleanComponentCode(code, componentName) } as SectionCode;
+                let rawCode: string;
+                try {
+                  rawCode = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
+                  logger.info({ sectionId: section.id }, "Section generated with PRO model");
+                } catch (proErr) {
+                  logger.warn({ proErr: String(proErr), sectionId: section.id },
+                    "PRO model failed for section — retrying with Flash");
+                  rawCode = await callGemini(genai, FLASH, prompt, 32768, undefined, 0.8);
+                  logger.info({ sectionId: section.id }, "Section generated with Flash fallback");
+                }
+                return { plan: section, componentName, code: cleanComponentCode(rawCode, componentName) } as SectionCode;
               } catch (err) {
-                logger.error({ err, sectionId: section.id }, "Section generation failed, using fallback");
+                logger.error({ err, sectionId: section.id }, "Section generation failed on both PRO and Flash");
                 return {
                   plan: section,
                   componentName,
@@ -363,7 +372,17 @@ export async function runGeneration(
         };
 
         const resolved = await getAgentPromptAndModel(userId, step.agent, step.model, defaultPrompt, promptParams);
-        const output = await callGemini(genai, resolved.model, resolved.prompt, 8192, resolved.systemInstruction, resolved.temperature);
+        let output: string;
+        if (resolved.model === PRO) {
+          try {
+            output = await callGemini(genai, PRO, resolved.prompt, 8192, resolved.systemInstruction, resolved.temperature);
+          } catch (proErr) {
+            logger.warn({ proErr: String(proErr), stepName: step.name }, "PRO failed for planning step — retrying with Flash");
+            output = await callGemini(genai, FLASH, resolved.prompt, 8192, resolved.systemInstruction, resolved.temperature);
+          }
+        } else {
+          output = await callGemini(genai, resolved.model, resolved.prompt, 8192, resolved.systemInstruction, resolved.temperature);
+        }
         agentOutputs[step.agent] = output;
 
         await db.update(aiJobStepsTable)
@@ -543,7 +562,13 @@ export async function runSectionRegeneration(
       branding,
     });
 
-    const raw = await callGemini(genai, PRO, prompt, 16384, undefined, 0.8);
+    let raw: string;
+    try {
+      raw = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
+    } catch (proErr) {
+      logger.warn({ proErr: String(proErr) }, "PRO failed for section regen — retrying with Flash");
+      raw = await callGemini(genai, FLASH, prompt, 32768, undefined, 0.8);
+    }
     const newCode = cleanComponentCode(raw, input.sectionId);
 
     // Transpile + IIFE-wrap before inserting into the assembled HTML.
@@ -792,7 +817,13 @@ export async function runChatEdit(
               previousOutputs: planningContext,
               branding,
             });
-            const raw = await callGemini(genai, PRO, sectionPrompt, 32768, undefined, 0.8);
+            let raw: string;
+            try {
+              raw = await callGemini(genai, PRO, sectionPrompt, 32768, undefined, 0.8);
+            } catch (proErr) {
+              logger.warn({ proErr: String(proErr), section: change.section }, "PRO failed for chat-edit section — retrying with Flash");
+              raw = await callGemini(genai, FLASH, sectionPrompt, 32768, undefined, 0.8);
+            }
             const newCode = cleanComponentCode(raw, change.section);
             const transpiledSection = await transpileAndWrapSection(newCode, change.section);
             refinedHtml = replaceSectionInHtml(refinedHtml, change.section, sectionType, transpiledSection);
