@@ -411,9 +411,50 @@ export function assembleHTML(
   <style>
 ${context.globalCSS}
   </style>
+  <style id="_sc-err-style">
+    #_sc-error{display:none;position:fixed;inset:0;background:#0a0a0f;color:#f1f5f9;
+      font-family:system-ui,sans-serif;flex-direction:column;align-items:center;
+      justify-content:center;padding:2rem;text-align:center;z-index:99999}
+    #_sc-error.show{display:flex}
+    #_sc-error h2{font-size:1.4rem;margin-bottom:.6rem;color:#f87171}
+    #_sc-error p{color:#94a3b8;font-size:.9rem;max-width:520px;line-height:1.6}
+    #_sc-error pre{margin-top:1rem;background:#1e1e2e;border-radius:8px;padding:1rem;
+      font-size:.75rem;color:#a78bfa;max-width:600px;overflow:auto;text-align:left;white-space:pre-wrap}
+  </style>
 </head>
 <body>
   <div id="root"></div>
+  <div id="_sc-error">
+    <h2>⚠ Render Error</h2>
+    <p>Something went wrong while loading this page. This is usually caused by a slow network or a temporary CDN issue. Try reloading — if the problem persists, regenerate the page.</p>
+    <pre id="_sc-error-msg"></pre>
+  </div>
+
+  <script>
+    // Show error overlay on any uncaught JS error (covers CDN failures & JSX crashes)
+    window.addEventListener('error', function(e) {
+      var el = document.getElementById('_sc-error');
+      var msg = document.getElementById('_sc-error-msg');
+      if (el) el.classList.add('show');
+      if (msg) msg.textContent = (e.message || 'Unknown error') + (e.filename ? '\\n' + e.filename + ':' + e.lineno : '');
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      var el = document.getElementById('_sc-error');
+      var msg = document.getElementById('_sc-error-msg');
+      if (el) el.classList.add('show');
+      if (msg) msg.textContent = String(e.reason || 'Unhandled promise rejection');
+    });
+    // Timeout fallback: if root is still empty after 12 s, show the error overlay
+    setTimeout(function() {
+      var root = document.getElementById('root');
+      if (root && root.childElementCount === 0) {
+        var el = document.getElementById('_sc-error');
+        var msg = document.getElementById('_sc-error-msg');
+        if (el) el.classList.add('show');
+        if (msg) msg.textContent = 'Page did not render within 12 seconds. CDN resources may have failed to load.';
+      }
+    }, 12000);
+  </script>
 
   <script type="text/babel" data-type="module" data-presets="react">
     import React, {
@@ -445,7 +486,14 @@ ${appJSX}
       )
     }
 
-    createRoot(document.getElementById('root')).render(<App />)
+    try {
+      createRoot(document.getElementById('root')).render(<App />)
+    } catch (err) {
+      var el = document.getElementById('_sc-error')
+      var msg = document.getElementById('_sc-error-msg')
+      if (el) el.classList.add('show')
+      if (msg) msg.textContent = String(err)
+    }
   <\/script>
 </body>
 </html>`;

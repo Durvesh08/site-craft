@@ -559,27 +559,42 @@ function replaceSectionInHtml(
   newCode: string,
 ): string {
   const escaped = componentName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `(\\/\\/ ── [^\\n]*\\(${escaped}\\)[^\\n]*\\n)([\\s\\S]*?)(?=\\s*\\/\\/ ── |\\s*\\/\\* ═══)`,
+
+  // Lookahead covers: next section comment (// ──), APP SHELL block (/* ═══),
+  // or closing </script> — so the last section (footer) is handled correctly.
+  const sectionPat = new RegExp(
+    `(\\/\\/ ── [^\\n]*\\(${escaped}\\)[^\\n]*\\n)([\\s\\S]*?)` +
+    String.raw`(?=\s*\/\/ ── |\s*\/\* ═{3}|\s*<\/script)`,
   );
 
   const indent = (code: string, n: number) =>
     code.split("\n").map(l => (l.trim() === "" ? "" : " ".repeat(n) + l)).join("\n");
 
-  // Rebuild the comment line with the correct type
-  const commentLine = `    // ── ${sectionType} (${componentName}) ${"─".repeat(Math.max(0, 50 - sectionType.length - componentName.length))}\n`;
+  const commentLine =
+    `    // ── ${sectionType} (${componentName}) ` +
+    `${ "─".repeat(Math.max(0, 50 - sectionType.length - componentName.length)) }\n`;
 
-  if (pattern.test(html)) {
-    return html.replace(pattern, `${commentLine}${indent(newCode.trim(), 4)}\n\n    `);
+  if (sectionPat.test(html)) {
+    return html.replace(sectionPat, `${commentLine}${indent(newCode.trim(), 4)}\n\n    `);
   }
 
-  // Fallback: append before App block
+  // Fallback: capture from the section comment to the APP SHELL block (last-section / footer path)
+  const fallbackPat = new RegExp(
+    `(\\s*\\/\\/ ── [^\\n]*\\(${escaped}\\)[^\\n]*[\\s\\S]*?)(?=\\s*\\/\\* ═{3})`,
+  );
+  if (fallbackPat.test(html)) {
+    logger.warn({ componentName }, "Using fallback section replacement (last-section path)");
+    return html.replace(fallbackPat, `\n\n${commentLine}${indent(newCode.trim(), 4)}\n\n    `);
+  }
+
+  // Last resort: append before App block
   logger.warn({ componentName }, "Section comment not found in HTML — appending before App");
   return html.replace(
-    /(\s*\/\* ═══[^=]*APP SHELL)/,
+    /(\s*\/\* ═{3}[^=]*APP SHELL)/,
     `\n${commentLine}${indent(newCode.trim(), 4)}\n\n    $1`,
   );
 }
+
 
 // ── Chat edit pipeline ────────────────────────────────────────────────────────
 
@@ -864,22 +879,36 @@ Return ONLY valid JSON: { "visualScore": number, "seoScore": number, "accessibil
 /** Strip stray import/export statements the model may have emitted despite instructions */
 function cleanComponentCode(raw: string, componentName: string): string {
   let code = raw
-    .replace(/^```(?:jsx?|tsx?|javascript|typescript)?\s*/gim, "")
-    .replace(/\s*```$/gim, "")
+    // Strip all markdown code fences (``` with any language tag)
+    .replace(/^```(?:jsx?|tsx?|javascript|typescript|html|plaintext)?\s*/gim, "")
+    .replace(/\s*```\s*$/gim, "")
     .trim();
 
-  // Remove any import/export statements — they're declared at the top of the assembled script
-  code = code
-    .replace(/^import\s+.*$/gm, "")
-    .replace(/^export\s+(default\s+)?/gm, "")
-    .trim();
+  // Remove import statements (single-line and multi-line)
+  code = code.replace(/^import\s[\s\S]*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, "");
+  // Remove bare export keywords while keeping the declaration that follows
+  code = code.replace(/^export\s+(default\s+)?/gm, "");
+  code = code.trim();
 
-  // If the model returned only the function body (no function wrapper), wrap it
-  if (!code.startsWith("function") && !code.startsWith("const") && !code.startsWith("//")) {
-    code = `function ${componentName}() {\n  return (\n    <div>${code}</div>\n  )\n}`;
+  // Guard: if nothing useful came back, use the safe fallback
+  if (code.length < 20) {
+    return buildFallbackSection(componentName, "content-section");
   }
 
-  return code;
+  // If the code is already a valid function or arrow-function declaration, keep it as-is
+  const isFunction = /^function\s+\w+/.test(code);
+  const isArrow    = /^const\s+\w+\s*=\s*(\([^)]*\)|[a-z_]\w*)\s*=>/.test(code);
+  const isComment  = code.startsWith("//") || code.startsWith("/*");
+
+  if (isFunction || isArrow || isComment) return code;
+
+  // If it starts with a return statement or JSX, wrap it in a named function
+  if (code.startsWith("return") || code.startsWith("<")) {
+    return `function ${componentName}() {\n  ${code.startsWith("return") ? code : `return (\n    ${code}\n  )`}\n}`;
+  }
+
+  // Last resort: treat the whole block as the function body
+  return `function ${componentName}() {\n  return (\n    <div style={{ padding: '40px 24px' }}>\n      ${code}\n    </div>\n  )\n}`;
 }
 
 function buildFallbackSection(componentName: string, type: string): string {
@@ -895,23 +924,30 @@ function buildFallbackSection(componentName: string, type: string): string {
 // ── HTML extraction (for chat edits) ──────────────────────────────────────────
 
 function extractHtml(output: string, fallbackTitle: string): string {
-  // 1. Direct HTML
-  if (output.includes("<!DOCTYPE")) {
-    const start = output.indexOf("<!DOCTYPE");
-    return output.slice(start).trim();
-  }
-  // 2. Fenced HTML block
-  const fenced = output.match(/```html\s*([\s\S]*?)```/i);
-  if (fenced?.[1]?.includes("<!DOCTYPE")) return fenced[1].trim();
+  // 1. Direct HTML — case-insensitive search for <!DOCTYPE or <html
+  const doctypeIdx = output.search(/<!doctype\s+html/i);
+  if (doctypeIdx !== -1) return output.slice(doctypeIdx).trim();
 
-  // 3. JSON wrapper
+  // 2. <html> tag without doctype (Gemini sometimes skips it)
+  const htmlTagIdx = output.search(/<html[\s>]/i);
+  if (htmlTagIdx !== -1) return output.slice(htmlTagIdx).trim();
+
+  // 3. Fenced HTML block (```html ... ```)
+  const fenced = output.match(/```(?:html)?\s*(<!DOCTYPE[\s\S]*?)```/i);
+  if (fenced?.[1]) return fenced[1].trim();
+
+  // 4. Any fenced block that looks like HTML
+  const anyFenced = output.match(/```[a-z]*\s*(<!DOCTYPE[\s\S]*?)```/i);
+  if (anyFenced?.[1]) return anyFenced[1].trim();
+
+  // 5. JSON wrapper { "html": "..." }
   try {
     const stripped = output.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
     const parsed = JSON.parse(stripped);
-    if (parsed.html?.includes("<!DOCTYPE")) return parsed.html;
+    if (typeof parsed.html === "string" && parsed.html.length > 100) return parsed.html;
   } catch { /* fall through */ }
 
-  logger.warn({ outputPreview: output.slice(0, 200) }, "HTML extraction failed — using placeholder");
+  logger.warn({ outputPreview: output.slice(0, 300) }, "HTML extraction failed — using placeholder");
   return buildPlaceholder(fallbackTitle);
 }
 
