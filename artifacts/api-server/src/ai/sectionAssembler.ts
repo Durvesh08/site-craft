@@ -386,7 +386,7 @@ import { logger } from "../lib/logger";
  *   export { … } [from '…']        → removed
  *   export default <expr>           → removed
  */
-function stripModuleStatements(code: string): string {
+export function stripModuleStatements(code: string): string {
   return code
     // Multi-line or single-line:  import ... from '...';
     .replace(/^import\b[\s\S]*?from\s*['"][^'"]+['"]\s*;?\n?/gm, "")
