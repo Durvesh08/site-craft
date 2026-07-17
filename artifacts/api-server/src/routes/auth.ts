@@ -35,10 +35,14 @@ function getOrigin(req: Request): string {
 }
 
 function setSessionCookie(res: Response, sid: string) {
+  // SameSite=None + Secure=true is required so the session cookie is sent
+  // inside cross-site iframes (e.g. Replit's preview pane, embedded widgets).
+  // SameSite=Lax silently blocks cookies when the top-level context differs
+  // from the cookie's origin, which breaks login in Replit's preview frame.
   res.cookie(SESSION_COOKIE, sid, {
     httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
+    secure: true,           // required by all browsers when SameSite=None
+    sameSite: 'none',       // allows cookie in cross-site iframe contexts
     path: '/',
     maxAge: SESSION_TTL,
   });
@@ -48,7 +52,7 @@ function setOidcCookie(res: Response, name: string, value: string) {
   res.cookie(name, value, {
     httpOnly: true,
     secure: true,
-    sameSite: 'lax',
+    sameSite: 'none',
     path: '/',
     maxAge: OIDC_COOKIE_TTL,
   });

@@ -65,6 +65,7 @@ export function useAuth(): AuthState {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
     if (!res.ok) {
@@ -80,6 +81,7 @@ export function useAuth(): AuthState {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password, firstName, lastName }),
     });
     if (!res.ok) {
