@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { index, jsonb, pgTable, timestamp, varchar } from 'drizzle-orm/pg-core';
+import crypto from 'crypto';
 
 // (IMPORTANT) This table is mandatory for Replit Auth, don't drop it.
 export const sessionsTable = pgTable(
@@ -16,7 +17,7 @@ export const sessionsTable = pgTable(
 export const usersTable = pgTable('users', {
   id: varchar('id')
     .primaryKey()
-    .default(sql`gen_random_uuid()`),
+    .$defaultFn(() => crypto.randomUUID()),
   email: varchar('email').unique(),
   passwordHash: varchar('password_hash'),
   firstName: varchar('first_name'),
