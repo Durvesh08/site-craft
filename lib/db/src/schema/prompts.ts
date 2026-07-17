@@ -4,8 +4,12 @@ import { z } from "zod";
 import { usersTable } from "./auth";
 
 export const promptModelEnum = pgEnum("prompt_model", [
-  "gemini-flash",
-  "gemini-pro",
+  // Legacy values — kept for backward compat with existing rows
+  "gemini-flash",      // → gemini-2.5-flash (thinking disabled)
+  "gemini-pro",        // → gemini-2.5-pro
+  // New explicit options
+  "gemini-flash-fast", // → gemini-2.0-flash — zero thinking overhead, cheapest & fastest
+  "gemini-1.5-flash",  // → gemini-1.5-flash — legacy but still available, no thinking
 ]);
 
 export const promptTemplatesTable = pgTable("prompt_templates", {

@@ -744,7 +744,7 @@ export const ListPromptsResponse = zod.object({
   "description": zod.string(),
   "systemPrompt": zod.string(),
   "userPromptTemplate": zod.string(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro']),
+  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']),
   "temperature": zod.number(),
   "version": zod.string(),
   "isActive": zod.boolean(),
@@ -763,7 +763,7 @@ export const CreatePromptBody = zod.object({
   "description": zod.string().optional(),
   "systemPrompt": zod.string(),
   "userPromptTemplate": zod.string(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro']),
+  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']),
   "temperature": zod.number().optional()
 })
 
@@ -774,7 +774,7 @@ export const CreatePromptResponse = zod.object({
   "description": zod.string(),
   "systemPrompt": zod.string(),
   "userPromptTemplate": zod.string(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro']),
+  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']),
   "temperature": zod.number(),
   "version": zod.string(),
   "isActive": zod.boolean(),
@@ -794,7 +794,7 @@ export const UpdatePromptBody = zod.object({
   "name": zod.string().optional(),
   "systemPrompt": zod.string().optional(),
   "userPromptTemplate": zod.string().optional(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro']).optional(),
+  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']).optional(),
   "temperature": zod.number().optional(),
   "changelog": zod.string().optional()
 })
@@ -806,7 +806,7 @@ export const UpdatePromptResponse = zod.object({
   "description": zod.string(),
   "systemPrompt": zod.string(),
   "userPromptTemplate": zod.string(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro']),
+  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']),
   "temperature": zod.number(),
   "version": zod.string(),
   "isActive": zod.boolean(),
