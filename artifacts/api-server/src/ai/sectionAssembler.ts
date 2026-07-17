@@ -158,7 +158,7 @@ ${context.previousOutputs}
 4. Reference brand colors via var(--primary) etc. in style objects
 5. Use Framer Motion for EVERY entrance animation:
    - whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 30 }}
-     viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.6, ease: "easeOut" }}
+     viewport={{ once: true, margin: "0px" }} transition={{ duration: 0.6, ease: "easeOut" }}
    - Stagger children with { delay: index * 0.1 }
 6. Mobile-first: detect viewport with useState + useEffect(window.innerWidth) OR use a
    <style> tag inside JSX with @media rules for layout-only concerns
@@ -201,6 +201,9 @@ function getSectionTypeRules(type: string): string {
 
   if (type.includes("hero")) return `
 - Full viewport height (minHeight: "100vh"), centered content
+- CRITICAL: badge, headline, subheadline and CTA buttons MUST use animate not whileInView:
+  motion.h1 animate={{ opacity:1, y:0 }} initial={{ opacity:0, y:30 }} transition={{ duration:0.7 }}
+  (whileInView can miss on first load in small viewports — hero content must always be visible)
 - Badge pill above headline (border-radius: 999px, border, translucent bg)
 - Headline: large (clamp(2.5rem, 6vw, 5rem)), bold — apply gradient-text if specified in context
 - Subheadline below, muted color

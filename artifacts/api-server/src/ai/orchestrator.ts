@@ -792,7 +792,7 @@ export async function runChatEdit(
               previousOutputs: planningContext,
               branding,
             });
-            const raw = await callGemini(genai, PRO, sectionPrompt, 16384, undefined, 0.8);
+            const raw = await callGemini(genai, PRO, sectionPrompt, 32768, undefined, 0.8);
             const newCode = cleanComponentCode(raw, change.section);
             const transpiledSection = await transpileAndWrapSection(newCode, change.section);
             refinedHtml = replaceSectionInHtml(refinedHtml, change.section, sectionType, transpiledSection);
@@ -1180,8 +1180,11 @@ function cleanComponentCode(raw: string, componentName: string): string {
 function buildFallbackSection(componentName: string, type: string): string {
   return `function ${componentName}() {
   return (
-    <section style={{ padding: '80px 24px', textAlign: 'center', background: 'var(--card-bg)', borderBottom: '1px solid var(--border)' }}>
-      <p style={{ color: 'var(--muted)', fontSize: '14px' }}>${type} section</p>
+    <section style={{ padding: '80px 24px', textAlign: 'center', background: 'var(--background)', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+      <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '6px', padding: '6px 14px', display: 'inline-block' }}>
+        <span style={{ color: '#f87171', fontSize: '12px', fontWeight: 600, letterSpacing: '0.05em' }}>⚠ GENERATION FAILED</span>
+      </div>
+      <p style={{ color: 'var(--foreground)', fontSize: '14px', opacity: 0.7 }}>${type}</p>
     </section>
   )
 }`;
