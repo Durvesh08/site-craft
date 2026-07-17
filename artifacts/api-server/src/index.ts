@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { recoverInterruptedJobs } from "./lib/job-recovery";
+import { autoMigrate } from "./lib/auto-migrate";
 
 const rawPort = process.env["PORT"];
 
@@ -16,14 +17,22 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, async (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
+// Run migrations before starting the server
+autoMigrate()
+  .then(() => {
+    app.listen(port, async (err) => {
+      if (err) {
+        logger.error({ err }, "Error listening on port");
+        process.exit(1);
+      }
 
-  logger.info({ port }, "Server listening");
-  
-  // Sweep and recover any hung jobs from previous run
-  await recoverInterruptedJobs();
-});
+      logger.info({ port }, "Server listening");
+
+      // Sweep and recover any hung jobs from previous run
+      await recoverInterruptedJobs();
+    });
+  })
+  .catch((err) => {
+    logger.error({ err }, "Auto-migration failed — cannot start server");
+    process.exit(1);
+  });
