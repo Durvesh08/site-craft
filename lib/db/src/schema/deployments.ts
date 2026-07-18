@@ -18,6 +18,12 @@ export const deploymentEnvironmentEnum = pgEnum("deployment_environment", [
   "staging",
 ]);
 
+export const deploymentProtocolEnum = pgEnum("deployment_protocol", [
+  "ftp",
+  "ftps",
+  "sftp",
+]);
+
 export const deploymentsTable = pgTable("deployments", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   projectId: text("project_id")
@@ -28,11 +34,15 @@ export const deploymentsTable = pgTable("deployments", {
     .references(() => usersTable.id, { onDelete: "cascade" }),
   status: deploymentStatusEnum("status").notNull().default("pending"),
   environment: deploymentEnvironmentEnum("environment").notNull().default("production"),
+  protocol: deploymentProtocolEnum("protocol").notNull().default("ftp"),
   liveUrl: text("live_url"),
   screenshotUrl: text("screenshot_url"),
   ftpHost: text("ftp_host"),
+  ftpPort: integer("ftp_port").notNull().default(21),
   lighthouseScore: real("lighthouse_score"),
   filesUploaded: integer("files_uploaded"),
+  uploadProgress: integer("upload_progress").notNull().default(0),
+  deploymentLog: text("deployment_log"),
   error: text("error"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),

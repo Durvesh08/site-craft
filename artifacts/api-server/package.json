@@ -21,6 +21,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",
+    "esbuild": "0.27.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "google-auth-library": "^10.9.0",
@@ -28,8 +29,8 @@
     "openid-client": "^6.8.4",
     "pino": "^9.14.0",
     "pino-http": "^10.5.0",
-    "zod": "catalog:",
-    "esbuild": "0.27.3"
+    "ssh2-sftp-client": "^12.1.1",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/archiver": "^8.0.0",

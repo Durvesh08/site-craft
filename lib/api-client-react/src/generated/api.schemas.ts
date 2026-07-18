@@ -226,16 +226,29 @@ export const DeploymentEnvironment = {
   staging: 'staging',
 } as const;
 
+export type DeploymentProtocol = typeof DeploymentProtocol[keyof typeof DeploymentProtocol];
+
+
+export const DeploymentProtocol = {
+  ftp: 'ftp',
+  ftps: 'ftps',
+  sftp: 'sftp',
+} as const;
+
 export interface Deployment {
   id: string;
   projectId: string;
   status: DeploymentStatus;
   environment: DeploymentEnvironment;
+  protocol?: DeploymentProtocol;
   liveUrl?: string | null;
   screenshotUrl?: string | null;
   ftpHost?: string | null;
+  ftpPort?: number | null;
   lighthouseScore?: number | null;
   filesUploaded?: number | null;
+  uploadProgress?: number | null;
+  deploymentLog?: string | null;
   error?: string | null;
   createdAt: string;
   completedAt?: string | null;
@@ -253,12 +266,29 @@ export const DeployRequestEnvironment = {
   staging: 'staging',
 } as const;
 
+export type DeployRequestProtocol = typeof DeployRequestProtocol[keyof typeof DeployRequestProtocol];
+
+
+export const DeployRequestProtocol = {
+  ftp: 'ftp',
+  ftps: 'ftps',
+  sftp: 'sftp',
+} as const;
+
 export interface DeployRequest {
   environment?: DeployRequestEnvironment;
+  protocol?: DeployRequestProtocol;
   ftpHost: string;
+  ftpPort?: number;
   ftpUsername: string;
   ftpPassword: string;
   ftpPath?: string;
+  siteUrl?: string;
+  overwriteExisting?: boolean;
+}
+
+export interface RetryDeploymentRequest {
+  overwriteExisting?: boolean;
 }
 
 export interface Domain {

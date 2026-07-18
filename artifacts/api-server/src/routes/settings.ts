@@ -163,20 +163,20 @@ router.put("/settings/:category", async (req: Request, res: Response) => {
   }
 });
 
-// POST /settings/deployment/test - test FTP connection
+// POST /settings/deployment/test - test FTP/FTPS/SFTP connection
 router.post("/settings/deployment/test", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
-    const { ftp_host, ftp_port, ftp_username, ftp_password, ftp_secure } = req.body;
+    const { ftp_host, ftp_port, ftp_username, ftp_password, ftp_secure, ftp_protocol } = req.body;
 
     if (!ftp_host || !ftp_username || !ftp_password) {
-      res.status(400).json({ error: "BadRequest", message: "Missing required FTP fields" });
+      res.status(400).json({ error: "BadRequest", message: "Missing required fields: host, username, password" });
       return;
     }
 
+    // Resolve password (unmask if user is sending the masked sentinel)
     let password = ftp_password;
     if (ftp_password === "••••••••") {
-      // Load saved password from database
       const [saved] = await db
         .select()
         .from(settingsTable)
@@ -190,36 +190,56 @@ router.post("/settings/deployment/test", async (req: Request, res: Response) => 
         .limit(1);
 
       if (!saved) {
-        res.status(400).json({ error: "BadRequest", message: "No saved FTP password found" });
+        res.status(400).json({ error: "BadRequest", message: "No saved password found" });
         return;
       }
       password = decrypt(saved.value);
     }
 
-    const client = new ftp.Client();
-    client.ftp.verbose = false;
+    // Determine protocol
+    const protocol: "ftp" | "ftps" | "sftp" =
+      ftp_protocol === "sftp" ? "sftp"
+      : ftp_protocol === "ftps" || ftp_secure === "true" || ftp_secure === true ? "ftps"
+      : "ftp";
 
-    try {
-      await client.access({
-        host: ftp_host,
-        port: ftp_port ? Number(ftp_port) : 21,
-        user: ftp_username,
-        password: password,
-        secure: ftp_secure === "true" || ftp_secure === true || false,
-      });
+    const port = ftp_port ? Number(ftp_port) : (protocol === "sftp" ? 22 : 21);
 
-      // Quick test list
-      await client.list("/");
-      client.close();
-      
-      res.json({ success: true });
-    } catch (ftpErr: any) {
-      client.close();
-      res.json({ success: false, error: ftpErr.message || "Connection failed" });
+    if (protocol === "sftp") {
+      // SFTP test via ssh2-sftp-client
+      const SftpClient = (await import("ssh2-sftp-client")).default;
+      const sftp = new SftpClient();
+      try {
+        await sftp.connect({ host: ftp_host, port, username: ftp_username, password, readyTimeout: 15000 });
+        await sftp.list("/");
+        await sftp.end();
+        res.json({ success: true, protocol: "sftp" });
+      } catch (err: any) {
+        try { await sftp.end(); } catch {}
+        res.json({ success: false, protocol: "sftp", error: err.message || "SFTP connection failed" });
+      }
+    } else {
+      // FTP / FTPS test via basic-ftp
+      const client = new ftp.Client();
+      client.ftp.verbose = false;
+      try {
+        await client.access({
+          host: ftp_host,
+          port,
+          user: ftp_username,
+          password,
+          secure: protocol === "ftps",
+        });
+        await client.list("/");
+        client.close();
+        res.json({ success: true, protocol });
+      } catch (ftpErr: any) {
+        client.close();
+        res.json({ success: false, protocol, error: ftpErr.message || "Connection failed" });
+      }
     }
   } catch (err) {
-    req.log.error(err, "Failed to test FTP connection");
-    res.status(500).json({ error: "InternalError", message: "Failed to test FTP connection" });
+    req.log.error(err, "Failed to test connection");
+    res.status(500).json({ error: "InternalError", message: "Failed to test connection" });
   }
 });
 

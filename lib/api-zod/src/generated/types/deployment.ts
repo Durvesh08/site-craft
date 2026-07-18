@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DeploymentEnvironment } from './deploymentEnvironment';
+import type { DeploymentProtocol } from './deploymentProtocol';
 import type { DeploymentStatus } from './deploymentStatus';
 
 export interface Deployment {
@@ -13,11 +14,15 @@ export interface Deployment {
   projectId: string;
   status: DeploymentStatus;
   environment: DeploymentEnvironment;
+  protocol?: DeploymentProtocol;
   liveUrl?: string | null;
   screenshotUrl?: string | null;
   ftpHost?: string | null;
+  ftpPort?: number | null;
   lighthouseScore?: number | null;
   filesUploaded?: number | null;
+  uploadProgress?: number | null;
+  deploymentLog?: string | null;
   error?: string | null;
   createdAt: Date;
   completedAt?: Date | null;

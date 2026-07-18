@@ -537,13 +537,20 @@ export const DeployProjectParams = zod.object({
 })
 
 export const deployProjectBodyEnvironmentDefault = `production`;
+export const deployProjectBodyProtocolDefault = `ftp`;
+export const deployProjectBodyFtpPortDefault = 21;
+export const deployProjectBodyOverwriteExistingDefault = true;
 
 export const DeployProjectBody = zod.object({
   "environment": zod.enum(['production', 'staging']).default(deployProjectBodyEnvironmentDefault),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).default(deployProjectBodyProtocolDefault),
   "ftpHost": zod.string(),
+  "ftpPort": zod.number().default(deployProjectBodyFtpPortDefault),
   "ftpUsername": zod.string(),
   "ftpPassword": zod.string(),
-  "ftpPath": zod.string().optional()
+  "ftpPath": zod.string().optional(),
+  "siteUrl": zod.string().optional(),
+  "overwriteExisting": zod.boolean().default(deployProjectBodyOverwriteExistingDefault)
 })
 
 export const DeployProjectResponse = zod.object({
@@ -551,11 +558,15 @@ export const DeployProjectResponse = zod.object({
   "projectId": zod.string(),
   "status": zod.enum(['pending', 'uploading', 'verifying', 'live', 'failed', 'rolled_back']),
   "environment": zod.enum(['production', 'staging']),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).optional(),
   "liveUrl": zod.string().nullish(),
   "screenshotUrl": zod.string().nullish(),
   "ftpHost": zod.string().nullish(),
+  "ftpPort": zod.number().nullish(),
   "lighthouseScore": zod.number().nullish(),
   "filesUploaded": zod.number().nullish(),
+  "uploadProgress": zod.number().nullish(),
+  "deploymentLog": zod.string().nullish(),
   "error": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "completedAt": zod.coerce.date().nullish()
@@ -575,11 +586,15 @@ export const ListProjectDeploymentsResponse = zod.object({
   "projectId": zod.string(),
   "status": zod.enum(['pending', 'uploading', 'verifying', 'live', 'failed', 'rolled_back']),
   "environment": zod.enum(['production', 'staging']),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).optional(),
   "liveUrl": zod.string().nullish(),
   "screenshotUrl": zod.string().nullish(),
   "ftpHost": zod.string().nullish(),
+  "ftpPort": zod.number().nullish(),
   "lighthouseScore": zod.number().nullish(),
   "filesUploaded": zod.number().nullish(),
+  "uploadProgress": zod.number().nullish(),
+  "deploymentLog": zod.string().nullish(),
   "error": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "completedAt": zod.coerce.date().nullish()
@@ -599,11 +614,15 @@ export const GetDeploymentResponse = zod.object({
   "projectId": zod.string(),
   "status": zod.enum(['pending', 'uploading', 'verifying', 'live', 'failed', 'rolled_back']),
   "environment": zod.enum(['production', 'staging']),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).optional(),
   "liveUrl": zod.string().nullish(),
   "screenshotUrl": zod.string().nullish(),
   "ftpHost": zod.string().nullish(),
+  "ftpPort": zod.number().nullish(),
   "lighthouseScore": zod.number().nullish(),
   "filesUploaded": zod.number().nullish(),
+  "uploadProgress": zod.number().nullish(),
+  "deploymentLog": zod.string().nullish(),
   "error": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "completedAt": zod.coerce.date().nullish()
@@ -622,11 +641,48 @@ export const RollbackDeploymentResponse = zod.object({
   "projectId": zod.string(),
   "status": zod.enum(['pending', 'uploading', 'verifying', 'live', 'failed', 'rolled_back']),
   "environment": zod.enum(['production', 'staging']),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).optional(),
   "liveUrl": zod.string().nullish(),
   "screenshotUrl": zod.string().nullish(),
   "ftpHost": zod.string().nullish(),
+  "ftpPort": zod.number().nullish(),
   "lighthouseScore": zod.number().nullish(),
   "filesUploaded": zod.number().nullish(),
+  "uploadProgress": zod.number().nullish(),
+  "deploymentLog": zod.string().nullish(),
+  "error": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Retry a failed deployment using saved credentials
+ */
+export const RetryDeploymentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const retryDeploymentBodyOverwriteExistingDefault = true;
+
+export const RetryDeploymentBody = zod.object({
+  "overwriteExisting": zod.boolean().default(retryDeploymentBodyOverwriteExistingDefault)
+})
+
+export const RetryDeploymentResponse = zod.object({
+  "id": zod.string(),
+  "projectId": zod.string(),
+  "status": zod.enum(['pending', 'uploading', 'verifying', 'live', 'failed', 'rolled_back']),
+  "environment": zod.enum(['production', 'staging']),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).optional(),
+  "liveUrl": zod.string().nullish(),
+  "screenshotUrl": zod.string().nullish(),
+  "ftpHost": zod.string().nullish(),
+  "ftpPort": zod.number().nullish(),
+  "lighthouseScore": zod.number().nullish(),
+  "filesUploaded": zod.number().nullish(),
+  "uploadProgress": zod.number().nullish(),
+  "deploymentLog": zod.string().nullish(),
   "error": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "completedAt": zod.coerce.date().nullish()

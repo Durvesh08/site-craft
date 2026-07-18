@@ -2,9 +2,10 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { deploymentsTable, domainsTable, projectsTable, settingsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
-import { Readable } from "stream";
 import * as ftp from "basic-ftp";
+import SftpClient from "ssh2-sftp-client";
 import { decrypt } from "../lib/encryption";
+import { logger } from "../lib/logger";
 import {
   DeployProjectParams,
   DeployProjectBody,
@@ -31,11 +32,15 @@ function toDeploymentResponse(d: typeof deploymentsTable.$inferSelect) {
     projectId: d.projectId,
     status: d.status,
     environment: d.environment,
+    protocol: d.protocol ?? "ftp",
     liveUrl: d.liveUrl ?? null,
     screenshotUrl: d.screenshotUrl ?? null,
     ftpHost: d.ftpHost ?? null,
+    ftpPort: d.ftpPort ?? 21,
     lighthouseScore: d.lighthouseScore ? Number(d.lighthouseScore) : null,
     filesUploaded: d.filesUploaded ?? null,
+    uploadProgress: d.uploadProgress ?? 0,
+    deploymentLog: d.deploymentLog ?? null,
     error: d.error ?? null,
     createdAt: d.createdAt.toISOString(),
     completedAt: d.completedAt?.toISOString() ?? null,
@@ -54,7 +59,270 @@ function toDomainResponse(d: typeof domainsTable.$inferSelect) {
   };
 }
 
-// POST /projects/:id/deploy
+// ── Credential resolver ────────────────────────────────────────────────────────
+
+interface DeployCredentials {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  remotePath: string;
+  protocol: "ftp" | "ftps" | "sftp";
+}
+
+async function resolveCredentials(
+  userId: string,
+  overrides: {
+    host?: string; port?: number; username?: string;
+    password?: string; path?: string; protocol?: string;
+  },
+): Promise<DeployCredentials | null> {
+  // Load saved settings
+  const rows = await db
+    .select()
+    .from(settingsTable)
+    .where(and(eq(settingsTable.userId, userId), eq(settingsTable.category, "deployment")));
+
+  const saved: Record<string, string> = {};
+  for (const r of rows) saved[r.key] = r.value;
+
+  const host     = overrides.host     || saved["ftp_host"]     || "";
+  const username = overrides.username || saved["ftp_username"] || "";
+  const path     = overrides.path     || saved["ftp_path"]     || "/";
+  const port     = overrides.port     || (saved["ftp_port"] ? Number(saved["ftp_port"]) : 21);
+
+  // Password: if override provided and not masked, use it; else decrypt saved
+  let password = overrides.password || "";
+  if (!password || password === "••••••••") {
+    const savedPwd = saved["ftp_password"];
+    if (savedPwd) {
+      try { password = decrypt(savedPwd); } catch { password = ""; }
+    }
+  }
+
+  if (!host || !username || !password) return null;
+
+  // Protocol: from override, or infer from settings
+  let protocol: "ftp" | "ftps" | "sftp" = "ftp";
+  const proto = overrides.protocol || saved["ftp_protocol"] || "";
+  if (proto === "ftps") protocol = "ftps";
+  else if (proto === "sftp") protocol = "sftp";
+  else if (saved["ftp_secure"] === "true") protocol = "ftps";
+
+  return { host, port, username, password, remotePath: path, protocol };
+}
+
+// ── Core upload functions ──────────────────────────────────────────────────────
+
+async function appendLog(deploymentId: string, line: string) {
+  const ts = new Date().toISOString().slice(11, 19); // HH:MM:SS
+  const entry = `[${ts}] ${line}\n`;
+  // Append to existing log (read-modify-write — low frequency, acceptable)
+  const [current] = await db
+    .select({ log: deploymentsTable.deploymentLog })
+    .from(deploymentsTable)
+    .where(eq(deploymentsTable.id, deploymentId));
+  const existing = current?.log ?? "";
+  await db
+    .update(deploymentsTable)
+    .set({ deploymentLog: existing + entry })
+    .where(eq(deploymentsTable.id, deploymentId));
+}
+
+async function setProgress(deploymentId: string, progress: number) {
+  await db
+    .update(deploymentsTable)
+    .set({ uploadProgress: Math.min(100, Math.max(0, progress)) })
+    .where(eq(deploymentsTable.id, deploymentId));
+}
+
+interface UploadOptions {
+  html: string;
+  creds: DeployCredentials;
+  deploymentId: string;
+  overwriteExisting: boolean;
+  siteUrl?: string;
+}
+
+async function uploadViaFtp(opts: UploadOptions): Promise<string> {
+  const { html, creds, deploymentId, overwriteExisting } = opts;
+  const client = new ftp.Client();
+  client.ftp.verbose = false;
+
+  await appendLog(deploymentId, `Connecting via ${creds.protocol.toUpperCase()} to ${creds.host}:${creds.port}…`);
+  await setProgress(deploymentId, 10);
+
+  await client.access({
+    host: creds.host,
+    port: creds.port,
+    user: creds.username,
+    password: creds.password,
+    secure: creds.protocol === "ftps",
+  });
+
+  await appendLog(deploymentId, "Connected. Navigating to remote path…");
+  await setProgress(deploymentId, 20);
+
+  if (creds.remotePath) await client.ensureDir(creds.remotePath);
+
+  const files = [
+    { name: "index.html", content: html },
+    { name: "robots.txt", content: "User-agent: *\nAllow: /\n" },
+    {
+      name: ".htaccess",
+      content: "Options -Indexes\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n</IfModule>\n",
+    },
+    {
+      name: "sitemap.xml",
+      content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${opts.siteUrl || `https://${creds.host}`}</loc><priority>1.0</priority></url>\n</urlset>\n`,
+    },
+  ];
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const remoteName = `${creds.remotePath.replace(/\/$/, "")}/${file.name}`;
+
+    // No-overwrite check
+    if (!overwriteExisting) {
+      try {
+        const listing = await client.list(creds.remotePath);
+        if (listing.some(f => f.name === file.name)) {
+          await appendLog(deploymentId, `Skipping ${file.name} (already exists, overwrite=false)`);
+          await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
+          continue;
+        }
+      } catch { /* ignore list errors — proceed with upload */ }
+    }
+
+    await appendLog(deploymentId, `Uploading ${file.name}…`);
+    const buf = Buffer.from(file.content, "utf-8");
+    const { Readable } = await import("stream");
+    const stream = Readable.from(buf);
+    await client.uploadFrom(stream, remoteName);
+    await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
+    await appendLog(deploymentId, `✓ ${file.name} uploaded (${buf.length} bytes)`);
+  }
+
+  client.close();
+  await appendLog(deploymentId, "All files uploaded successfully.");
+  await setProgress(deploymentId, 100);
+
+  return opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
+}
+
+async function uploadViaSftp(opts: UploadOptions): Promise<string> {
+  const { html, creds, deploymentId, overwriteExisting } = opts;
+  const sftp = new SftpClient();
+
+  await appendLog(deploymentId, `Connecting via SFTP to ${creds.host}:${creds.port}…`);
+  await setProgress(deploymentId, 10);
+
+  await sftp.connect({
+    host: creds.host,
+    port: creds.port,
+    username: creds.username,
+    password: creds.password,
+    readyTimeout: 20000,
+  });
+
+  await appendLog(deploymentId, "SFTP connected. Ensuring remote directory…");
+  await setProgress(deploymentId, 20);
+
+  // Ensure remote path exists
+  try { await sftp.mkdir(creds.remotePath, true); } catch { /* already exists */ }
+
+  const files = [
+    { name: "index.html", content: html },
+    { name: "robots.txt", content: "User-agent: *\nAllow: /\n" },
+    {
+      name: ".htaccess",
+      content: "Options -Indexes\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n</IfModule>\n",
+    },
+    {
+      name: "sitemap.xml",
+      content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${opts.siteUrl || `https://${creds.host}`}</loc><priority>1.0</priority></url>\n</urlset>\n`,
+    },
+  ];
+
+  const base = creds.remotePath.endsWith("/") ? creds.remotePath : creds.remotePath + "/";
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const remotePath = `${base}${file.name}`;
+
+    if (!overwriteExisting) {
+      const exists = await sftp.exists(remotePath);
+      if (exists) {
+        await appendLog(deploymentId, `Skipping ${file.name} (already exists, overwrite=false)`);
+        await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
+        continue;
+      }
+    }
+
+    await appendLog(deploymentId, `Uploading ${file.name}…`);
+    const buf = Buffer.from(file.content, "utf-8");
+    await sftp.put(buf, remotePath);
+    await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
+    await appendLog(deploymentId, `✓ ${file.name} uploaded (${buf.length} bytes)`);
+  }
+
+  await sftp.end();
+  await appendLog(deploymentId, "All files uploaded successfully via SFTP.");
+  await setProgress(deploymentId, 100);
+
+  return opts.siteUrl || `https://${creds.host}`;
+}
+
+async function runUpload(
+  deploymentId: string,
+  projectId: string,
+  userId: string,
+  creds: DeployCredentials,
+  html: string,
+  siteUrl: string | undefined,
+  overwriteExisting: boolean,
+): Promise<void> {
+  try {
+    await db.update(deploymentsTable)
+      .set({ status: "uploading", uploadProgress: 5 })
+      .where(eq(deploymentsTable.id, deploymentId));
+
+    await appendLog(deploymentId, `Starting deployment via ${creds.protocol.toUpperCase()}…`);
+
+    const liveUrl = creds.protocol === "sftp"
+      ? await uploadViaSftp({ html, creds, deploymentId, overwriteExisting, siteUrl })
+      : await uploadViaFtp({ html, creds, deploymentId, overwriteExisting, siteUrl });
+
+    await db.update(deploymentsTable)
+      .set({
+        status: "live",
+        uploadProgress: 100,
+        liveUrl,
+        filesUploaded: 4,
+        completedAt: new Date(),
+      })
+      .where(eq(deploymentsTable.id, deploymentId));
+
+    await db.update(projectsTable)
+      .set({ status: "deployed", liveUrl, updatedAt: new Date() })
+      .where(eq(projectsTable.id, projectId));
+
+    await appendLog(deploymentId, `🚀 Deployment live at ${liveUrl}`);
+  } catch (err: any) {
+    logger.error({ err, deploymentId }, "Deployment upload failed");
+    await appendLog(deploymentId, `❌ Error: ${err?.message || "Upload failed"}`);
+    await db.update(deploymentsTable)
+      .set({
+        status: "failed",
+        error: err?.message || "Upload failed",
+        completedAt: new Date(),
+      })
+      .where(eq(deploymentsTable.id, deploymentId));
+  }
+}
+
+// ── POST /projects/:id/deploy ──────────────────────────────────────────────────
+
 router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
@@ -75,45 +343,30 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
       return;
     }
 
-    let host = body.data.ftpHost;
-    let username = body.data.ftpUsername;
-    let password = body.data.ftpPassword;
-    let ftpPath = body.data.ftpPath || "/";
-    let port = 21;
-    let secure = false;
-
-    // If request has missing FTP fields, load from user settings
-    if (!host || !username || !password) {
-      const rows = await db
-        .select()
-        .from(settingsTable)
-        .where(
-          and(
-            eq(settingsTable.userId, req.user!.id),
-            eq(settingsTable.category, "deployment")
-          )
-        );
-
-      const dbSettings: Record<string, string> = {};
-      for (const r of rows) {
-        dbSettings[r.key] = r.value;
-      }
-
-      host = host || dbSettings["ftp_host"];
-      username = username || dbSettings["ftp_username"];
-      const savedPwd = dbSettings["ftp_password"];
-      if (savedPwd) {
-        password = password || decrypt(savedPwd);
-      }
-      ftpPath = ftpPath || dbSettings["ftp_path"] || "/";
-      port = dbSettings["ftp_port"] ? Number(dbSettings["ftp_port"]) : 21;
-      secure = dbSettings["ftp_secure"] === "true" || false;
-    }
-
-    if (!host || !username || !password) {
-      res.status(400).json({ error: "BadRequest", message: "FTP deployment credentials are not configured. Go to Settings." });
+    if (!project.generatedHtml) {
+      res.status(400).json({ error: "BadRequest", message: "Project has no generated HTML. Generate the site first." });
       return;
     }
+
+    const creds = await resolveCredentials(req.user!.id, {
+      host: body.data.ftpHost,
+      port: (body.data as any).ftpPort,
+      username: body.data.ftpUsername,
+      password: body.data.ftpPassword,
+      path: body.data.ftpPath,
+      protocol: (body.data as any).protocol,
+    });
+
+    if (!creds) {
+      res.status(400).json({
+        error: "BadRequest",
+        message: "FTP credentials are not configured. Go to Settings → FTP Server Protocols.",
+      });
+      return;
+    }
+
+    const overwriteExisting = (body.data as any).overwriteExisting !== false;
+    const siteUrl = (body.data as any).siteUrl || undefined;
 
     const [deployment] = await db
       .insert(deploymentsTable)
@@ -121,90 +374,116 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
         projectId: params.data.id,
         userId: req.user!.id,
         status: "pending",
-        environment: body.data.environment ?? "production",
-        ftpHost: host,
+        protocol: creds.protocol,
+        environment: (body.data.environment as any) || "production",
+        ftpHost: creds.host,
+        ftpPort: creds.port,
+        uploadProgress: 0,
+        deploymentLog: "",
       })
       .returning();
 
-    // Execute actual FTP upload asynchronously (fire and forget)
-    (async () => {
-      try {
-        await db.update(deploymentsTable)
-          .set({ status: "uploading" })
-          .where(eq(deploymentsTable.id, deployment.id));
-
-        const client = new ftp.Client();
-        client.ftp.verbose = false;
-
-        await client.access({
-          host,
-          port,
-          user: username,
-          password,
-          secure,
-        });
-
-        if (ftpPath) {
-          await client.ensureDir(ftpPath);
-        }
-
-        const stream = Readable.from([project.generatedHtml || ""]);
-        await client.uploadFrom(stream, "index.html");
-        client.close();
-
-        // Derive the public site URL from the deploy body (preferred) or
-        // fall back to guessing from the FTP hostname (strip leading ftp. prefix).
-        const rawSiteUrl = (body.data as any).siteUrl as string | undefined;
-        const liveUrl = rawSiteUrl
-          ? rawSiteUrl.replace(/\/$/, "")
-          : `https://${host.replace(/^ftp\./i, "")}`;
-
-        await db.update(deploymentsTable)
-          .set({
-            status: "live",
-            liveUrl,
-            lighthouseScore: null,   // not measured — remove fake 95
-            filesUploaded: 4,        // index.html + .htaccess + robots.txt + sitemap.xml
-            completedAt: new Date(),
-          })
-          .where(eq(deploymentsTable.id, deployment.id));
-
-        await db.update(projectsTable)
-          .set({ status: "deployed", liveUrl, updatedAt: new Date() })
-          .where(eq(projectsTable.id, params.data.id));
-
-      } catch (ftpErr: any) {
-        req.log.error(ftpErr, "FTP upload error during deployment");
-        await db.update(deploymentsTable)
-          .set({ status: "failed", error: ftpErr.message || "FTP upload failed", completedAt: new Date() })
-          .where(eq(deploymentsTable.id, deployment.id));
-      }
-    })();
+    // Fire and forget — client polls for progress
+    runUpload(
+      deployment.id,
+      params.data.id,
+      req.user!.id,
+      creds,
+      project.generatedHtml,
+      siteUrl,
+      overwriteExisting,
+    ).catch(err => logger.error({ err, deploymentId: deployment.id }, "runUpload threw"));
 
     res.status(202).json(toDeploymentResponse(deployment));
   } catch (err) {
-    req.log.error({ err }, "Failed to deploy project");
-    res.status(500).json({ error: "InternalError", message: "Failed to deploy project" });
+    req.log.error({ err }, "Failed to start deployment");
+    res.status(500).json({ error: "InternalError", message: "Failed to start deployment" });
   }
 });
 
-// GET /projects/:id/deployments
-router.get("/projects/:id/deployments", async (req: Request, res: Response) => {
+// ── POST /deployments/:id/retry ───────────────────────────────────────────────
+
+router.post("/deployments/:id/retry", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
-    const params = ListProjectDeploymentsParams.safeParse(req.params);
-    if (!params.success) {
-      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
+    const { id } = req.params;
+    const [original] = await db
+      .select()
+      .from(deploymentsTable)
+      .where(and(eq(deploymentsTable.id, id), eq(deploymentsTable.userId, req.user!.id)));
+
+    if (!original) {
+      res.status(404).json({ error: "NotFound", message: "Deployment not found" });
       return;
     }
 
     const [project] = await db
       .select()
       .from(projectsTable)
-      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+      .where(eq(projectsTable.id, original.projectId));
 
-    if (!project) {
-      res.status(404).json({ error: "NotFound", message: "Project not found" });
+    if (!project?.generatedHtml) {
+      res.status(400).json({ error: "BadRequest", message: "Project has no generated HTML." });
+      return;
+    }
+
+    const creds = await resolveCredentials(req.user!.id, {
+      host: original.ftpHost || undefined,
+      port: original.ftpPort || undefined,
+      protocol: original.protocol || undefined,
+    });
+
+    if (!creds) {
+      res.status(400).json({
+        error: "BadRequest",
+        message: "Could not resolve FTP credentials. Check Settings → FTP Server Protocols.",
+      });
+      return;
+    }
+
+    const overwriteExisting = req.body?.overwriteExisting !== false;
+
+    // Create a fresh deployment record for the retry
+    const [retryDeployment] = await db
+      .insert(deploymentsTable)
+      .values({
+        projectId: original.projectId,
+        userId: req.user!.id,
+        status: "pending",
+        protocol: creds.protocol,
+        environment: original.environment,
+        ftpHost: creds.host,
+        ftpPort: creds.port,
+        uploadProgress: 0,
+        deploymentLog: "[Retry of failed deployment]\n",
+      })
+      .returning();
+
+    runUpload(
+      retryDeployment.id,
+      original.projectId,
+      req.user!.id,
+      creds,
+      project.generatedHtml,
+      original.liveUrl || undefined,
+      overwriteExisting,
+    ).catch(err => logger.error({ err, deploymentId: retryDeployment.id }, "retry runUpload threw"));
+
+    res.status(202).json(toDeploymentResponse(retryDeployment));
+  } catch (err) {
+    req.log.error({ err }, "Failed to retry deployment");
+    res.status(500).json({ error: "InternalError", message: "Failed to retry deployment" });
+  }
+});
+
+// ── GET /projects/:id/deployments ────────────────────────────────────────────
+
+router.get("/projects/:id/deployments", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const params = ListProjectDeploymentsParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
       return;
     }
 
@@ -221,7 +500,8 @@ router.get("/projects/:id/deployments", async (req: Request, res: Response) => {
   }
 });
 
-// GET /deployments/:id
+// ── GET /deployments/:id ──────────────────────────────────────────────────────
+
 router.get("/deployments/:id", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
@@ -248,7 +528,8 @@ router.get("/deployments/:id", async (req: Request, res: Response) => {
   }
 });
 
-// POST /deployments/:id/rollback
+// ── POST /deployments/:id/rollback ────────────────────────────────────────────
+
 router.post("/deployments/:id/rollback", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
@@ -273,11 +554,14 @@ router.post("/deployments/:id/rollback", async (req: Request, res: Response) => 
       .values({
         projectId: deployment.projectId,
         userId: req.user!.id,
-        status: "live",
+        status: "pending",
+        protocol: deployment.protocol,
         environment: deployment.environment,
         liveUrl: deployment.liveUrl,
         ftpHost: deployment.ftpHost,
-        completedAt: new Date(),
+        ftpPort: deployment.ftpPort,
+        uploadProgress: 0,
+        deploymentLog: "[Rollback deployment]\n",
       })
       .returning();
 
@@ -288,7 +572,8 @@ router.post("/deployments/:id/rollback", async (req: Request, res: Response) => 
   }
 });
 
-// GET /domains
+// ── Domains ───────────────────────────────────────────────────────────────────
+
 router.get("/domains", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
@@ -297,7 +582,6 @@ router.get("/domains", async (req: Request, res: Response) => {
       .from(domainsTable)
       .where(eq(domainsTable.userId, req.user!.id))
       .orderBy(desc(domainsTable.createdAt));
-
     res.json({ domains: domains.map(toDomainResponse) });
   } catch (err) {
     req.log.error({ err }, "Failed to list domains");
@@ -305,7 +589,6 @@ router.get("/domains", async (req: Request, res: Response) => {
   }
 });
 
-// POST /domains
 router.post("/domains", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
@@ -333,7 +616,6 @@ router.post("/domains", async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /domains/:id
 router.delete("/domains/:id", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
