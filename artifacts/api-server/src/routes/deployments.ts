@@ -86,7 +86,9 @@ async function resolveCredentials(
   const saved: Record<string, string> = {};
   for (const r of rows) saved[r.key] = r.value;
 
-  const host     = overrides.host     || saved["ftp_host"]     || "";
+  // Strip any protocol prefix users commonly paste (ftp://host → host, sftp://host → host)
+  const rawHost  = overrides.host     || saved["ftp_host"]     || "";
+  const host     = rawHost.replace(/^(ftp|ftps|sftp):\/\//i, "").replace(/\/+$/, "");
   const username = overrides.username || saved["ftp_username"] || "";
   const path     = overrides.path     || saved["ftp_path"]     || "/";
   const port     = overrides.port     || (saved["ftp_port"] ? Number(saved["ftp_port"]) : 21);

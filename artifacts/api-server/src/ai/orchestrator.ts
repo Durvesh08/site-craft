@@ -947,8 +947,15 @@ Return ONLY valid JSON (no markdown fences):
   "mutedColor": string (hex — subtle surface/card bg),
   "cardColor": string (with rgba for transparency),
   "borderColor": string (with rgba for subtle borders),
-  "fontFamily": string (Google Font name + fallback stack),
-  "monoFont": string (monospace font name + fallback),
+  "fontFamily": string (pick ONE name from this approved list, then we auto-load it:
+    Syne | Outfit | DM Sans | Manrope | Space Grotesk | Raleway | Nunito | Plus Jakarta Sans | Inter
+    Match the font to the brand personality:
+    Syne / Space Grotesk / Clash Display → bold/tech/edgy brands
+    Outfit / DM Sans / Manrope → modern SaaS / professional
+    Raleway / Nunito → friendly/approachable/wellness
+    Plus Jakarta Sans / Inter → clean versatile default
+    Return the font name only, e.g. "Manrope" — no fallback stack needed here),
+  "monoFont": string (e.g. "JetBrains Mono" — used for code/stats/technical labels),
   "borderRadius": string (e.g. "12px"),
   "headlineGradient": string | null (e.g. "135deg, #FFD700, #FFFFFF" — only when brand has energy/boldness),
   "isDark": boolean,

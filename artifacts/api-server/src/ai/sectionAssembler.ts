@@ -213,9 +213,20 @@ BUTTONS — Every button must feel tactile and alive. Two distinct button types:
   • Smooth: transition:'all 0.2s ease'
   • Font: fontWeight:600, fontSize:15, padding:'13px 28px', color:'var(--foreground)'
 
-  BUTTON PLACEMENT RULES:
-  • ONE dominant primary CTA must appear above the fold (in hero)
-  • Repeat the primary CTA: hero section → mid-page features/CTA section → footer area
+  BUTTON/CTA RULES — CRITICAL (read carefully before generating any buttons):
+  • The PRIMARY CTA label is: "${context.primaryCta}" — use this EXACT text verbatim as the button label.
+    DO NOT replace it with generic text like "Get Started" or "Learn More".
+  • Platform detection — if the CTA text mentions a messaging/social platform, format the link correctly:
+      Telegram mention  → href="https://t.me/username" (use "#" if no username given)
+      WhatsApp mention  → href="https://wa.me/number" (use "#" if no number given)
+      Discord mention   → href="https://discord.gg/invite" (use "#" if no invite given)
+      YouTube mention   → href="https://youtube.com/@channel" (use "#" if no channel given)
+      Instagram mention → href="https://instagram.com/handle" (use "#" if no handle given)
+    Always add target="_blank" rel="noopener noreferrer" on external link buttons.
+  • SECONDARY BUTTON: ONLY add a secondary button when there is a CLEARLY DISTINCT second action
+    in the business description or planning context. If the user only named one action (e.g. "Join Telegram"),
+    DO NOT add a secondary button — a single powerful CTA converts better than diluting focus.
+  • ONE dominant primary CTA must appear above the fold (in hero), repeated mid-page + footer
   • Primary CTA must always be visually dominant over any secondary action nearby
 
 TYPOGRAPHY — Headlines must command attention:
@@ -367,21 +378,47 @@ function ${componentName}() {
 function getSectionTypeRules(type: string): string {
   if (type.includes("nav")) return `
 - position: sticky, top: 0, zIndex: 1000
+- OVERFLOW PREVENTION (CRITICAL — prevents the nav from breaking on mobile):
+  The nav root element MUST have: style={{overflow:'hidden', maxWidth:'100vw', width:'100%'}}
+  The inner flex row MUST have: style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', maxWidth:1180, margin:'0 auto', padding:'0 clamp(16px,4vw,40px)', height:64, boxSizing:'border-box'}}
+  INJECT this CSS via a <style> tag at the very top of the return:
+    const navCSS = \`
+      .sc-nav-links { display:flex; align-items:center; gap:32px; }
+      .sc-nav-cta   { display:flex; align-items:center; }
+      .sc-hamburger { display:none; }
+      @media(max-width:768px){
+        .sc-nav-links { display:none !important; }
+        .sc-nav-cta   { display:none !important; }
+        .sc-hamburger { display:flex !important; flex-direction:column; gap:5px; cursor:pointer; padding:8px; }
+      }
+      .sc-mobile-menu { display:none; }
+      .sc-mobile-menu.open { display:flex; flex-direction:column; padding:16px; gap:12px; border-top:1px solid rgba(255,255,255,0.06); }
+    \`;
 - On scroll: transition background from transparent to var(--card-bg) with backdrop-filter blur(20px) and
   boxShadow '0 1px 0 rgba(255,255,255,0.06)' — use useEffect scroll listener + useState for scrolled bool
-- LEFT: logo + company name row, gap 10, alignItems center
-  LOGO RULE (critical — always follow):
-    If logoUrl provided: <div style={{width:38,height:38,borderRadius:'50%',overflow:'hidden',flexShrink:0}}>
-      <img src={logoUrl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="logo" />
-    </div>
-    Then company name in <span style={{fontWeight:700,fontSize:17,letterSpacing:'-0.01em'}}>
-    NEVER render the logo as a large standalone img tag — always 38x38 circle crop
-- CENTER: nav links, gap 32, fontSize 14, fontWeight 500, opacity 0.75 on rest, hover opacity 1 transition 0.2s
-  Visible on desktop only — on mobile collapse into hamburger
-- RIGHT: CTA button + hamburger on mobile
-  CTA: background var(--primary), color #fff, padding '9px 22px', borderRadius 9999, fontWeight 600, fontSize 14
-  Hamburger: 3 horizontal lines (2px each, width 22px, gap 5px, rounded), shown on mobile hidden on desktop
-- Mobile open menu: slide-down with AnimatePresence, stacked links + CTA button`;
+- LEFT: logo + company name, always visible on all screen sizes, flexShrink:0
+  LOGO RULE (critical):
+    If logoUrl provided:
+      <div style={{display:'flex',alignItems:'center',gap:10,flexShrink:0,minWidth:0}}>
+        <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',flexShrink:0,border:'2px solid rgba(255,255,255,0.12)'}}>
+          <img src={logoUrl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="logo" />
+        </div>
+        <span style={{fontWeight:700,fontSize:16,letterSpacing:'-0.01em',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:160}}>{companyName}</span>
+      </div>
+    If NO logoUrl: brand initial in a gradient circle (36x36) + company name
+    NEVER use a large uncropped <img> tag directly — always 36x36 circle
+- CENTER: nav links, className="sc-nav-links" (hidden on mobile via CSS above)
+  Each link: fontSize:14, fontWeight:500, opacity:0.7, hover opacity:1, textDecoration:'none', color:'inherit', transition:'opacity 0.2s', href="#sectionId"
+  NEVER use <a href=""> — always href="#sectionId" or a real URL
+- RIGHT desktop: CTA button className="sc-nav-cta" (hidden on mobile via CSS above)
+  CTA: background:var(--primary), color:#fff, padding:'8px 20px', borderRadius:9999, fontWeight:600, fontSize:14, border:'none', cursor:'pointer', whiteSpace:'nowrap'
+- RIGHT mobile: hamburger button className="sc-hamburger" (hidden on desktop via CSS above)
+  3 horizontal bars (width:22px, height:2px, background:currentColor, borderRadius:2)
+  onClick toggles useState mobileOpen
+- Mobile dropdown: div className={\`sc-mobile-menu\${mobileOpen?' open':''}\`} positioned below nav bar
+  Contains: stacked nav links (fontSize:16, padding:'8px 0') + full-width CTA button
+  Each mobile link onClick: setMobileOpen(false)`;
+
 
   if (type.includes("hero") && type.includes("mockup")) return `
 - Two-column layout: left=copy, right=VISUAL LIBRARY cluster. On mobile: stack vertically.
@@ -471,8 +508,50 @@ function getSectionTypeRules(type: string): string {
       border:'1px solid rgba(255,255,255,0.14)', fontWeight:600, fontSize:15
       whileHover={{ background:'rgba(255,255,255,0.12)', scale:1.03 }}
 
-- FLOATING AMBIENT ELEMENTS (optional but strongly recommended for visual richness):
-    Add 2-4 small decorative floating elements in the hero background area using position:absolute, zIndex:0
+- THREE.JS PARTICLE SYSTEM (REQUIRED for hero sections — makes the page feel alive):
+  Add a full-viewport canvas behind the content using Three.js. This is a REQUIRED element, not optional.
+  Implementation pattern (copy exactly):
+  ```
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    if (!canvasRef.current || !window.THREE) return;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 5;
+    const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Particles
+    const count = 120;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i++) positions[i] = (Math.random() - 0.5) * 14;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({ color: 0x6366f1, size: 0.06, transparent: true, opacity: 0.55 });
+    const points = new THREE.Points(geo, mat);
+    scene.add(points);
+    let frameId;
+    const animate = () => {
+      frameId = requestAnimationFrame(animate);
+      points.rotation.y += 0.0008;
+      points.rotation.x += 0.0004;
+      renderer.render(scene, camera);
+    };
+    animate();
+    const onResize = () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', onResize);
+    return () => { cancelAnimationFrame(frameId); window.removeEventListener('resize', onResize); renderer.dispose(); };
+  }, []);
+  ```
+  Place the canvas: <canvas ref={canvasRef} style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0}} />
+  This canvas sits BEHIND the aurora blobs (both at zIndex:0, canvas first in DOM order).
+
+- FLOATING AMBIENT ELEMENTS (strongly recommended for visual richness):
+    Add 2-4 small decorative floating elements in the hero background area using position:absolute, zIndex:1
     Choose from the visual library: notification bubble, rating badge, analytics card, metric pill, user avatars
     Each: opacity 0.7-0.85, slight rotation (-4 to +4 deg), floating CSS animation with different delays
     Arrange asymmetrically (top-right, bottom-left, etc.) so they frame the copy without blocking it
@@ -733,9 +812,23 @@ export function buildGlobalCSS(
   let muted      = defaults.muted;
   let card       = defaults.card;
   let border     = defaults.border;
+  // Premium font pool — design-director picks one; we map common names to reliable stacks
+  const FONT_MAP: Record<string, { stack: string; url: string }> = {
+    "Syne":              { stack: "'Syne', 'Plus Jakarta Sans', system-ui, sans-serif",          url: "https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap" },
+    "Cabinet Grotesk":   { stack: "'Cabinet Grotesk', 'Inter', system-ui, sans-serif",           url: "https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800&display=swap" },
+    "Clash Display":     { stack: "'Clash Display', 'Plus Jakarta Sans', system-ui, sans-serif", url: "https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&display=swap" },
+    "Outfit":            { stack: "'Outfit', 'Inter', system-ui, sans-serif",                    url: "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" },
+    "DM Sans":           { stack: "'DM Sans', 'Inter', system-ui, sans-serif",                   url: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" },
+    "Manrope":           { stack: "'Manrope', 'Inter', system-ui, sans-serif",                   url: "https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" },
+    "Space Grotesk":     { stack: "'Space Grotesk', 'Inter', system-ui, sans-serif",             url: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" },
+    "Raleway":           { stack: "'Raleway', 'Inter', system-ui, sans-serif",                   url: "https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&display=swap" },
+    "Nunito":            { stack: "'Nunito', 'Inter', system-ui, sans-serif",                    url: "https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap" },
+    "Plus Jakarta Sans": { stack: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",         url: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" },
+    "Inter":             { stack: "'Inter', system-ui, -apple-system, sans-serif",               url: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" },
+  };
   let fontSans   = "'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif";
-  let fontMono   = "'JetBrains Mono', ui-monospace, monospace";
-  let googleFontsUrl = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap";
+  let fontMono   = "'JetBrains Mono', 'Fira Code', ui-monospace, monospace";
+  let googleFontsUrl = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap";
   let radius = "12px";
 
   try {
@@ -748,23 +841,34 @@ export function buildGlobalCSS(
     muted       = d.mutedColor     ?? d.muted     ?? muted;
     card        = d.cardColor      ?? d.card      ?? card;
     border      = d.borderColor    ?? d.border    ?? border;
-    fontSans    = d.fontFamily     ?? d.bodyFont  ?? d.sansFont ?? fontSans;
-    fontMono    = d.monoFont       ?? d.monoFamily ?? fontMono;
     radius      = d.borderRadius   ?? d.radius    ?? radius;
 
     // Derive primaryDark by trying to use a secondary brand color
     primaryDark = d.primaryDark ?? d.secondaryColor ?? primary;
 
-    // Build Google Fonts URL from font names
-    const fontNames = [fontSans, fontMono]
-      .flatMap(f => f.split(","))
-      .map(f => f.trim().replace(/['"]/g, ""))
-      .filter(f => !f.includes("system-ui") && !f.includes("-apple") && !f.includes("sans-serif") && !f.includes("monospace") && f.length > 0)
-      .slice(0, 3);
-    if (fontNames.length > 0) {
-      const encoded = fontNames.map(f => `family=${encodeURIComponent(f)}:wght@300;400;500;600;700;800`).join("&");
-      googleFontsUrl = `https://fonts.googleapis.com/css2?${encoded}&display=swap`;
+    // Font resolution: prefer FONT_MAP lookup for reliable stacks/URLs
+    const rawFont = d.fontFamily ?? d.bodyFont ?? d.sansFont ?? "";
+    // Try to find a match in FONT_MAP by checking if any key appears in rawFont
+    const mappedFont = Object.entries(FONT_MAP).find(([key]) =>
+      rawFont.toLowerCase().includes(key.toLowerCase())
+    );
+    if (mappedFont) {
+      fontSans = mappedFont[1].stack;
+      googleFontsUrl = mappedFont[1].url;
+    } else if (rawFont) {
+      // Fallback: use AI-provided font name as-is
+      fontSans = rawFont;
+      const fontNames = [rawFont, d.monoFont ?? "JetBrains Mono"]
+        .flatMap(f => f.split(","))
+        .map(f => f.trim().replace(/['"]/g, ""))
+        .filter(f => !f.includes("system-ui") && !f.includes("-apple") && !f.includes("sans-serif") && !f.includes("monospace") && f.length > 0)
+        .slice(0, 3);
+      if (fontNames.length > 0) {
+        const encoded = fontNames.map(f => `family=${encodeURIComponent(f)}:wght@300;400;500;600;700;800`).join("&");
+        googleFontsUrl = `https://fonts.googleapis.com/css2?${encoded}&display=swap`;
+      }
     }
+    fontMono    = d.monoFont       ?? d.monoFamily ?? fontMono;
   } catch { /* use safe defaults */ }
 
   // Compute secondary color (a lighter/darker variant of primary for gradients)
