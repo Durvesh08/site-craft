@@ -1,8 +1,10 @@
 import {
   useListProjectDeployments,
+  getListProjectDeploymentsQueryKey,
   useDeployProject,
   useListProjects,
   useGetDeployment,
+  getGetDeploymentQueryKey,
   useRetryDeployment,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
@@ -36,7 +38,7 @@ function DeploymentLogRow({ deployment }: { deployment: any }) {
 
   // Poll for progress while active
   const { data: live, refetch } = useGetDeployment(deployment.id, {
-    query: { enabled: isActive, refetchInterval: isActive ? 1500 : false },
+    query: { enabled: isActive, queryKey: getGetDeploymentQueryKey(deployment.id), refetchInterval: isActive ? 1500 : false },
   });
 
   const current = live ?? deployment;
@@ -229,7 +231,7 @@ export default function Deployments() {
   const activeProjectId = viewProjectId || projects[0]?.id || "";
 
   const { data: deploymentsData, refetch } = useListProjectDeployments(activeProjectId, {
-    query: { enabled: !!activeProjectId },
+    query: { enabled: !!activeProjectId, queryKey: getListProjectDeploymentsQueryKey(activeProjectId) },
   });
 
   // Decorate deployments with project name
