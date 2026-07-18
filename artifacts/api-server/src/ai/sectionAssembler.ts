@@ -165,6 +165,26 @@ ${context.previousOutputs}
 7. Use actual business copy extracted from the Copywriting context — no lorem ipsum
 8. Pull exact hex colors from the Color & Typography context — no made-up colors
 
+━━━ CRITICAL: IMAGES & MEDIA ━━━
+NEVER generate fake product/hero image URLs that will 404. Broken images look worse than no image.
+If you need to show a product image → use a reliable placeholder:
+  https://picsum.photos/seed/{descriptive-word}/400/500   (portrait)
+  https://picsum.photos/seed/{descriptive-word}/600/400   (landscape)
+  https://images.unsplash.com/photo-{ID}?w=600&q=80 — only if you know a real Unsplash photo ID
+OR use a CSS-only gradient card (preferred for products):
+  <div style={{width:280,height:340,borderRadius:20,background:'linear-gradient(145deg,var(--card-bg),var(--muted))',
+    border:'1px solid var(--border)',display:'flex',flexDirection:'column',alignItems:'center',
+    justifyContent:'center',gap:12,fontSize:48,boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
+    🧴 {/* product emoji */}
+    <span style={{fontSize:14,fontWeight:600,color:'var(--foreground)',opacity:0.7}}>Product Name</span>
+  </div>
+
+HERO BADGE LOGO RULE: If showing logo in a badge/pill inside the hero:
+  <div style={{width:22,height:22,borderRadius:'50%',overflow:'hidden',flexShrink:0,display:'inline-block'}}>
+    <img src={logoUrl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="" />
+  </div>
+  NEVER an uncropped <img src={logoUrl}> directly inside the badge.
+
 SECTION-TYPE SPECIFIC RULES:
 ${getSectionTypeRules(section.type)}
 
@@ -201,59 +221,95 @@ function getSectionTypeRules(type: string): string {
 - Mobile open menu: slide-down with AnimatePresence, stacked links + CTA button`;
 
   if (type.includes("hero") && type.includes("mockup")) return `
-- Full viewport height (minHeight: "100vh")
-- Left column: badge pill + headline (use gradient-text if specified) + subheadline + 2 CTA buttons
-- Right column: a floating glassmorphism card (backdrop-filter: blur(20px), border: 1px solid rgba(255,255,255,0.1))
-  The card must contain REALISTIC fake data matching this business: metric numbers, a pulsing green ● Live badge,
-  mini activity feed rows, status chips — make it look like a real SaaS widget
-- Implement the heroBackgroundEffect from the Visual Effects context
-- If useGradientGlow: add a large blurred radial gradient blob behind content (filter: blur(80px))`;
+- Two-column layout: left=copy, right=product mockup/widget. On mobile: stack vertically.
+- Left column: badge pill + headline (gradient-text if context specifies) + subheadline + 2 CTA buttons
+  Same animated background as hero type (use aurora blobs, position:relative overflow:hidden on section)
+- Right column: floating card (no real image URLs — use one of these approaches):
+  APPROACH A — CSS product card (preferred for e-commerce/beauty/food brands):
+    A decorative card with gradient background, large product emoji (4rem), product name, a few bullet points
+    border-radius:20, background:'linear-gradient(145deg,var(--card-bg),var(--muted))', boxShadow:'0 30px 80px rgba(0,0,0,0.25)'
+    Use picsum.photos ONLY if you know it will work: https://picsum.photos/seed/{word}/360/440
+  APPROACH B — SaaS dashboard widget (for SaaS/tech brands):
+    Glassmorphism card with real-looking metrics, pulsing Live badge, mini chart bars, activity rows
+    backdrop-filter:blur(20px), border:'1px solid rgba(255,255,255,0.12)'
+  Pick whichever fits the business. Never use placeholder broken URLs.
+- Animate the right card: motion.div animate={{opacity:1, y:0, rotateY:0}} initial={{opacity:0, y:40, rotateY:-8}} transition={{duration:0.9,ease:'easeOut'}}`;
 
   if (type.includes("hero")) return `
-- Full viewport height (minHeight: "100vh"), centered content
-- CRITICAL: badge, headline, subheadline and CTA buttons MUST use animate not whileInView:
-  motion.h1 animate={{ opacity:1, y:0 }} initial={{ opacity:0, y:30 }} transition={{ duration:0.7 }}
-  (whileInView can miss on first load in small viewports — hero content must always be visible)
-- Badge pill above headline (border-radius: 999px, border, translucent bg)
-- Headline: large (clamp(2.5rem, 6vw, 5rem)), bold — apply gradient-text if specified in context
-- Subheadline below, muted color
-- 1–2 CTA buttons (primary filled + secondary outlined)
-- MUST implement an animated background (flat dark bg looks unprofessional — do not skip):
-  Use this pattern (adapt colors to match the brand — primary/secondary/accent blobs):
-  Define keyframe CSS string, inject via <style> tag in JSX, add absolutely-positioned blurred divs:
+- Full viewport height (minHeight: "100vh"), centered content, position:'relative', overflow:'hidden'
+- CRITICAL: badge, headline, subheadline, CTA buttons MUST use animate (not whileInView):
+  motion.div animate={{ opacity:1, y:0 }} initial={{ opacity:0, y:30 }} transition={{ duration:0.7 }}
+  (whileInView misses on first load in small viewports — hero must always be visible immediately)
 
-  const _bgCSS = '@keyframes _da{0%,100%{transform:translate(0,0)}50%{transform:translate(4%,5%)}} @keyframes _db{0%,100%{transform:translate(0,0)}50%{transform:translate(-5%,-4%)}}';
-  // Outer section must be position:relative, overflow:hidden
-  // Inside return, before content:
-  <style>{_bgCSS}</style>
+- MANDATORY animated background — a flat solid/white background is FORBIDDEN:
+  Always add aurora blobs. For LIGHT themes increase opacity to 0.18-0.28 since white washes colors out.
+  Template (copy exactly, substitute 2-char unique prefix for animation names):
+  const _bgCSS = '@keyframes _ha{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,5%) scale(1.04)}} @keyframes _hb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-5%,-4%) scale(1.03)}}';
+  Then inside return(), BEFORE the content wrapper:
+  <style>{\`\${_bgCSS}\`}<\/style>
   <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none',zIndex:0}}>
-    <div style={{position:'absolute',top:'-15%',left:'-10%',width:'65%',height:'70%',background:'radial-gradient(ellipse,var(--primary) 0%,transparent 65%)',filter:'blur(90px)',opacity:0.35,animation:'_da 9s ease-in-out infinite'}}/>
-    <div style={{position:'absolute',bottom:'-15%',right:'-10%',width:'60%',height:'65%',background:'radial-gradient(ellipse,var(--secondary) 0%,transparent 65%)',filter:'blur(80px)',opacity:0.28,animation:'_db 12s ease-in-out infinite'}}/>
-    <div style={{position:'absolute',top:'35%',right:'10%',width:'45%',height:'50%',background:'radial-gradient(ellipse,var(--accent) 0%,transparent 70%)',filter:'blur(110px)',opacity:0.18,animation:'_da 16s ease-in-out infinite reverse'}}/>
+    <div style={{position:'absolute',top:'-20%',left:'-15%',width:'70%',height:'75%',background:'radial-gradient(ellipse,var(--primary) 0%,transparent 60%)',filter:'blur(100px)',opacity:0.22,animation:'_ha 10s ease-in-out infinite'}}/>
+    <div style={{position:'absolute',bottom:'-20%',right:'-15%',width:'65%',height:'70%',background:'radial-gradient(ellipse,var(--secondary) 0%,transparent 60%)',filter:'blur(90px)',opacity:0.18,animation:'_hb 13s ease-in-out infinite'}}/>
+    <div style={{position:'absolute',top:'30%',right:'5%',width:'50%',height:'55%',background:'radial-gradient(ellipse,var(--accent) 0%,transparent 65%)',filter:'blur(120px)',opacity:0.12,animation:'_ha 18s ease-in-out infinite reverse'}}/>
   </div>
-  // All text/button content must be in a child div with position:relative, zIndex:1
+  All text/button content: <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center',padding:'0 24px',maxWidth:720,margin:'auto'}}>
 
-- Social proof badge (star ⭐ + count + phrase) below buttons — subtle pill style`;
+- Badge pill above headline:
+    display:'flex', alignItems:'center', gap:8, padding:'5px 14px 5px 8px', borderRadius:9999
+    border:'1px solid var(--border)', background:'rgba(0,0,0,0.04)' (light) or 'rgba(255,255,255,0.08)' (dark)
+    fontSize:13, fontWeight:600, color:'var(--primary)', marginBottom:24
+    If logoUrl: include 22x22 circle-cropped logo (see HERO BADGE LOGO RULE above) + company name text
+    If no logo: just a sparkle ✨ emoji + short tagline text
+
+- Headline: fontSize:clamp(2.4rem,5.5vw,4.6rem), fontWeight:800, lineHeight:1.08, letterSpacing:'-0.03em'
+    If context specifies gradient-text:
+      style={{background:'linear-gradient(135deg,var(--primary),var(--secondary))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',backgroundClip:'text'}}
+    Otherwise: color:'var(--foreground)'
+
+- Subheadline: fontSize:clamp(1rem,2vw,1.2rem), lineHeight:1.65, opacity:0.6, maxWidth:560, margin:'16px auto 0'
+
+- Button row (marginTop:36, gap:14, display:flex, flexWrap:wrap, justifyContent:center):
+    Primary: background:'var(--primary)', color:'#fff', padding:'14px 34px', borderRadius:9999, fontWeight:700, fontSize:16, border:'none'
+    Secondary: background:'transparent', color:'var(--foreground)', padding:'14px 34px', borderRadius:9999, fontWeight:600, fontSize:16, border:'1px solid var(--border)'
+
+- Social proof row (marginTop:32): "⭐⭐⭐⭐⭐  4.9/5 from 1,000+ happy customers"
+    display:flex, alignItems:center, gap:8, fontSize:13, opacity:0.55
+    pill: padding:'7px 16px', borderRadius:999, border:'1px solid var(--border)', background:'rgba(0,0,0,0.03)'`;
 
   if (type.includes("bento") || type.includes("feature")) return `
 - Section: paddingTop/Bottom 96px, paddingLeft/Right 24px, maxWidth 1100px, margin auto
-- Section header above grid: small label pill (uppercase, fontSize 11, letterSpacing 0.1em) + large headline + subtext
-- CSS Grid: 2 cols on desktop, 1 col on mobile — inject via <style> tag with media query
-  For bento-feature-grid: some cards span 2 cols (use inline gridColumn:'span 2' for first/featured card)
+- CRITICAL: section background should be slightly offset from page background for visual rhythm:
+    If light theme: background:'rgba(0,0,0,0.02)' or a very subtle radial-gradient tint centered
+    If dark theme: background:'rgba(255,255,255,0.015)' or keep --background with a subtle section divider
+- Section header above grid: small label pill + large headline (fontWeight 800, fontSize clamp(1.8rem,4vw,3rem)) + subtext (maxWidth 560, margin auto, lineHeight 1.6)
+
+- CSS GRID (REQUIRED — inject via style tag, do NOT use conditional JS for layout):
+  Inject this CSS via a <style> tag at the top of your JSX return:
+    const gridCSS = '.fg-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px} @media(max-width:640px){.fg-grid{grid-template-columns:1fr}} .fg-span2{grid-column:span 2} @media(max-width:640px){.fg-span2{grid-column:span 1}}';
+    Then: <style>{gridCSS}</style>
+  Apply className="fg-grid" to the grid container div, className="fg-span2" to the first/featured card.
+
 - Each card (motion.div):
-    background: var(--card-bg), border: '1px solid var(--border)', borderRadius: 16, padding: '28px 24px'
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.04)'
-    whileHover: {{ scale:1.02, boxShadow:'0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px var(--primary)' }}
-    transition: {{ duration:0.2 }}
-- Icon container (GRADIENT circle — not plain emoji):
-    <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,var(--primary),var(--secondary))',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,boxShadow:'0 4px 14px rgba(0,0,0,0.3)'}}>
-      <span style={{fontSize:24,lineHeight:1}}>{ICON}</span>
+    background: var(--card-bg), border: '1px solid var(--border)', borderRadius: 20, padding: '32px 28px'
+    boxShadow: '0 1px 4px rgba(0,0,0,0.12), 0 4px 16px rgba(0,0,0,0.08)'
+    whileHover: {{ scale:1.02, boxShadow:'0 8px 40px rgba(0,0,0,0.2), 0 0 0 2px var(--primary)' }}
+    transition: {{ duration:0.18 }}
+
+- Icon container (ALWAYS gradient circle — critical, do NOT use plain colored background):
+    Each card gets a UNIQUE gradient angle and mix of primary+secondary+accent:
+    Card 0: background:'linear-gradient(135deg,var(--primary),var(--secondary))'
+    Card 1: background:'linear-gradient(225deg,var(--secondary),var(--accent))'
+    Card 2: background:'linear-gradient(45deg,var(--accent),var(--primary))'
+    Card 3+: alternate the above gradients
+    <div style={{width:56,height:56,borderRadius:'50%',background:GRADIENT_ABOVE,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,boxShadow:'0 6px 20px rgba(0,0,0,0.25)'}}>
+      <span style={{fontSize:26,lineHeight:1}}>{ICON}</span>
     </div>
-    Use relevant unicode/emoji for each feature (🧠 ⚡ 📊 🔒 🚀 ✨ 🎯 💡 etc.)
-- Card title: fontSize 19, fontWeight 700, marginBottom 10, color var(--foreground)
-- Card description: fontSize 15, lineHeight 1.65, color var(--muted), opacity as needed
-- Stagger animations: whileInView={{ opacity:1, y:0 }} initial={{ opacity:0, y:24 }}
-    viewport={{ once:true, margin:'0px' }} transition={{ duration:0.5, delay: index*0.08 }}`;
+
+- Card title: fontSize 20, fontWeight 700, marginBottom 12, color var(--foreground), letterSpacing '-0.01em'
+- Card description: fontSize 15, lineHeight 1.7, color inherit, opacity 0.65, marginBottom 0
+
+- Stagger: whileInView={{ opacity:1, y:0 }} initial={{ opacity:0, y:28 }}
+    viewport={{ once:true, margin:'0px' }} transition={{ duration:0.5, delay: index*0.09 }}`;
 
   if (type.includes("pricing")) return `
 - 2–4 tier cards; middle/recommended card visually elevated (border: 2px solid var(--primary), scale 1.04)
@@ -262,10 +318,32 @@ function getSectionTypeRules(type: string): string {
 - Hover lift on non-featured cards`;
 
   if (type.includes("testimonial")) return `
-- Auto-scrolling carousel OR masonry grid of quote cards
-- Each card: quote text, author name, role/company, optional avatar initial circle
-- Glassmorphism card style (backdrop-filter + border)
-- For carousel: useEffect auto-advance every 4s with AnimatePresence slide transition`;
+- Section: paddingTop/Bottom 80px, paddingInline 24px, overflow:'hidden'
+
+- WALL layout (for testimonial-wall type): CSS masonry with 3 cols on desktop, 1 on mobile
+  Each card: background var(--card-bg), border '1px solid var(--border)', borderRadius 16, padding '24px', marginBottom 16
+  Inject via <style> tag: .tw-grid{columns:3;gap:16px} @media(max-width:768px){.tw-grid{columns:1}}
+
+- CAROUSEL layout (for testimonial-carousel type — FOLLOW EXACTLY to prevent overflow/clipping):
+  State: const [active, setActive] = useState(0)
+  Auto-advance: useEffect(()=>{ const t=setInterval(()=>setActive(p=>(p+1)%testimonials.length),4500); return ()=>clearInterval(t); },[])
+  Outer container: width:'100%', overflow:'hidden', position:'relative'
+  Inner track wrapper: display:'flex', transition:'transform 0.5s ease', transform: ('translateX(-' + (active*100) + '%)')
+    Each slide: minWidth:'100%', padding:'0 12px'
+  Dot navigation: row of circles below, filled dot = active
+  Each card MUST have: maxWidth:'680px', margin:'0 auto', width:'100%'
+    background var(--card-bg), border '1px solid var(--border)', borderRadius 20, padding '36px 32px'
+    boxShadow '0 4px 24px rgba(0,0,0,0.15)'
+
+- Quote text: fontSize 18, lineHeight 1.75, fontStyle:'italic', color var(--foreground), opacity 0.85, marginBottom 24
+- Author row: display flex, alignItems center, gap 12
+  Avatar: 44x44 circle, background linear-gradient(135deg,var(--primary),var(--secondary)), color #fff
+    display flex, alignItems center, justifyContent center, fontWeight 700, fontSize 15
+    Show initials from author name (first letter of first+last name)
+  Author name: fontWeight 700, fontSize 15
+  Role: fontSize 13, opacity 0.6, marginTop 2
+
+- Stagger cards into view with whileInView on the section header only`;
 
   if (type.includes("cta")) return `
 - Full-width section with rich gradient background: use linear or radial gradient from var(--primary) to var(--primary-dark)
@@ -279,25 +357,48 @@ function getSectionTypeRules(type: string): string {
 - Optional secondary link below button: "No credit card required" or equivalent in small muted text`;
 
   if (type.includes("footer")) return `
-- Background var(--background), borderTop '1px solid var(--border)', padding '64px 24px 32px'
-- Grid: 2-col on desktop (logo+tagline left, link columns right), 1-col stack on mobile — use style tag for media query
-- LEFT column:
-    LOGO RULE (critical — always follow):
-      If logoUrl: row with gap 10, alignItems center:
-        <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',flexShrink:0}}>
-          <img src={logoUrl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="logo" />
+- Container: background var(--background) with a very subtle top gradient wash:
+    background: 'linear-gradient(to bottom, rgba(var(--primary-rgb,99,102,241),0.03) 0%, var(--background) 80%)'
+  borderTop: '1px solid var(--border)', padding: '72px 24px 40px'
+  maxWidth: 1100px, margin: '0 auto' on the inner wrapper
+
+- CSS Grid (inject via style tag REQUIRED — do not use JS for this):
+  Inject: const ftCSS = '.ft-grid{display:grid;grid-template-columns:280px 1fr;gap:64px} .ft-links{display:grid;grid-template-columns:repeat(3,1fr);gap:32px} @media(max-width:768px){.ft-grid{grid-template-columns:1fr;gap:40px} .ft-links{grid-template-columns:repeat(2,1fr)}}';
+  Then in JSX: <style>{ftCSS}</style>
+
+- LEFT column (className="ft-left"):
+  LOGO ROW (REQUIRED — always render this, never skip):
+    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+      {logoUrl ? (
+        <div style={{width:40,height:40,borderRadius:'50%',overflow:'hidden',flexShrink:0,
+          boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>
+          <img src={logoUrl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="logo"/>
         </div>
-        <span style={{fontWeight:700,fontSize:16}}>Company Name</span>
-      If no logoUrl: company name in large gradient text (fontSize 22, fontWeight 800)
-      NEVER display logo as a large unconstrained image
-    Tagline: fontSize 14, color var(--muted), lineHeight 1.6, maxWidth 240, marginTop 12
-    Social icons row (marginTop 20): 𝕏 ◆ in — each in a 32x32 circle border borderRadius 50%, hover background var(--border)
-- RIGHT: 2-3 link columns (Product, Company, Legal)
-    Column header: fontSize 11, fontWeight 700, letterSpacing 0.08em, textTransform uppercase, color var(--muted), marginBottom 14
-    Links: fontSize 14, color inherit, opacity 0.65, hover opacity 1, transition 0.15s, display block, marginBottom 10
-- Bottom bar: marginTop 48, paddingTop 24, borderTop '1px solid var(--border)', flex row, copyright left, links right
-  Copyright: fontSize 12, opacity 0.5
-- No heavy animations — keep performant`;
+      ) : (
+        <div style={{width:40,height:40,borderRadius:'50%',background:'linear-gradient(135deg,var(--primary),var(--secondary))',
+          display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:18}}>
+          {companyName[0]}
+        </div>
+      )}
+      <span style={{fontWeight:800,fontSize:18,letterSpacing:'-0.01em'}}>{companyName}</span>
+    </div>
+  Tagline: fontSize 14, lineHeight 1.65, opacity 0.55, maxWidth 230, marginBottom 24
+  Social icons row: X ◆ LinkedIn — each in 34x34 circle, border '1px solid var(--border)',
+    borderRadius '50%', display inline-flex, alignItems center, justifyContent center,
+    fontSize 14, marginRight 8, cursor pointer
+    On hover: background var(--border) — implement with onMouseEnter/Leave state or CSS
+
+- RIGHT: link columns (className="ft-links"):
+  Column header: fontSize 11, fontWeight 700, textTransform uppercase, letterSpacing '0.1em', opacity 0.4, marginBottom 16
+  Links: fontSize 14, display block, marginBottom 12, opacity 0.6,
+    onMouseEnter/Leave or CSS for opacity 1 on hover
+
+- Bottom bar: marginTop 64, paddingTop 24, borderTop '1px solid var(--border)'
+  display flex, justifyContent between, alignItems center, flexWrap wrap, gap 12
+  Left: "© 2026 {companyName}. All rights reserved." in fontSize 12, opacity 0.4
+  Right: Privacy Policy · Terms links in fontSize 12, opacity 0.4
+
+- Do not add any heavy animations — footer should be fast-loading`;
 
   if (type.includes("accordion") || type.includes("faq")) return `
 - useState for which item is open (null or index)
@@ -305,15 +406,46 @@ function getSectionTypeRules(type: string): string {
 - Chevron icon rotates 180° when open (motion.span with rotate transform)
 - Divider between items`;
 
+  if (type.includes("alternating") || type.includes("split-hero") || type.includes("media-hero")) return `
+- Two-column alternating rows: image/visual LEFT + copy RIGHT, then copy LEFT + image/visual RIGHT
+- Visual side: DO NOT use fake image URLs. Use one of:
+    1. A styled CSS card: gradient background, large emoji, product/feature name
+    2. A picsum placeholder: https://picsum.photos/seed/{descriptive-seed-word}/480/360
+    3. An abstract decorative shape (nested bordered circles, gradient blobs, geometric grid)
+- Copy side: badge label (uppercase small pill) + heading (fontWeight 800, fontSize clamp(1.6rem,3.5vw,2.4rem))
+    + body paragraph (lineHeight 1.7, opacity 0.65) + bullet list with ✓ checkmarks (color var(--primary))
+    + CTA link/button
+- Rows separated by 80–100px padding. Section maxWidth 1100px, paddingInline 24px
+- Each row: display flex (alternating flexDirection row / row-reverse), alignItems center, gap 64
+  On mobile: flex-direction column — inject via <style> tag with @media query
+- Animate each row in: whileInView {{opacity:1,x:0}} initial={{opacity:0,x:index%2===0?-40:40}} viewport={{once:true,margin:'0px'}}`;
+
+  if (type.includes("logo-cloud") || type.includes("trust-badge")) return `
+- Horizontal scrolling strip of company/partner logos OR trust badges
+- Background: subtle surface — var(--card-bg) or slightly different from page background
+- Centered section heading (optional) above the strip
+- Logo items: grayscale opacity 0.4, hover opacity 0.8, transition 0.2s
+  Each logo in a flex row with gap 48px, paddingInline 24px, paddingBlock 20px
+  For trust badges: icon + text pairs (e.g. ✓ 256-bit SSL, ✓ SOC2 Certified)
+- Marquee auto-scroll effect using CSS animation:
+  @keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  Duplicate the logo list so it loops seamlessly`;
+
   if (type.includes("stat") || type.includes("counter")) return `
 - Large numbers that animate from 0 when scrolled into view
-- Use useInView + useEffect with a counter interval
-- Format: "14,248+" / "84.2%" / "$2.3M" etc. from the copy context`;
+- Use useInView hook: const ref = useRef(); const isInView = useInView(ref, {once:true, margin:'0px'})
+  useEffect(() => { if(isInView) { /* start counting */ } }, [isInView])
+- Display 3–4 stat items in a row (wrap on mobile): number + label + optional description
+  Stat number: fontSize clamp(2.5rem,5vw,4rem), fontWeight 800, color var(--primary), letterSpacing -0.03em
+  Label: fontSize 15, opacity 0.65, marginTop 8
+- Format numbers: "14,248+" / "84.2%" / "$2.3M" etc. from copy context
+- Optional subtle dividers between stats`;
 
   return `
 - Use the section brief and business context to design an appropriate layout
 - Apply Framer Motion whileInView animations
-- Style with inline styles using CSS custom properties`;
+- Style with inline styles using CSS custom properties
+- NEVER use fake image URLs — always CSS gradients/shapes or picsum.photos/seed/{word}/w/h`;
 }
 
 // ---------------------------------------------------------------------------
@@ -391,12 +523,15 @@ export function buildGlobalCSS(
     }
   } catch { /* use safe defaults */ }
 
+  // Compute secondary color (a lighter/darker variant of primary for gradients)
+  let secondary = primaryDark !== primary ? primaryDark : accent;
+
   return `@import url('${googleFontsUrl}');
 
 :root {
   --primary:     ${primary};
   --primary-dark:${primaryDark};
-  --secondary:   ${accent};
+  --secondary:   ${secondary};
   --background:  ${background};
   --foreground:  ${foreground};
   --muted:       ${muted};
