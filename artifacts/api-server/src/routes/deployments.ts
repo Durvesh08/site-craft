@@ -406,7 +406,7 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
 router.post("/deployments/:id/retry", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
-    const { id } = req.params;
+    const id = String(req.params.id);
     const [original] = await db
       .select()
       .from(deploymentsTable)
