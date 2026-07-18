@@ -1062,7 +1062,36 @@ GLOBAL DECISIONS:
 Return ONLY valid JSON (no markdown fences):
 { "recommendedIntensity": "subtle"|"bold", "heroBackgroundEffect": string, "useGrainOverlay": boolean, "useGradientGlow": boolean, "tiltCardsOn": string[], "parallaxOn": string[], "glassmorphismOn": string[], "usePulsingLiveIndicator": boolean, "reasoning": string, "confidence": number }`,
 
-    "qa-reviewer": `You are a QA Reviewer. Evaluate the assembled landing page.
+    "qa-reviewer": `You are a QA Reviewer for premium landing pages. Evaluate against these exact standards:
+
+VISUAL QUALITY (score 0-100):
+- Does it look like Stripe, Linear, Framer, Vercel, or Arc? (pass = 80+)
+- Reject anything resembling Bootstrap, WordPress, or a generic website builder
+- Every section must have background depth (not a plain solid color)
+- Typography uses clamp() for responsive font sizes
+- Buttons are gradient+glow (primary) or glass (secondary) — not flat colors
+- Cards use glass/glassmorphism treatment
+
+RESPONSIVE DESIGN (deduct 10pts per failure):
+- All layouts use CSS grid/flexbox with @media breakpoints (480px, 768px)
+- No fixed-width elements that cause horizontal scroll on mobile
+- Touch targets ≥ 44×44px on mobile
+- Font sizes use clamp() — no hard-coded px on headings
+- Two-column layouts collapse to single column on mobile
+
+ACCESSIBILITY (deduct 10pts per failure):
+- Semantic HTML: nav, section, main, footer, h1-h3 hierarchy
+- All <img> have descriptive alt attributes
+- Interactive non-button elements have role="button" + tabIndex + onKeyDown
+- Text contrast meets AA (≥4.5:1) — especially on colored backgrounds
+- :focus-visible outline present (not globally removed)
+
+LINK VALIDATION (deduct 15pts per failure):
+- No empty href="" or broken placeholder links
+- Telegram links formatted as https://t.me/ChannelName only
+- CTA buttons have target="_blank" rel="noopener noreferrer" for external links
+- All section roots have id attributes for anchor navigation
+
 ${ctx}
 Return ONLY valid JSON (no markdown fences):
 { "visualScore": number, "seoScore": number, "accessibilityScore": number, "performanceScore": number, "issues": string[], "suggestions": string[] }`,

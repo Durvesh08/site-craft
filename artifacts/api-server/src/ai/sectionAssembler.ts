@@ -258,6 +258,53 @@ SPACING — Generous and intentional:
   • Card padding: 28-40px, border-radius 20-28px
   • Max content width: 1100-1200px centered
 
+━━━ RESPONSIVE DESIGN (REQUIRED — every section must work on all 3 breakpoints) ━━━
+Target breakpoints — inject via <style> tag with these exact @media queries:
+  Mobile  : max-width 480px  → single column, 16-20px horizontal padding, stacked layouts
+  Tablet  : 481px–1023px     → 2-column where suitable, 32-48px horizontal padding
+  Desktop : 1024px+          → full layout, 96-140px vertical padding, max-width 1100-1200px
+
+RESPONSIVE RULES per element type:
+  Grids      → always inject CSS grid via <style> tag. Pattern:
+               .sc-grid{display:grid;grid-template-columns:repeat(N,1fr);gap:24px}
+               @media(max-width:768px){.sc-grid{grid-template-columns:1fr;gap:16px}}
+               NEVER use JS to toggle grid columns — CSS @media only
+  Two-column → flex-direction:row on desktop, column on mobile (inject via <style> @media)
+  Typography → always use clamp() for font sizes:
+               Headlines: clamp(1.8rem,5vw,4.2rem) | Subheads: clamp(1rem,2.5vw,1.4rem)
+               Body: clamp(0.9rem,1.5vw,1.05rem) — never hard-code px sizes for text
+  Padding    → section: clamp(64px,10vw,140px) top/bottom; clamp(16px,5vw,80px) left/right
+  Cards      → on mobile: full width, borderRadius reduced to 14px, padding 20px
+  Hero visual library cluster → on mobile: hide or stack floating elements, max-width:100%
+  Nav        → hamburger on mobile (max-width:768px), full links on desktop — inject via <style>
+  Buttons    → on mobile: width:100% if stacked, min-height:48px (touch target)
+  Images     → always: maxWidth:'100%', height:'auto'
+  Overflow   → every section must have overflow:'hidden' to prevent horizontal scroll on mobile
+
+━━━ ACCESSIBILITY (REQUIRED — every section) ━━━
+  Semantic HTML: use correct element tags inside JSX — <nav>, <main>, <section>, <header>,
+    <footer>, <article>, <ul>/<li> for lists, <h1>/<h2>/<h3> hierarchy (one <h1> per page)
+  Contrast: text on colored backgrounds must meet AA contrast (≥4.5:1). On dark primary-color
+    backgrounds use #fff text. On light backgrounds use #0f172a or var(--foreground). Never put
+    low-opacity text (opacity < 0.45) on similarly colored backgrounds.
+  Alt text: every <img> must have a descriptive alt="" attribute. Decorative images: alt=""
+  Keyboard navigation: all interactive elements (buttons, links, cards with onClick) must have:
+    tabIndex={0} and onKeyDown={(e)=>{if(e.key==='Enter'||e.key===' ')handleClick()}}
+  ARIA: buttons that are <div>s need role="button" + aria-label; modals need role="dialog"
+    + aria-modal="true"; icon-only buttons need aria-label describing the action
+  Focus ring: do NOT remove outline globally. Add to global CSS:
+    :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  Touch targets: all clickable elements min 44×44px on mobile (use minHeight/minWidth or padding)
+
+━━━ LINK VALIDATION (REQUIRED) ━━━
+  NEVER output empty, placeholder, or broken links. All <a href> values must be real or "#".
+  Telegram links: ALWAYS format as https://t.me/ChannelName — never t.me/..., @ChannelName, or bare channel names
+  CTA buttons that open external links: use target="_blank" rel="noopener noreferrer"
+  Nav links: use href="#sectionId" for same-page anchors; every section must have id="sectionId"
+  Social links (Twitter/X, LinkedIn, Instagram): use real platform URLs or "#" if unknown
+  Phone/email links: tel:+1234567890 and mailto:email@domain.com format
+  Never output <a href=""> or <a href="javascript:void(0)"> — use href="#" as minimum
+
 ━━━ RULES ━━━
 1. Write ONLY the named function — no import/export statements:
    function ${componentName}() { ... return (...) }
@@ -267,15 +314,19 @@ SPACING — Generous and intentional:
    Wrong: const label: string = "hello"                     → use const label = "hello"
    No interfaces, no type aliases, no type annotations, no type casts, no generics
 3. ALL styling via inline style={{ }} objects — no external CSS classes, no Tailwind
+   EXCEPTION: inject layout-only CSS (grids, @media, @keyframes) via <style> tags in JSX
 4. Reference brand colors via var(--primary) etc. in style objects
 5. Use Framer Motion for EVERY entrance animation:
    - whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 30 }}
      viewport={{ once: true, margin: "0px" }} transition={{ duration: 0.6, ease: "easeOut" }}
    - Stagger children with { delay: index * 0.1 }
-6. Mobile-first: detect viewport with useState + useEffect(window.innerWidth) OR use a
-   <style> tag inside JSX with @media rules for layout-only concerns
+6. Responsive: ALWAYS inject layout CSS via <style> tag with @media breakpoints (480px, 768px)
+   Never use JS to toggle columns — CSS grid/flexbox + @media handles all layout changes
 7. Use actual business copy extracted from the Copywriting context — no lorem ipsum
 8. Pull exact hex colors from the Color & Typography context — no made-up colors
+9. Every section root element must have id="${section.id}" for anchor navigation
+10. QUALITY BAR: the output must look like Stripe, Linear, or Framer — reject anything that
+    resembles Bootstrap, WordPress, or a generic website builder template
 
 ━━━ CRITICAL: IMAGES & MEDIA ━━━
 NEVER generate fake product/hero image URLs that will 404. Broken images look worse than no image.
@@ -750,6 +801,7 @@ img { max-width: 100%; height: auto; display: block; }
 button { cursor: pointer; border: none; font-family: inherit; }
 a { text-decoration: none; color: inherit; }
 ::selection { background: var(--primary); color: #fff; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
