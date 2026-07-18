@@ -510,45 +510,35 @@ function getSectionTypeRules(type: string): string {
 
 - THREE.JS PARTICLE SYSTEM (REQUIRED for hero sections — makes the page feel alive):
   Add a full-viewport canvas behind the content using Three.js. This is a REQUIRED element, not optional.
-  Implementation pattern (copy exactly):
-  ```
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    if (!canvasRef.current || !window.THREE) return;
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 5;
-    const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    // Particles
-    const count = 120;
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count * 3; i++) positions[i] = (Math.random() - 0.5) * 14;
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({ color: 0x6366f1, size: 0.06, transparent: true, opacity: 0.55 });
-    const points = new THREE.Points(geo, mat);
-    scene.add(points);
-    let frameId;
-    const animate = () => {
-      frameId = requestAnimationFrame(animate);
-      points.rotation.y += 0.0008;
-      points.rotation.x += 0.0004;
-      renderer.render(scene, camera);
-    };
-    animate();
-    const onResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
+  Implementation pattern — copy this exactly inside the component function:
+
+    const canvasRef = useRef(null);
+    useEffect(() => {
+      if (!canvasRef.current || !window.THREE) return;
+      const scene = new window.THREE.Scene();
+      const camera = new window.THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 5;
+      const renderer = new window.THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
-    };
-    window.addEventListener('resize', onResize);
-    return () => { cancelAnimationFrame(frameId); window.removeEventListener('resize', onResize); renderer.dispose(); };
-  }, []);
-  ```
-  Place the canvas: <canvas ref={canvasRef} style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0}} />
-  This canvas sits BEHIND the aurora blobs (both at zIndex:0, canvas first in DOM order).
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      const count = 120;
+      const positions = new Float32Array(count * 3);
+      for (let i = 0; i < count * 3; i++) positions[i] = (Math.random() - 0.5) * 14;
+      const geo = new window.THREE.BufferGeometry();
+      geo.setAttribute('position', new window.THREE.BufferAttribute(positions, 3));
+      const mat = new window.THREE.PointsMaterial({ color: 0x6366f1, size: 0.06, transparent: true, opacity: 0.55 });
+      const points = new window.THREE.Points(geo, mat);
+      scene.add(points);
+      let frameId = 0;
+      const tick = () => { frameId = requestAnimationFrame(tick); points.rotation.y += 0.0008; points.rotation.x += 0.0004; renderer.render(scene, camera); };
+      tick();
+      const onResize = () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+      window.addEventListener('resize', onResize);
+      return () => { cancelAnimationFrame(frameId); window.removeEventListener('resize', onResize); renderer.dispose(); };
+    }, []);
+
+  Place the canvas element FIRST inside the section, before aurora blobs and content:
+    <canvas ref={canvasRef} style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0}} />
 
 - FLOATING AMBIENT ELEMENTS (strongly recommended for visual richness):
     Add 2-4 small decorative floating elements in the hero background area using position:absolute, zIndex:1
