@@ -184,11 +184,21 @@ function ${componentName}() {
 function getSectionTypeRules(type: string): string {
   if (type.includes("nav")) return `
 - position: sticky, top: 0, zIndex: 1000
-- On scroll: transition background from transparent → var(--card-bg) with backdrop-filter: blur(12px)
-  (use useEffect + window scroll listener + useState for scrolled boolean)
-- Logo on left (img tag with branding logo URL if provided, else company name text)
-- Nav links in center (desktop), hamburger menu on mobile (useState for open)
-- CTA button on right with primary color`;
+- On scroll: transition background from transparent to var(--card-bg) with backdrop-filter blur(20px) and
+  boxShadow '0 1px 0 rgba(255,255,255,0.06)' — use useEffect scroll listener + useState for scrolled bool
+- LEFT: logo + company name row, gap 10, alignItems center
+  LOGO RULE (critical — always follow):
+    If logoUrl provided: <div style={{width:38,height:38,borderRadius:'50%',overflow:'hidden',flexShrink:0}}>
+      <img src={logoUrl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="logo" />
+    </div>
+    Then company name in <span style={{fontWeight:700,fontSize:17,letterSpacing:'-0.01em'}}>
+    NEVER render the logo as a large standalone img tag — always 38x38 circle crop
+- CENTER: nav links, gap 32, fontSize 14, fontWeight 500, opacity 0.75 on rest, hover opacity 1 transition 0.2s
+  Visible on desktop only — on mobile collapse into hamburger
+- RIGHT: CTA button + hamburger on mobile
+  CTA: background var(--primary), color #fff, padding '9px 22px', borderRadius 9999, fontWeight 600, fontSize 14
+  Hamburger: 3 horizontal lines (2px each, width 22px, gap 5px, rounded), shown on mobile hidden on desktop
+- Mobile open menu: slide-down with AnimatePresence, stacked links + CTA button`;
 
   if (type.includes("hero") && type.includes("mockup")) return `
 - Full viewport height (minHeight: "100vh")
@@ -208,16 +218,42 @@ function getSectionTypeRules(type: string): string {
 - Headline: large (clamp(2.5rem, 6vw, 5rem)), bold — apply gradient-text if specified in context
 - Subheadline below, muted color
 - 1–2 CTA buttons (primary filled + secondary outlined)
-- Implement the heroBackgroundEffect (animated-gradient-mesh / aurora-waves / cosmic-starfield /
-  floating-blobs) from the Visual Effects context using useEffect + useRef canvas or CSS keyframes
-- Social proof badge (star + count) below buttons`;
+- MUST implement an animated background (flat dark bg looks unprofessional — do not skip):
+  Use this pattern (adapt colors to match the brand — primary/secondary/accent blobs):
+  Define keyframe CSS string, inject via <style> tag in JSX, add absolutely-positioned blurred divs:
+
+  const _bgCSS = '@keyframes _da{0%,100%{transform:translate(0,0)}50%{transform:translate(4%,5%)}} @keyframes _db{0%,100%{transform:translate(0,0)}50%{transform:translate(-5%,-4%)}}';
+  // Outer section must be position:relative, overflow:hidden
+  // Inside return, before content:
+  <style>{_bgCSS}</style>
+  <div style={{position:'absolute',inset:0,overflow:'hidden',pointerEvents:'none',zIndex:0}}>
+    <div style={{position:'absolute',top:'-15%',left:'-10%',width:'65%',height:'70%',background:'radial-gradient(ellipse,var(--primary) 0%,transparent 65%)',filter:'blur(90px)',opacity:0.35,animation:'_da 9s ease-in-out infinite'}}/>
+    <div style={{position:'absolute',bottom:'-15%',right:'-10%',width:'60%',height:'65%',background:'radial-gradient(ellipse,var(--secondary) 0%,transparent 65%)',filter:'blur(80px)',opacity:0.28,animation:'_db 12s ease-in-out infinite'}}/>
+    <div style={{position:'absolute',top:'35%',right:'10%',width:'45%',height:'50%',background:'radial-gradient(ellipse,var(--accent) 0%,transparent 70%)',filter:'blur(110px)',opacity:0.18,animation:'_da 16s ease-in-out infinite reverse'}}/>
+  </div>
+  // All text/button content must be in a child div with position:relative, zIndex:1
+
+- Social proof badge (star ⭐ + count + phrase) below buttons — subtle pill style`;
 
   if (type.includes("bento") || type.includes("feature")) return `
-- CSS Grid with asymmetric layout (some cards span 2 columns) for bento grids
-- Each card: var(--card-bg) bg, 1px border var(--border), var(--radius) border-radius, padding 28px
-- Icon (emoji or unicode symbol) in a colored circle above title
-- Stagger whileInView animations with delay: index * 0.08
-- Hover: scale(1.02) + box-shadow lift using motion.div whileHover`;
+- Section: paddingTop/Bottom 96px, paddingLeft/Right 24px, maxWidth 1100px, margin auto
+- Section header above grid: small label pill (uppercase, fontSize 11, letterSpacing 0.1em) + large headline + subtext
+- CSS Grid: 2 cols on desktop, 1 col on mobile — inject via <style> tag with media query
+  For bento-feature-grid: some cards span 2 cols (use inline gridColumn:'span 2' for first/featured card)
+- Each card (motion.div):
+    background: var(--card-bg), border: '1px solid var(--border)', borderRadius: 16, padding: '28px 24px'
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.04)'
+    whileHover: {{ scale:1.02, boxShadow:'0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px var(--primary)' }}
+    transition: {{ duration:0.2 }}
+- Icon container (GRADIENT circle — not plain emoji):
+    <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,var(--primary),var(--secondary))',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20,boxShadow:'0 4px 14px rgba(0,0,0,0.3)'}}>
+      <span style={{fontSize:24,lineHeight:1}}>{ICON}</span>
+    </div>
+    Use relevant unicode/emoji for each feature (🧠 ⚡ 📊 🔒 🚀 ✨ 🎯 💡 etc.)
+- Card title: fontSize 19, fontWeight 700, marginBottom 10, color var(--foreground)
+- Card description: fontSize 15, lineHeight 1.65, color var(--muted), opacity as needed
+- Stagger animations: whileInView={{ opacity:1, y:0 }} initial={{ opacity:0, y:24 }}
+    viewport={{ once:true, margin:'0px' }} transition={{ duration:0.5, delay: index*0.08 }}`;
 
   if (type.includes("pricing")) return `
 - 2–4 tier cards; middle/recommended card visually elevated (border: 2px solid var(--primary), scale 1.04)
@@ -232,16 +268,36 @@ function getSectionTypeRules(type: string): string {
 - For carousel: useEffect auto-advance every 4s with AnimatePresence slide transition`;
 
   if (type.includes("cta")) return `
-- Full-width section with gradient background (use --primary to --primary-dark or two brand colors)
-- Large centered headline, subtext, big CTA button
-- Optional: floating decorative shapes (absolutely positioned blurred divs)
-- whileInView scale-in for the button`;
+- Full-width section with rich gradient background: use linear or radial gradient from var(--primary) to var(--primary-dark)
+  Add subtle noise texture feel via layered radial gradients, or a mesh gradient with 2-3 color stops
+- Add absolutely-positioned blurred glow divs for depth (same aurora pattern as hero but smaller/more contained)
+- Centered content with maxWidth 700px margin auto, textAlign center
+- Large headline: clamp(2rem,5vw,3.5rem), fontWeight 800, color #fff (high contrast on gradient bg)
+- Subtext: fontSize 18, color rgba(255,255,255,0.75), lineHeight 1.6, marginTop 16, marginBottom 40
+- CTA button: large pill, white background, dark text, padding '16px 40px', fontSize 18, fontWeight 700
+  whileHover scale 1.04 + boxShadow, whileInView scale-in animation
+- Optional secondary link below button: "No credit card required" or equivalent in small muted text`;
 
   if (type.includes("footer")) return `
-- Dark background (var(--background) or slightly lighter)
-- Grid layout: logo + tagline left, link columns right
-- Bottom bar: copyright line + social icon links (SVG or unicode: 𝕏 ◆ in)
-- Keep it clean — no heavy animations`;
+- Background var(--background), borderTop '1px solid var(--border)', padding '64px 24px 32px'
+- Grid: 2-col on desktop (logo+tagline left, link columns right), 1-col stack on mobile — use style tag for media query
+- LEFT column:
+    LOGO RULE (critical — always follow):
+      If logoUrl: row with gap 10, alignItems center:
+        <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',flexShrink:0}}>
+          <img src={logoUrl} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} alt="logo" />
+        </div>
+        <span style={{fontWeight:700,fontSize:16}}>Company Name</span>
+      If no logoUrl: company name in large gradient text (fontSize 22, fontWeight 800)
+      NEVER display logo as a large unconstrained image
+    Tagline: fontSize 14, color var(--muted), lineHeight 1.6, maxWidth 240, marginTop 12
+    Social icons row (marginTop 20): 𝕏 ◆ in — each in a 32x32 circle border borderRadius 50%, hover background var(--border)
+- RIGHT: 2-3 link columns (Product, Company, Legal)
+    Column header: fontSize 11, fontWeight 700, letterSpacing 0.08em, textTransform uppercase, color var(--muted), marginBottom 14
+    Links: fontSize 14, color inherit, opacity 0.65, hover opacity 1, transition 0.15s, display block, marginBottom 10
+- Bottom bar: marginTop 48, paddingTop 24, borderTop '1px solid var(--border)', flex row, copyright left, links right
+  Copyright: fontSize 12, opacity 0.5
+- No heavy animations — keep performant`;
 
   if (type.includes("accordion") || type.includes("faq")) return `
 - useState for which item is open (null or index)
@@ -301,9 +357,9 @@ export function buildGlobalCSS(
   let muted      = defaults.muted;
   let card       = defaults.card;
   let border     = defaults.border;
-  let fontSans   = "'Inter', system-ui, -apple-system, sans-serif";
+  let fontSans   = "'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif";
   let fontMono   = "'JetBrains Mono', ui-monospace, monospace";
-  let googleFontsUrl = "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap";
+  let googleFontsUrl = "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap";
   let radius = "12px";
 
   try {
@@ -368,7 +424,27 @@ a { text-decoration: none; color: inherit; }
 ::selection { background: var(--primary); color: #fff; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }`;
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Utility: gradient text ─────────────────────────────────────────────── */
+.gradient-text, [data-gradient-text] {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Utility: glass card ────────────────────────────────────────────────── */
+.glass-card {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+}
+
+/* ── Smooth transitions for interactive elements ────────────────────────── */
+button, a { transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease; }`;
 }
 
 // ---------------------------------------------------------------------------
@@ -595,6 +671,8 @@ export async function assembleHTML(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escHtml(context.title)}</title>
   <meta name="description" content="${escHtml(context.description)}">${favicon}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <style>
 ${context.globalCSS}
   </style>
