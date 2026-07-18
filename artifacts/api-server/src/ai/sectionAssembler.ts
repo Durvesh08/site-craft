@@ -117,7 +117,7 @@ export function buildSectionPrompt(
     .filter(Boolean)
     .join("\n");
 
-  return `You are a React component engineer building ONE section of a premium landing page (Linear/Stripe/Framer-tier quality).
+  return `You are an elite Senior UI/UX Designer, Creative Director, and Frontend Engineer. You build ONE section of a world-class landing page — every pixel must feel intentional and premium. Your output should look like it was crafted by the teams at Stripe, Linear, Framer, Vercel, Apple, or Arc Browser. Never produce anything that resembles Bootstrap, WordPress, or a generic website builder.
 
 ━━━ SECTION TO BUILD ━━━
 Component name : ${componentName}
@@ -145,6 +145,44 @@ ${context.previousOutputs}
   --primary  --primary-dark  --secondary  --background  --foreground
   --muted    --accent        --border     --card-bg      --radius
   --font-sans  --font-mono
+
+━━━ PREMIUM VISUAL DESIGN SYSTEM ━━━
+Apply these principles to EVERY section you build:
+
+BACKGROUNDS — Never leave a section background plain. Choose at least one:
+  • Aurora/mesh gradient: multiple radial-gradient stops with CSS @keyframes shifting them
+    Template: const bgCSS='@keyframes _ba{0%,100%{transform:translate(0,0)}50%{transform:translate(5%,6%)}}';
+    Then 2-3 blurred blobs inside position:absolute inset:0 overflow:hidden zIndex:0 div
+  • Subtle grid lines: repeating-linear-gradient at 1px, rgba(255,255,255,0.035) for depth
+  • Radial glow: filter:blur(80-120px) colored div behind focal content
+  • Glass panels: backdrop-filter:blur(20px), bg rgba(255,255,255,0.04), border rgba(255,255,255,0.08)
+
+CARDS — Never plain rectangles. Always use at least two of:
+  • Glass: background rgba(255,255,255,0.04–0.06), backdrop-filter blur(16-20px)
+  • Gradient border: border 1px solid rgba(255,255,255,0.08–0.12)
+  • Inner glow: box-shadow inset 0 1px 0 rgba(255,255,255,0.08), 0 0 40px rgba(primary,0.06)
+  • Hover lift: whileHover={{ y:-6, boxShadow:'0 24px 48px rgba(0,0,0,0.3)' }}
+
+BUTTONS — Primary must feel alive:
+  • Gradient: linear-gradient(135deg, var(--primary), var(--primary-dark)) as background
+  • Glow: box-shadow 0 0 28px rgba(primary,0.35) — brightens on hover
+  • Hover: whileHover={{ scale:1.04 }}, whileTap={{ scale:0.97 }}
+
+TYPOGRAPHY — Headlines must command attention:
+  • Gradient text on key words: bg linear-gradient, -webkit-background-clip:text, color:transparent
+  • Letter-spacing: -0.02em to -0.04em on large headings (tighter = more premium)
+  • Section titles: clamp(1.8rem,4vw,3rem), weight 800
+
+ANIMATIONS — Everything moves with purpose:
+  • Stagger children: delay: index * 0.08 to 0.10
+  • Float keyframes: @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  • Glow pulse: @keyframes glowPulse{0%,100%{opacity:.5}50%{opacity:1}} on decorative elements
+  • Counter: numbers count up 0→final when scrolled into view (useInView + setInterval)
+
+SPACING — Generous and intentional:
+  • Section padding: 96-140px top/bottom (desktop), 64px (mobile)
+  • Card padding: 28-40px, border-radius 20-28px
+  • Max content width: 1100-1200px centered
 
 ━━━ RULES ━━━
 1. Write ONLY the named function — no import/export statements:
@@ -312,10 +350,21 @@ function getSectionTypeRules(type: string): string {
     viewport={{ once:true, margin:'0px' }} transition={{ duration:0.5, delay: index*0.09 }}`;
 
   if (type.includes("pricing")) return `
-- 2–4 tier cards; middle/recommended card visually elevated (border: 2px solid var(--primary), scale 1.04)
-- Each card: name, price (large bold), billing period, feature list with ✓ checkmarks, CTA button
-- "Most popular" badge on recommended tier (absolute positioned, top: -12px)
-- Hover lift on non-featured cards`;
+- 2–4 tier cards in a centered row; middle/recommended card visually elevated
+- RECOMMENDED CARD: position:relative, border:'2px solid var(--primary)', scale 1.04 on desktop
+    background: gradient from rgba(primary,0.1) to rgba(primary,0.03), borderRadius:24
+    boxShadow: '0 0 60px rgba(var(--primary),0.15), 0 24px 48px rgba(0,0,0,0.2)'
+    "Most Popular" badge: position absolute, top:-14px, left:50%, transform translateX(-50%)
+      background gradient, color #fff, borderRadius:999px, padding '4px 16px', fontSize:12, fontWeight:700
+- OTHER CARDS: glass treatment — backdrop-filter:blur(16px), background rgba(255,255,255,0.04)
+    border rgba(255,255,255,0.08), borderRadius:24, hover lift whileHover={{ y:-4 }}
+- EACH CARD CONTAINS: plan name (uppercase, letterSpacing 0.08em, small), price (clamp(2.2rem,4vw,3rem), fontWeight 800,
+    gradient text on recommended card), "/month" in muted small text, feature list with ✓ checkmarks
+    ✓: 18px circle with gradient bg + white checkmark, feature text beside it
+    CTA button at bottom: gradient+glow on recommended, glass on others
+- Optional toggle (useState) for Monthly / Annual billing with animated pill slider
+- Section header: label pill + headline (gradient word) + optional billing toggle
+- Stagger card entrances: delay index*0.08`;
 
   if (type.includes("testimonial")) return `
 - Section: paddingTop/Bottom 80px, paddingInline 24px, overflow:'hidden'
@@ -401,10 +450,33 @@ function getSectionTypeRules(type: string): string {
 - Do not add any heavy animations — footer should be fast-loading`;
 
   if (type.includes("accordion") || type.includes("faq")) return `
-- useState for which item is open (null or index)
-- AnimatePresence + motion.div with height animation for expand/collapse
-- Chevron icon rotates 180° when open (motion.span with rotate transform)
-- Divider between items`;
+- Section: maxWidth 760px centered, padding 96px top/bottom, paddingInline 24px
+- Section header: label pill + headline (gradient keyword) + short subtext
+- ITEMS: useState(null) for openIndex; clicking same item again closes it
+  Each item outer div: background rgba(255,255,255,0.04), border '1px solid rgba(255,255,255,0.07)',
+    borderRadius 16, marginBottom 8, overflow:hidden, cursor pointer
+    OPEN state: borderColor rgba(primary,0.3), background rgba(primary,0.04)
+  Trigger row: padding '22px 28px', display flex, justifyContent between, alignItems center
+    Question text: fontSize 15, fontWeight 600, flex:1
+    Chevron: motion.div with animate={{ rotate: isOpen ? 180 : 0 }} transition duration 0.25
+      Use ▼ unicode or SVG chevron, fontSize 14, color var(--muted)
+  Answer (AnimatePresence — REQUIRED for smooth animation):
+    <AnimatePresence>
+      {openIndex === i && (
+        <motion.div key="answer"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.28, ease: 'easeInOut' }}
+          style={{ overflow: 'hidden' }}>
+          <p style={{ padding: '0 28px 24px', fontSize:14, lineHeight:1.75, color:'var(--muted)' }}>
+            {answer}
+          </p>
+        </motion.div>
+      )}
+    </AnimatePresence>
+- Generate 5-8 realistic FAQ items from the Copywriting context
+- Stagger section header into view with whileInView animation`;
 
   if (type.includes("alternating") || type.includes("split-hero") || type.includes("media-hero")) return `
 - Two-column alternating rows: image/visual LEFT + copy RIGHT, then copy LEFT + image/visual RIGHT
@@ -443,9 +515,12 @@ function getSectionTypeRules(type: string): string {
 
   return `
 - Use the section brief and business context to design an appropriate layout
-- Apply Framer Motion whileInView animations
-- Style with inline styles using CSS custom properties
-- NEVER use fake image URLs — always CSS gradients/shapes or picsum.photos/seed/{word}/w/h`;
+- Apply the PREMIUM VISUAL DESIGN SYSTEM rules above: glass card container, background depth, stagger animations
+- ALL styling via inline style={{ }}, NO Tailwind, NO CSS classes
+- NEVER use fake image URLs — always CSS gradients/shapes or picsum.photos/seed/{word}/w/h
+- Every interactive element has whileHover + whileTap, every card has hover lift
+- Section must have a visible background effect (not a plain solid color)
+- Use actual copy from Copywriting context — zero lorem ipsum`;
 }
 
 // ---------------------------------------------------------------------------
