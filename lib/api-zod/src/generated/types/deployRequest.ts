@@ -6,11 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DeployRequestEnvironment } from './deployRequestEnvironment';
+import type { DeployRequestProtocol } from './deployRequestProtocol';
 
 export interface DeployRequest {
   environment?: DeployRequestEnvironment;
+  protocol?: DeployRequestProtocol;
   ftpHost: string;
+  ftpPort?: number;
   ftpUsername: string;
   ftpPassword: string;
   ftpPath?: string;
+  siteUrl?: string;
+  overwriteExisting?: boolean;
 }

@@ -614,6 +614,29 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /deployments/{id}/retry:
+    post:
+      operationId: retryDeployment
+      tags: [deployments]
+      summary: Retry a failed deployment using saved credentials
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetryDeploymentRequest"
+      responses:
+        "202":
+          description: Retry started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deployment"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /domains:
     get:
       operationId: listDomains
@@ -1180,6 +1203,9 @@ components:
         environment:
           type: string
           enum: [production, staging]
+        protocol:
+          type: string
+          enum: [ftp, ftps, sftp]
         liveUrl:
           type: string
           nullable: true
@@ -1189,11 +1215,20 @@ components:
         ftpHost:
           type: string
           nullable: true
+        ftpPort:
+          type: integer
+          nullable: true
         lighthouseScore:
           type: number
           nullable: true
         filesUploaded:
           type: integer
+          nullable: true
+        uploadProgress:
+          type: integer
+          nullable: true
+        deploymentLog:
+          type: string
           nullable: true
         error:
           type: string
@@ -1229,18 +1264,37 @@ components:
           type: string
           enum: [production, staging]
           default: production
+        protocol:
+          type: string
+          enum: [ftp, ftps, sftp]
+          default: ftp
         ftpHost:
           type: string
+        ftpPort:
+          type: integer
+          default: 21
         ftpUsername:
           type: string
         ftpPassword:
           type: string
         ftpPath:
           type: string
+        siteUrl:
+          type: string
+        overwriteExisting:
+          type: boolean
+          default: true
       required:
         - ftpHost
         - ftpUsername
         - ftpPassword
+
+    RetryDeploymentRequest:
+      type: object
+      properties:
+        overwriteExisting:
+          type: boolean
+          default: true
 
     Domain:
       type: object

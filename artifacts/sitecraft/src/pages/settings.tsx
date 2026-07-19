@@ -28,7 +28,7 @@ export default function SettingsPage() {
   const [ftpUsername, setFtpUsername] = useState("");
   const [ftpPassword, setFtpPassword] = useState("");
   const [ftpPath, setFtpPath] = useState("/");
-  const [ftpSecure, setFtpSecure] = useState(false);
+  const [ftpProtocol, setFtpProtocol] = useState<"ftp" | "ftps" | "sftp">("ftp");
   const [isSavingFtp, setIsSavingFtp] = useState(false);
   const [isTestingFtp, setIsTestingFtp] = useState(false);
   const [ftpTestStatus, setFtpTestStatus] = useState<"none" | "success" | "failed">("none");
@@ -73,7 +73,9 @@ export default function SettingsPage() {
           setFtpUsername(settings.deployment.ftp_username || "");
           setFtpPassword(settings.deployment.ftp_password || "");
           setFtpPath(settings.deployment.ftp_path || "/");
-          setFtpSecure(settings.deployment.ftp_secure === "true");
+          const proto = settings.deployment.ftp_protocol;
+          if (proto === "sftp" || proto === "ftps" || proto === "ftp") setFtpProtocol(proto);
+          else if (settings.deployment.ftp_secure === "true") setFtpProtocol("ftps");
         }
 
         // AI Settings
@@ -135,7 +137,8 @@ export default function SettingsPage() {
           ftp_username: ftpUsername,
           ftp_password: ftpPassword,
           ftp_path: ftpPath,
-          ftp_secure: ftpSecure.toString(),
+          ftp_protocol: ftpProtocol,
+          ftp_secure: (ftpProtocol === "ftps").toString(),
         }),
       });
 
@@ -162,7 +165,7 @@ export default function SettingsPage() {
           ftp_port: ftpPort,
           ftp_username: ftpUsername,
           ftp_password: ftpPassword,
-          ftp_secure: ftpSecure.toString(),
+          ftp_protocol: ftpProtocol,
         }),
       });
 
@@ -429,19 +432,30 @@ export default function SettingsPage() {
                   <p className="text-[10px] text-muted-foreground font-mono">Publication files will be uploaded directly under this folder.</p>
                 </div>
 
-                <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-card/30 mt-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="ftp-secure" className="flex items-center gap-2 cursor-pointer font-medium">
-                      <Shield className="h-4 w-4 text-primary" />
-                      Implicit/Explicit FTPS (Secure Connection)
-                    </Label>
-                    <p className="text-[11px] text-muted-foreground">Requires server configuration to accept encrypted connections.</p>
+                <div className="space-y-2">
+                  <Label htmlFor="ftp-protocol" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" />
+                    Protocol
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["ftp", "ftps", "sftp"] as const).map(p => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setFtpProtocol(p)}
+                        className={`rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                          ftpProtocol === p
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-card/30 text-muted-foreground hover:border-primary/50"
+                        }`}
+                      >
+                        {p.toUpperCase()}
+                        <p className="text-[9px] font-normal opacity-70 mt-0.5">
+                          {p === "ftp" ? "Plain, port 21" : p === "ftps" ? "Encrypted, port 21" : "SSH, port 22"}
+                        </p>
+                      </button>
+                    ))}
                   </div>
-                  <Switch
-                    id="ftp-secure"
-                    checked={ftpSecure}
-                    onCheckedChange={setFtpSecure}
-                  />
                 </div>
 
                 {ftpTestStatus === "success" && (

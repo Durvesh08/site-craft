@@ -53,6 +53,7 @@ import type {
   Prompt,
   PromptListResponse,
   RegenerateSectionRequest,
+  RetryDeploymentRequest,
   UnauthorizedResponse,
   UpdateProjectRequest,
   UpdatePromptRequest,
@@ -2193,6 +2194,78 @@ export const useRollbackDeployment = <TError = ErrorType<NotFoundResponse>,
         TContext
       > => {
       return useMutation(getRollbackDeploymentMutationOptions(options));
+    }
+
+export const getRetryDeploymentUrl = (id: string,) => {
+
+
+
+
+  return `/api/deployments/${id}/retry`
+}
+
+/**
+ * @summary Retry a failed deployment using saved credentials
+ */
+export const retryDeployment = async (id: string,
+    retryDeploymentRequest?: RetryDeploymentRequest, options?: RequestInit): Promise<Deployment> => {
+
+  return customFetch<Deployment>(getRetryDeploymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(retryDeploymentRequest)
+  }
+);}
+
+
+
+
+
+export const getRetryDeploymentMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryDeployment>>, TError,{id: string;data?: BodyType<RetryDeploymentRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof retryDeployment>>, TError,{id: string;data?: BodyType<RetryDeploymentRequest>}, TContext> => {
+
+const mutationKey = ['retryDeployment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retryDeployment>>, {id: string;data?: BodyType<RetryDeploymentRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  retryDeployment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetryDeploymentMutationResult = NonNullable<Awaited<ReturnType<typeof retryDeployment>>>
+    export type RetryDeploymentMutationBody = BodyType<RetryDeploymentRequest> | undefined
+    export type RetryDeploymentMutationError = ErrorType<NotFoundResponse>
+
+    /**
+ * @summary Retry a failed deployment using saved credentials
+ */
+export const useRetryDeployment = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retryDeployment>>, TError,{id: string;data?: BodyType<RetryDeploymentRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof retryDeployment>>,
+        TError,
+        {id: string;data?: BodyType<RetryDeploymentRequest>},
+        TContext
+      > => {
+      return useMutation(getRetryDeploymentMutationOptions(options));
     }
 
 export const getListDomainsUrl = () => {

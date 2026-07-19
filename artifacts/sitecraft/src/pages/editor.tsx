@@ -317,7 +317,7 @@ export default function ProjectEditor() {
               </div>
             )}
             {iframeUrl ? (
-              <iframe src={iframeUrl} className="w-full h-full bg-white" sandbox="allow-scripts allow-same-origin" title="Editor Preview" />
+              <iframe src={iframeUrl} className="w-full h-full bg-white" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation" title="Editor Preview" />
             ) : (
               <div className="flex-1 flex items-center justify-center bg-card">
                 <div className="animate-pulse flex flex-col items-center gap-2">
