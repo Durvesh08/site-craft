@@ -772,10 +772,11 @@ function replaceSectionInHtml(
   const escaped = componentName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   // Lookahead covers: next section comment (// ──), APP SHELL block (/* ═══),
-  // or closing </script> — so the last section (footer) is handled correctly.
+  // or legacy pages that jump directly into function App(). This prevents
+  // last-section edits from swallowing App()/mount code and blanking the page.
   const sectionPat = new RegExp(
     `(\\/\\/ ── [^\\n]*\\(${escaped}\\)[^\\n]*\\n)([\\s\\S]*?)` +
-    String.raw`(?=\s*\/\/ ── |\s*\/\* ═{3}|\s*<\/script)`,
+    String.raw`(?=\s*\/\/ ── |\s*\/\* ═{3}|\s*function\s+App\s*\(|\s*<\/script)`,
   );
 
   const indent = (code: string, n: number) =>
@@ -789,21 +790,22 @@ function replaceSectionInHtml(
     return html.replace(sectionPat, `${commentLine}${indent(newCode.trim(), 4)}\n\n    `);
   }
 
-  // Fallback: capture from the section comment to the APP SHELL block (last-section / footer path)
+  // Fallback: capture from the section comment to the APP SHELL block or legacy App() boundary.
   const fallbackPat = new RegExp(
-    `(\\s*\\/\\/ ── [^\\n]*\\(${escaped}\\)[^\\n]*[\\s\\S]*?)(?=\\s*\\/\\* ═{3})`,
+    `(\\s*\\/\\/ ── [^\\n]*\\(${escaped}\\)[^\\n]*[\\s\\S]*?)(?=\\s*(?:\\/\\* ═{3}|function\\s+App\\s*\\())`,
   );
   if (fallbackPat.test(html)) {
     logger.warn({ componentName }, "Using fallback section replacement (last-section path)");
     return html.replace(fallbackPat, `\n\n${commentLine}${indent(newCode.trim(), 4)}\n\n    `);
   }
 
-  // Last resort: append before App block
+  // Last resort: append before App block (new marker or legacy function App).
   logger.warn({ componentName }, "Section comment not found in HTML — appending before App");
-  return html.replace(
-    /(\s*\/\* ═{3}[^=]*APP SHELL)/,
-    `\n${commentLine}${indent(newCode.trim(), 4)}\n\n    $1`,
-  );
+  const appBoundary = /(\s*(?:\/\* ═{3}[^=]*APP SHELL[^*]*\*\/|function\s+App\s*\())/;
+  if (appBoundary.test(html)) {
+    return html.replace(appBoundary, `\n${commentLine}${indent(newCode.trim(), 4)}\n\n    $1`);
+  }
+  return html;
 }
 
 
