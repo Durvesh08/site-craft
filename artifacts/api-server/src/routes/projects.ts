@@ -23,6 +23,38 @@ function requireAuth(req: Request, res: Response): boolean {
   return true;
 }
 
+/**
+ * Strip residual ESM export statements from the generated <script> block of
+ * stored HTML pages.  These can cause "Uncaught SyntaxError: Unexpected
+ * identifier 'e'" in non-module browser context when esbuild leaves export
+ * artefacts (export {}, export { X as e }, export default …) in its output.
+ *
+ * Applied at serve-time so ALL existing projects are fixed transparently
+ * without requiring regeneration.
+ */
+function stripScriptExports(js: string): string {
+  return js
+    // export * from '...'  /  export * as ns from '...'
+    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    // export { … }  /  export { … } from '...'
+    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    // export type { … }
+    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    // export default <expression> — strip keyword, keep body
+    .replace(/^export\s+default\s+/gm, "")
+    // export function / class / const / let / var — strip keyword
+    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1");
+}
+
+function patchHtml(html: string | null): string | null {
+  if (!html) return null;
+  // Target only the generated landing page <script> (after the React runtime)
+  return html.replace(
+    /(<!-- Generated landing page -->\s*<script>)([\s\S]*?)(<\/script>)/,
+    (_, open, js: string, close) => open + stripScriptExports(js) + close,
+  );
+}
+
 function toProjectResponse(p: typeof projectsTable.$inferSelect) {
   return {
     id: p.id,
@@ -35,7 +67,7 @@ function toProjectResponse(p: typeof projectsTable.$inferSelect) {
     theme: p.theme ?? null,
     previewUrl: p.previewUrl ?? null,
     liveUrl: p.liveUrl ?? null,
-    generatedHtml: p.generatedHtml ?? null,
+    generatedHtml: patchHtml(p.generatedHtml ?? null),
     designTokens: p.designTokensJson ? JSON.parse(p.designTokensJson) : null,
     seoScore: p.seoScore ?? null,
     accessibilityScore: p.accessibilityScore ?? null,
@@ -168,7 +200,7 @@ router.get("/projects/:id/export", async (req: Request, res: Response) => {
     const slug = toSlug(project.name);
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${slug}.html"`);
-    res.send(project.generatedHtml);
+    res.send(patchHtml(project.generatedHtml) ?? project.generatedHtml);
   } catch (err) {
     req.log.error({ err }, "Failed to export project HTML");
     res.status(500).json({ error: "InternalError", message: "Failed to export" });
@@ -206,7 +238,7 @@ router.get("/projects/:id/export/zip", async (req: Request, res: Response) => {
 
     // ── Build zip ──────────────────────────────────────────────────────────
     const zip = new JSZip();
-    zip.file("index.html",  project.generatedHtml);
+    zip.file("index.html",  patchHtml(project.generatedHtml) ?? project.generatedHtml);
     zip.file(".htaccess",   buildHtaccess(siteUrl));
     zip.file("robots.txt",  buildRobots(siteUrl));
     zip.file("sitemap.xml", buildSitemap(siteUrl, now));
