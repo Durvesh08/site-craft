@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { deploymentsTable, domainsTable, projectsTable, settingsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { Readable } from "stream";
-import * as ftp from "basic-ftp";
+import { ftpConnect } from "../lib/ftpConnect";
 import { decrypt } from "../lib/encryption";
 import {
   DeployProjectParams,
@@ -133,24 +133,27 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
           .set({ status: "uploading" })
           .where(eq(deploymentsTable.id, deployment.id));
 
-        const client = new ftp.Client();
-        client.ftp.verbose = false;
+        // ftpConnect: strips ftp:// / ftps:// prefixes, auto-retries with
+        // FTPS on 530 "Login incorrect", tolerates self-signed certs.
+        const { client, usedSecure } = await ftpConnect(
+          { host, port, user: username!, password: password!, secure },
+          {
+            info: (m) => req.log.info(m),
+            error: (m) => req.log.error(m),
+          },
+        );
+        req.log.info(`FTP connected (secure=${usedSecure}), uploading to ${ftpPath}`);
 
-        await client.access({
-          host,
-          port,
-          user: username,
-          password,
-          secure,
-        });
+        try {
+          if (ftpPath) {
+            await client.ensureDir(ftpPath);
+          }
 
-        if (ftpPath) {
-          await client.ensureDir(ftpPath);
+          const stream = Readable.from([project.generatedHtml || ""]);
+          await client.uploadFrom(stream, "index.html");
+        } finally {
+          client.close();
         }
-
-        const stream = Readable.from([project.generatedHtml || ""]);
-        await client.uploadFrom(stream, "index.html");
-        client.close();
 
         // Derive the public site URL from the deploy body (preferred) or
         // fall back to guessing from the FTP hostname (strip leading ftp. prefix).

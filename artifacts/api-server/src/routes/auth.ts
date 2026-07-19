@@ -94,6 +94,9 @@ async function upsertUser(claims: Record<string, unknown>) {
 }
 
 router.get('/auth/user', (req: Request, res: Response) => {
+  // Never cache — the browser must not replay a stale {"user":null} response
+  // after login (304 from a cached unauthenticated response breaks auth flow).
+  res.setHeader('Cache-Control', 'no-store');
   res.json(
     GetCurrentAuthUserResponse.parse({
       user: req.isAuthenticated() ? req.user : null,

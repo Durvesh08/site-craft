@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, settingsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { encrypt, decrypt } from "../lib/encryption";
-import * as ftp from "basic-ftp";
+import { ftpConnect } from "../lib/ftpConnect";
 
 const router: IRouter = Router();
 
@@ -196,25 +196,30 @@ router.post("/settings/deployment/test", async (req: Request, res: Response) => 
       password = decrypt(saved.value);
     }
 
-    const client = new ftp.Client();
-    client.ftp.verbose = false;
-
+    let client;
     try {
-      await client.access({
-        host: ftp_host,
-        port: ftp_port ? Number(ftp_port) : 21,
-        user: ftp_username,
-        password: password,
-        secure: ftp_secure === "true" || ftp_secure === true || false,
-      });
+      const result = await ftpConnect(
+        {
+          host: ftp_host,           // prefix stripping + FTPS auto-retry inside
+          port: ftp_port ? Number(ftp_port) : 21,
+          user: ftp_username,
+          password,
+          secure: ftp_secure === "true" || ftp_secure === true || false,
+        },
+        {
+          info: (m) => req.log.info(m),
+          error: (m) => req.log.error(m),
+        },
+      );
+      client = result.client;
 
-      // Quick test list
+      // Quick sanity check — list root
       await client.list("/");
       client.close();
-      
-      res.json({ success: true });
+
+      res.json({ success: true, usedSecure: result.usedSecure });
     } catch (ftpErr: any) {
-      client.close();
+      client?.close();
       res.json({ success: false, error: ftpErr.message || "Connection failed" });
     }
   } catch (err) {
