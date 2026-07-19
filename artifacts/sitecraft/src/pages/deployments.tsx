@@ -250,30 +250,42 @@ export default function Deployments() {
     return () => clearInterval(id);
   }, [hasActive, refetch]);
 
-  // Auto-adjust port when protocol changes
+  // Track whether we're loading settings so the protocol-change effect
+  // doesn't overwrite the port that was just loaded from saved settings.
+  const [loadingSettings, setLoadingSettings] = useState(false);
+
+  // Auto-adjust port when protocol changes — but not while settings are loading
+  // (the load effect sets both port and protocol atomically).
   useEffect(() => {
+    if (loadingSettings) return;
     setFtpPort(DEFAULT_PORTS[protocol] ?? "21");
     setTestStatus("none");
-  }, [protocol]);
+  }, [protocol]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load saved FTP settings into the modal on open
   useEffect(() => {
     if (!isDeployModalOpen) return;
-    fetch("/api/settings/deployment")
-      .then(r => r.json())
+    setLoadingSettings(true);
+    fetch("/api/settings/deployment", { credentials: "include" })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(data => {
         const s = data.settings ?? {};
+        // Resolve protocol first so port default is correct
+        const proto: "ftp" | "ftps" | "sftp" =
+          s.ftp_protocol === "sftp" ? "sftp"
+          : s.ftp_protocol === "ftps" || s.ftp_secure === "true" ? "ftps"
+          : "ftp";
+        // Set all fields atomically before releasing the loadingSettings guard
         if (s.ftp_host) setFtpHost(s.ftp_host);
-        if (s.ftp_port) setFtpPort(s.ftp_port);
         if (s.ftp_username) setFtpUsername(s.ftp_username);
         if (s.ftp_path) setFtpPath(s.ftp_path);
-        // Resolve protocol
-        const proto = s.ftp_protocol;
-        if (proto === "sftp" || proto === "ftps" || proto === "ftp") setProtocol(proto);
-        else if (s.ftp_secure === "true") setProtocol("ftps");
+        // Port: use saved value, else derive from protocol
+        setFtpPort(s.ftp_port || DEFAULT_PORTS[proto] || "21");
+        setProtocol(proto);
       })
-      .catch(() => { /* settings not saved yet — use form defaults */ });
-  }, [isDeployModalOpen]);
+      .catch(() => { /* settings not saved yet — keep form defaults */ })
+      .finally(() => setLoadingSettings(false));
+  }, [isDeployModalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTestConnection = async () => {
     if (!ftpHost || !ftpUsername || !ftpPassword) {

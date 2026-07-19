@@ -91,7 +91,6 @@ async function resolveCredentials(
   const host     = rawHost.replace(/^(ftp|ftps|sftp):\/\//i, "").replace(/\/+$/, "");
   const username = overrides.username || saved["ftp_username"] || "";
   const path     = overrides.path     || saved["ftp_path"]     || "/";
-  const port     = overrides.port     || (saved["ftp_port"] ? Number(saved["ftp_port"]) : 21);
 
   // Password: if override provided and not masked, use it; else decrypt saved
   let password = overrides.password || "";
@@ -104,12 +103,34 @@ async function resolveCredentials(
 
   if (!host || !username || !password) return null;
 
-  // Protocol: from override, or infer from settings
+  // Protocol resolution — must happen BEFORE port so the SFTP default port is correct.
+  //
+  // The Zod schema always defaults protocol to "ftp" on the request body, so
+  // overrides.protocol is truthy even when the user never chose a protocol.
+  // Using a simple `overrides.protocol || saved[...]` would therefore always
+  // short-circuit and NEVER reach the saved value, causing plain FTP to be
+  // used even when the user saved "ftps" in Settings → causing FTP 503.
+  //
+  // Fix: only let an override WIN when it is an explicit non-default choice
+  // (i.e. "ftps" or "sftp").  "ftp" is the Zod default and may just be noise.
   let protocol: "ftp" | "ftps" | "sftp" = "ftp";
-  const proto = overrides.protocol || saved["ftp_protocol"] || "";
-  if (proto === "ftps") protocol = "ftps";
-  else if (proto === "sftp") protocol = "sftp";
-  else if (saved["ftp_secure"] === "true") protocol = "ftps";
+  const overrideProto = overrides.protocol || "";
+  const savedProto    = saved["ftp_protocol"] || "";
+
+  if (overrideProto === "ftps" || overrideProto === "sftp") {
+    // User explicitly chose FTPS or SFTP in the deploy form — honour it.
+    protocol = overrideProto as "ftps" | "sftp";
+  } else if (savedProto === "ftps" || savedProto === "sftp") {
+    // Saved setting wins over the Zod-injected default of "ftp".
+    protocol = savedProto as "ftps" | "sftp";
+  } else if (saved["ftp_secure"] === "true") {
+    // Legacy: old boolean FTPS toggle before the protocol selector existed.
+    protocol = "ftps";
+  }
+  // else: both override and saved are "ftp" (or absent) → plain FTP is correct.
+
+  // Port — resolved AFTER protocol so SFTP default of 22 applies correctly.
+  const port = overrides.port || (saved["ftp_port"] ? Number(saved["ftp_port"]) : (protocol === "sftp" ? 22 : 21));
 
   return { host, port, username, password, remotePath: path, protocol };
 }
