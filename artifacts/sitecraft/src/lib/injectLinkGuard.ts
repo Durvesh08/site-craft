@@ -1,52 +1,41 @@
 /**
- * SiteCraft — injectLinkGuard (Safe Version)
- * 
- * File location in your repo: artifacts/sitecraft/src/lib/injectLinkGuard.ts
- * 
- * FIX: The previous version could corrupt HTML structure by using
- * aggressive regex replacements that matched inside attribute values
- * or script tags. This version uses the DOMParser API to safely
- * modify only <a> href attributes, leaving everything else untouched.
- * 
- * This runs in the browser before creating the blob URL for the iframe.
- */
-
-/**
- * Safely injects a link guard into generated HTML.
- * Opens external links in a new tab and prevents navigation away
- * from the preview. Does NOT mutate the HTML structure.
+ * Injects a lightweight click-interceptor script into a generated HTML string
+ * before it's turned into a blob URL for the preview iframe.
+ *
+ * Without this, clicking any  href="#"  link inside the iframe navigates to
+ * blob:https://…#  (the blob URL plus a fragment), which opens a broken page.
+ *
+ * The script:
+ *  - Prevents navigation for empty / hash-only / blob: hrefs
+ *  - Opens real http/https links in a new browser tab instead of navigating
+ *    the iframe (which would replace the preview)
  */
 export function injectLinkGuard(html: string): string {
-  if (!html) return html;
+  const guard = `<script>
+(function(){
+  document.addEventListener('click', function(e){
+    var el = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!el) return;
+    var href = el.getAttribute('href') || '';
+    // Never navigate to blob: URLs or empty/hash-only hrefs
+    if (!href || href === '#' || /^blob:/i.test(href) || /^#/.test(href)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    // Open external links in a new tab instead of replacing the iframe
+    if (/^https?:\/\//i.test(href)) {
+      e.preventDefault();
+      window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  }, true);
+})();
+</script>`;
 
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    // Only modify <a> tags — leave everything else untouched
-    const links = doc.querySelectorAll("a[href]");
-    links.forEach((link) => {
-      const href = link.getAttribute("href");
-      if (!href) return;
-
-      // External links: open in new tab
-      if (href.startsWith("http://") || href.startsWith("https://")) {
-        link.setAttribute("target", "_blank");
-        link.setAttribute("rel", "noopener noreferrer");
-      }
-
-      // Prevent hash/anchor navigation from scrolling the parent page
-      if (href.startsWith("#")) {
-        link.setAttribute("data-preview-anchor", href);
-        link.setAttribute("href", "javascript:void(0)");
-      }
-    });
-
-    // Serialize back to HTML string
-    return "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
-  } catch {
-    // If DOMParser fails for any reason, return the original HTML untouched
-    // — it's better to show the page as-is than to break it
-    return html;
+  // Prefer injecting just before </body> so all DOM is ready
+  if (html.includes('</body>')) {
+    return html.replace('</body>', guard + '\n</body>');
   }
+  // Fallback: append at end
+  return html + '\n' + guard;
 }
