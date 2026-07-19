@@ -316,9 +316,11 @@ RESPONSIVE RULES per element type:
   Telegram links: ALWAYS format as https://t.me/ChannelName — never t.me/..., @ChannelName, or bare channel names
   CTA buttons that open external links: use target="_blank" rel="noopener noreferrer"
   Nav links: use href="#sectionId" for same-page anchors; every section must have id="sectionId"
-  Social links (Twitter/X, LinkedIn, Instagram): use real platform URLs or "#" if unknown
+  Social links: ONLY add social icons for platforms explicitly mentioned in context — use real platform URLs.
+    NEVER add X, Twitter, LinkedIn, Facebook, YouTube, etc. that were not mentioned.
   Phone/email links: tel:+1234567890 and mailto:email@domain.com format
-  Never output <a href=""> or <a href="javascript:void(0)"> — use href="#" as minimum
+  href="#" links MUST include onClick={e => e.preventDefault()} to prevent blob-URL navigation in previews.
+  Never output <a href=""> or <a href="javascript:void(0)"> — use href="#" with preventDefault as minimum.
 
 ━━━ RULES ━━━
 1. Write ONLY the named function — no import/export statements:
@@ -674,9 +676,18 @@ function getSectionTypeRules(type: string): string {
       <span style={{fontWeight:800,fontSize:18,letterSpacing:'-0.01em'}}>{companyName}</span>
     </div>
   Tagline: fontSize 14, lineHeight 1.65, opacity 0.55, maxWidth 230, marginBottom 24
-  Social icons row: X ◆ LinkedIn — each in 34x34 circle, border '1px solid var(--border)',
-    borderRadius '50%', display inline-flex, alignItems center, justifyContent center,
-    fontSize 14, marginRight 8, cursor pointer
+  Social icons row: ONLY render social platform icons that are EXPLICITLY mentioned in the
+    business description or CTA link. For example:
+      - Business mentions Telegram / t.me link → show Telegram icon linking to that URL
+      - Business mentions WhatsApp / wa.me link → show WhatsApp icon linking to that URL
+      - Business mentions Instagram → show Instagram icon linking to that URL
+      - Business mentions Discord → show Discord icon linking to that URL
+    If NO specific social platforms are mentioned in the context, OMIT the social icons row
+    entirely — do NOT invent or add X, Twitter, LinkedIn, Facebook, YouTube, or any other
+    platform that was not specified.
+    Each icon: 34x34 circle, border '1px solid var(--border)', borderRadius '50%',
+    display inline-flex, alignItems center, justifyContent center, fontSize 14, marginRight 8,
+    cursor pointer, href set to the actual platform URL (never "#")
     On hover: background var(--border) — implement with onMouseEnter/Leave state or CSS
 
 - RIGHT: link columns (className="ft-links"):

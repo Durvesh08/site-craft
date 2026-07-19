@@ -171,10 +171,13 @@ export default function ProjectEditor() {
   // ── Iframe blob URL ───────────────────────────────────────────────────────
   useEffect(() => {
     if (project?.generatedHtml) {
-      const blob = new Blob([project.generatedHtml], { type: "text/html" });
-      const url  = URL.createObjectURL(blob);
-      setIframeUrl(url);
-      return () => URL.revokeObjectURL(url);
+      import("@/lib/injectLinkGuard").then(({ injectLinkGuard }) => {
+        const guarded = injectLinkGuard(project.generatedHtml!);
+        const blob = new Blob([guarded], { type: "text/html" });
+        const url  = URL.createObjectURL(blob);
+        setIframeUrl(url);
+        return () => URL.revokeObjectURL(url);
+      });
     }
     return undefined;
   }, [project?.generatedHtml]);

@@ -67,10 +67,13 @@ export default function GenerateProject() {
   useEffect(() => {
     // If completed and we have generated HTML, show it
     if (isCompleted && project?.generatedHtml && !iframeUrl) {
-      const blob = new Blob([project.generatedHtml], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      setIframeUrl(url);
-      return () => URL.revokeObjectURL(url);
+      import("@/lib/injectLinkGuard").then(({ injectLinkGuard }) => {
+        const guarded = injectLinkGuard(project.generatedHtml!);
+        const blob = new Blob([guarded], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        setIframeUrl(url);
+        return () => URL.revokeObjectURL(url);
+      });
     }
     return undefined;
   }, [isCompleted, project?.generatedHtml, iframeUrl]);
