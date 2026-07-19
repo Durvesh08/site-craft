@@ -184,6 +184,88 @@ async function callGemini(
   return text;
 }
 
+// ── CTA label + href resolver ─────────────────────────────────────────────────
+// Detects platform from the user's primaryCta (which may be a raw URL) and from
+// the business description, returning a human-readable button label and the
+// actual link href so every section uses the correct button name and URL.
+
+interface ResolvedCta {
+  label: string;
+  href: string;
+}
+
+function detectPlatformCta(text: string, fallbackLabel = "Get Started"): ResolvedCta | null {
+  const lower = text.toLowerCase();
+  // Extract first URL if present
+  const urlMatch = text.match(/https?:\/\/[^\s"'<>]+/i);
+  const url = urlMatch ? urlMatch[0] : "";
+  const urlLower = url.toLowerCase();
+
+  if (urlLower.includes("t.me/") || urlLower.includes("telegram.me/") || lower.includes("telegram")) {
+    return { label: "Join Telegram", href: url || "#" };
+  }
+  if (urlLower.includes("wa.me/") || urlLower.includes("whatsapp")) {
+    return { label: "Chat on WhatsApp", href: url || "#" };
+  }
+  if (urlLower.includes("discord.gg/") || lower.includes("discord")) {
+    return { label: "Join Discord", href: url || "#" };
+  }
+  if (urlLower.includes("youtube.com/") || urlLower.includes("youtu.be/")) {
+    return { label: "Watch on YouTube", href: url || "#" };
+  }
+  if (urlLower.includes("instagram.com/")) {
+    return { label: "Follow on Instagram", href: url || "#" };
+  }
+  if (urlLower.includes("twitter.com/") || urlLower.includes("x.com/")) {
+    return { label: "Follow on X", href: url || "#" };
+  }
+  if (urlLower.includes("facebook.com/")) {
+    return { label: "Join on Facebook", href: url || "#" };
+  }
+  if (url) {
+    // Generic URL — keep label but extract href
+    return null; // caller decides label
+  }
+  return null;
+}
+
+export function resolveCtaLabelAndHref(
+  primaryCta: string | undefined,
+  businessDescription: string,
+  copywriterCta?: string,
+): ResolvedCta {
+  const raw = (primaryCta ?? "").trim();
+
+  // 1. If the user's input is a raw URL, detect platform and label
+  if (/^https?:\/\//i.test(raw)) {
+    const detected = detectPlatformCta(raw);
+    if (detected) return detected;
+    return { label: copywriterCta || "Get Started", href: raw };
+  }
+
+  // 2. User gave explicit non-URL label — use it; detect href from desc
+  if (raw) {
+    const detected = detectPlatformCta(businessDescription);
+    const href = detected?.href ?? "#";
+    return { label: raw, href };
+  }
+
+  // 3. No CTA given — try copywriter output
+  const copyLabel = (copywriterCta ?? "").trim();
+
+  // 4. Detect platform from business description
+  const detected = detectPlatformCta(businessDescription, "Get Started");
+  if (detected) {
+    return {
+      label: detected.label,  // smart label ("Join Telegram" etc.)
+      href: detected.href,
+    };
+  }
+
+  // 5. Use copywriter's CTA or fallback
+  return { label: copyLabel || "Get Started", href: "#" };
+}
+
 // ── Main generation pipeline ──────────────────────────────────────────────────
 
 export async function runGeneration(
@@ -269,13 +351,21 @@ export async function runGeneration(
             .filter(Boolean)
             .join("\n\n");
 
+          // Resolve the CTA label + href once for all sections
+          const copywriterCta = (() => {
+            try { return JSON.parse(agentOutputs["copywriter"] ?? "{}").cta ?? ""; } catch { return ""; }
+          })();
+          const resolvedCta = resolveCtaLabelAndHref(input.primaryCta, input.businessDescription, copywriterCta);
+          logger.info({ label: resolvedCta.label, href: resolvedCta.href }, "Resolved CTA for section generation");
+
           const sectionResults = await Promise.all(
             sectionPlan.map(async (section) => {
               const componentName = toComponentName(section.id);
               const prompt = buildSectionPrompt(section, componentName, sectionPlan.length, {
                 businessDescription: input.businessDescription,
                 targetAudience: input.targetAudience ?? "General consumers",
-                primaryCta: input.primaryCta ?? "Get Started",
+                primaryCta: resolvedCta.label,
+                primaryCtaHref: resolvedCta.href,
                 previousOutputs: planningContext,
                 branding,
               });
@@ -554,10 +644,12 @@ export async function runSectionRegeneration(
       input.instruction ? `User instruction: ${input.instruction}` : "",
     ].filter(Boolean).join("\n\n");
 
+    const regenCta = resolveCtaLabelAndHref(undefined, businessDesc);
     const prompt = buildSectionPrompt(sectionPlan, input.sectionId, totalSections, {
       businessDescription: businessDesc,
       targetAudience: "General consumers",
-      primaryCta: "Get Started",
+      primaryCta: regenCta.label,
+      primaryCtaHref: regenCta.href,
       previousOutputs: planningContext,
       branding,
     });
@@ -810,10 +902,12 @@ export async function runChatEdit(
             const cssVars = extractCssVarsBlock(refinedHtml);
             const planningContext = cssVars ? `Brand CSS variables:\n${cssVars}\nUser instruction: ${change.description}` : `User instruction: ${change.description}`;
 
+            const chatCta = resolveCtaLabelAndHref(undefined, proj?.businessDescription ?? "");
             const sectionPrompt = buildSectionPrompt(sectionPlan, change.section, 1, {
               businessDescription: proj?.businessDescription ?? "",
               targetAudience: "General consumers",
-              primaryCta: "Get Started",
+              primaryCta: chatCta.label,
+              primaryCtaHref: chatCta.href,
               previousOutputs: planningContext,
               branding,
             });

@@ -104,6 +104,7 @@ export function buildSectionPrompt(
     businessDescription: string;
     targetAudience: string;
     primaryCta: string;
+    primaryCtaHref: string;
     previousOutputs: string; // full planning context (colors, copy, motion, 3D spec)
     branding: Record<string, string>;
   },
@@ -129,6 +130,7 @@ Position       : #${section.order + 1} of ${totalSections} sections on the page
 ${context.businessDescription}
 Target audience: ${context.targetAudience}
 Primary CTA    : ${context.primaryCta}
+Primary CTA URL: ${context.primaryCtaHref}
 ${brandCtx ? `\n━━━ BRANDING ━━━\n${brandCtx}` : ""}
 
 ━━━ FULL PLANNING CONTEXT (colors, fonts, copy, motion spec, 3D/FX spec) ━━━
@@ -216,13 +218,15 @@ BUTTONS — Every button must feel tactile and alive. Two distinct button types:
   BUTTON/CTA RULES — CRITICAL (read carefully before generating any buttons):
   • The PRIMARY CTA label is: "${context.primaryCta}" — use this EXACT text verbatim as the button label.
     DO NOT replace it with generic text like "Get Started" or "Learn More".
-  • Platform detection — if the CTA text mentions a messaging/social platform, format the link correctly:
-      Telegram mention  → href="https://t.me/username" (use "#" if no username given)
-      WhatsApp mention  → href="https://wa.me/number" (use "#" if no number given)
-      Discord mention   → href="https://discord.gg/invite" (use "#" if no invite given)
-      YouTube mention   → href="https://youtube.com/@channel" (use "#" if no channel given)
-      Instagram mention → href="https://instagram.com/handle" (use "#" if no handle given)
-    Always add target="_blank" rel="noopener noreferrer" on external link buttons.
+  • The PRIMARY CTA href is: "${context.primaryCtaHref}" — use this EXACT URL as the href attribute.
+    If the URL is not "#", use it verbatim. NEVER substitute a different URL.
+    Always add target="_blank" rel="noopener noreferrer" on external link buttons (href !== "#").
+  • Platform detection — these are already resolved for you; just use the label + href above exactly:
+      "Join Telegram"      → already has t.me/… href
+      "Chat on WhatsApp"   → already has wa.me/… href
+      "Join Discord"       → already has discord.gg/… href
+      "Watch on YouTube"   → already has youtube.com/… href
+      "Follow on Instagram"→ already has instagram.com/… href
   • SECONDARY BUTTON: ONLY add a secondary button when there is a CLEARLY DISTINCT second action
     in the business description or planning context. If the user only named one action (e.g. "Join Telegram"),
     DO NOT add a secondary button — a single powerful CTA converts better than diluting focus.

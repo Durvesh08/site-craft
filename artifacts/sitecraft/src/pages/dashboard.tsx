@@ -178,12 +178,18 @@ export default function Dashboard() {
                           Open Editor
                         </Link>
                       </Button>
-                      <Button size="sm" className="gap-1.5" asChild>
-                        <a href={project.liveUrl || project.previewUrl || "#"} target="_blank" rel="noreferrer">
-                          View Live
-                          <ArrowRight className="h-3 w-3" />
-                        </a>
-                      </Button>
+                      {project.liveUrl ? (
+                        <Button size="sm" className="gap-1.5" asChild>
+                          <a href={project.liveUrl} target="_blank" rel="noreferrer">
+                            View Live
+                            <ArrowRight className="h-3 w-3" />
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" disabled className="gap-1.5 opacity-50 cursor-not-allowed">
+                          Not Deployed
+                        </Button>
+                      )}
                     </div>
                   )}
                 </CardContent>
