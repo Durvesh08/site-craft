@@ -1214,6 +1214,8 @@ export async function assembleHTML(
     ``,
     transpiledSections.map(s => ind(s, 2)).join("\n\n"),
     ``,
+    ind(`/* ═══ APP SHELL ═══ */`, 2),
+    ``,
     ind(appCode, 2),
     ``,
     ind(mountCode, 2),

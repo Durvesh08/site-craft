@@ -70,6 +70,72 @@ interface DeployCredentials {
   protocol: "ftp" | "ftps" | "sftp";
 }
 
+function normalizeRemotePath(path?: string | null): string {
+  const raw = (path || "/public_html/").trim();
+  const withoutScheme = raw.replace(/^(ftp|ftps|sftp):\/\/[^/]+/i, "");
+  const normalized = withoutScheme
+    .replace(/\\/g, "/")
+    .replace(/\/+/g, "/")
+    .replace(/\/?$/, "/");
+  return normalized.startsWith("/") ? normalized : `/${normalized}`;
+}
+
+function joinRemotePath(base: string, fileName: string): string {
+  return `${normalizeRemotePath(base).replace(/\/$/, "")}/${fileName}`;
+}
+
+function stripGeneratedScriptExports(js: string): string {
+  return js
+    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^export\s+default\s+/gm, "")
+    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1");
+}
+
+function patchHtmlForDeployment(html: string): string {
+  return html.replace(
+    /(<!-- Generated landing page -->\s*<script>)([\s\S]*?)(<\/script>)/,
+    (_, open, js: string, close) => open + stripGeneratedScriptExports(js) + close,
+  );
+}
+
+function buildHtaccess(): string {
+  return `Options -Indexes
+AddDefaultCharset UTF-8
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+`;
+}
+
+function buildDeployFiles(html: string, siteUrl: string) {
+  const baseUrl = siteUrl.replace(/\/$/, "");
+  return [
+    { name: "index.html", content: patchHtmlForDeployment(html) },
+    { name: "robots.txt", content: `User-agent: *\nAllow: /\n\nSitemap: ${baseUrl}/sitemap.xml\n` },
+    { name: ".htaccess", content: buildHtaccess() },
+    {
+      name: "sitemap.xml",
+      content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${baseUrl}/</loc><priority>1.0</priority></url>\n</urlset>\n`,
+    },
+  ];
+}
+
 async function resolveCredentials(
   userId: string,
   overrides: {
@@ -90,7 +156,7 @@ async function resolveCredentials(
   const rawHost  = overrides.host     || saved["ftp_host"]     || "";
   const host     = rawHost.replace(/^(ftp|ftps|sftp):\/\//i, "").replace(/\/+$/, "");
   const username = overrides.username || saved["ftp_username"] || "";
-  const path     = overrides.path     || saved["ftp_path"]     || "/";
+  const path     = normalizeRemotePath(overrides.path || saved["ftp_path"] || "/public_html/");
 
   // Password: if override provided and not masked, use it; else decrypt saved
   let password = overrides.password || "";
@@ -204,32 +270,23 @@ async function uploadViaFtp(opts: UploadOptions): Promise<string> {
       throw err;
     }
   }
-  await appendLog(deploymentId, `Connected${usedSecure && creds.protocol !== "ftps" ? " (auto-upgraded to FTPS)" : ""}. Navigating to remote path…`);
+  await appendLog(deploymentId, `Connected${usedSecure && creds.protocol !== "ftps" ? " (auto-upgraded to FTPS)" : ""}. Uploading to ${creds.remotePath}…`);
   await setProgress(deploymentId, 20);
 
-  if (creds.remotePath) await client.ensureDir(creds.remotePath);
+  await client.ensureDir(creds.remotePath);
+  await client.cd(creds.remotePath);
 
-  const files = [
-    { name: "index.html", content: html },
-    { name: "robots.txt", content: "User-agent: *\nAllow: /\n" },
-    {
-      name: ".htaccess",
-      content: "Options -Indexes\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n</IfModule>\n",
-    },
-    {
-      name: "sitemap.xml",
-      content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${opts.siteUrl || `https://${creds.host}`}</loc><priority>1.0</priority></url>\n</urlset>\n`,
-    },
-  ];
+  const liveUrl = opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
+  const files = buildDeployFiles(html, liveUrl);
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const remoteName = `${creds.remotePath.replace(/\/$/, "")}/${file.name}`;
+    const remoteName = file.name;
 
     // No-overwrite check
     if (!overwriteExisting) {
       try {
-        const listing = await client.list(creds.remotePath);
+        const listing = await client.list();
         if (listing.some(f => f.name === file.name)) {
           await appendLog(deploymentId, `Skipping ${file.name} (already exists, overwrite=false)`);
           await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
@@ -251,7 +308,7 @@ async function uploadViaFtp(opts: UploadOptions): Promise<string> {
   await appendLog(deploymentId, "All files uploaded successfully.");
   await setProgress(deploymentId, 100);
 
-  return opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
+  return liveUrl;
 }
 
 async function uploadViaSftp(opts: UploadOptions): Promise<string> {
@@ -269,30 +326,18 @@ async function uploadViaSftp(opts: UploadOptions): Promise<string> {
     readyTimeout: 20000,
   });
 
-  await appendLog(deploymentId, "SFTP connected. Ensuring remote directory…");
+  await appendLog(deploymentId, `SFTP connected. Uploading to ${creds.remotePath}…`);
   await setProgress(deploymentId, 20);
 
   // Ensure remote path exists
   try { await sftp.mkdir(creds.remotePath, true); } catch { /* already exists */ }
 
-  const files = [
-    { name: "index.html", content: html },
-    { name: "robots.txt", content: "User-agent: *\nAllow: /\n" },
-    {
-      name: ".htaccess",
-      content: "Options -Indexes\n<IfModule mod_rewrite.c>\n  RewriteEngine On\n</IfModule>\n",
-    },
-    {
-      name: "sitemap.xml",
-      content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${opts.siteUrl || `https://${creds.host}`}</loc><priority>1.0</priority></url>\n</urlset>\n`,
-    },
-  ];
-
-  const base = creds.remotePath.endsWith("/") ? creds.remotePath : creds.remotePath + "/";
+  const liveUrl = opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
+  const files = buildDeployFiles(html, liveUrl);
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
-    const remotePath = `${base}${file.name}`;
+    const remotePath = joinRemotePath(creds.remotePath, file.name);
 
     if (!overwriteExisting) {
       const exists = await sftp.exists(remotePath);
@@ -314,7 +359,7 @@ async function uploadViaSftp(opts: UploadOptions): Promise<string> {
   await appendLog(deploymentId, "All files uploaded successfully via SFTP.");
   await setProgress(deploymentId, 100);
 
-  return opts.siteUrl || `https://${creds.host}`;
+  return liveUrl;
 }
 
 async function runUpload(
