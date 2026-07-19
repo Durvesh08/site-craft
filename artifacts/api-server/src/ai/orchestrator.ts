@@ -871,27 +871,31 @@ export async function runChatEdit(
     let refinedHtml = input.currentHtml ?? "";
 
     const refinementRaw = agentOutputs["refinement-agent"] ?? "";
-    try {
-      const parsed = JSON.parse(
-        refinementRaw
-          .replace(/^```(?:json)?\s*/i, "")
-          .replace(/\s*```$/i, "")
-          .trim(),
-      );
+    const parsed = parseJsonObject<{
+      cssChanges?: Record<string, unknown> | null;
+      textChanges?: { section?: string; description?: string }[] | null;
+      summary?: string;
+    }>(refinementRaw);
 
+    if (parsed) {
       // Apply CSS variable changes directly into the HTML :root block
       if (parsed.cssChanges && typeof parsed.cssChanges === "object") {
-        refinedHtml = applyCssVarChanges(refinedHtml, parsed.cssChanges as Record<string, string>);
+        refinedHtml = applyCssVarChanges(refinedHtml, parsed.cssChanges);
         logger.info({ cssChangeCount: Object.keys(parsed.cssChanges).length }, "CSS changes applied");
       }
 
       // For text/content changes we queue individual section regenerations.
       // Each textChange entry triggers runSectionRegeneration inline.
       if (Array.isArray(parsed.textChanges) && parsed.textChanges.length > 0 && refinedHtml) {
-        for (const change of parsed.textChanges as { section: string; description: string }[]) {
+        for (const change of parsed.textChanges) {
           if (!change.section || !change.description) continue;
           try {
-            const escapedId = change.section.replace(/[.*+?^${}()|[\\]]/g, "\\$&");
+            const componentName = resolveSectionComponentName(refinedHtml, change.section);
+            if (!componentName) {
+              logger.warn({ requestedSection: change.section }, "Text change target section not found — skipping");
+              continue;
+            }
+            const escapedId = componentName.replace(/[.*+?^${}()|[\\]]/g, "\\$&");
             const typeMatch = new RegExp(`\\/\\/ ── ([^\\s(]+) \\(${escapedId}\\)`).exec(refinedHtml);
             const sectionType = typeMatch?.[1] ?? "content-section";
 
@@ -902,7 +906,7 @@ export async function runChatEdit(
 
             const [proj] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
             const sectionPlan = {
-              id: change.section.replace(/Section$/, "").toLowerCase(),
+              id: componentName.replace(/Section$/, "").toLowerCase(),
               type: sectionType,
               order: 0,
               brief: `${sectionType} section. User instruction: ${change.description}`,
@@ -911,7 +915,7 @@ export async function runChatEdit(
             const planningContext = cssVars ? `Brand CSS variables:\n${cssVars}\nUser instruction: ${change.description}` : `User instruction: ${change.description}`;
 
             const chatCta = resolveCtaLabelAndHref(undefined, proj?.businessDescription ?? "");
-            const sectionPrompt = buildSectionPrompt(sectionPlan, change.section, 1, {
+            const sectionPrompt = buildSectionPrompt(sectionPlan, componentName, 1, {
               businessDescription: proj?.businessDescription ?? "",
               targetAudience: "General consumers",
               primaryCta: chatCta.label,
@@ -926,23 +930,23 @@ export async function runChatEdit(
               logger.warn({ proErr: String(proErr), section: change.section }, "PRO failed for chat-edit section — retrying with Flash");
               raw = await callGemini(genai, FLASH, sectionPrompt, 32768, undefined, 0.8);
             }
-            const newCode = cleanComponentCode(raw, change.section);
-            const transpiledSection = await transpileAndWrapSection(newCode, change.section);
-            refinedHtml = replaceSectionInHtml(refinedHtml, change.section, sectionType, transpiledSection);
-            logger.info({ section: change.section }, "Text change applied via section regen");
+            const newCode = cleanComponentCode(raw, componentName);
+            const transpiledSection = await transpileAndWrapSection(newCode, componentName);
+            refinedHtml = replaceSectionInHtml(refinedHtml, componentName, sectionType, transpiledSection);
+            logger.info({ section: componentName }, "Text change applied via section regen");
           } catch (err) {
             logger.warn({ err, section: change.section }, "Text change section regen failed — skipping");
           }
         }
       }
 
-      // If neither cssChanges nor textChanges produced useful output (e.g. structural
-      // change request), fall back to the old extractHtml approach.
+      // If neither cssChanges nor textChanges produced useful output, keep the
+      // current HTML. Structural edits should be handled by section regeneration,
+      // not by injecting a fresh full HTML blob from Gemini.
       if (!parsed.cssChanges && (!parsed.textChanges || parsed.textChanges.length === 0)) {
-        const fallback = extractHtml(refinementRaw, "Edited Page");
-        if (fallback.length > 200) refinedHtml = fallback;
+        logger.info({ summary: parsed.summary }, "No safe chat-edit changes returned; preserving current HTML");
       }
-    } catch {
+    } else {
       // JSON parse failed — do NOT overwrite valid current HTML with raw Gemini
       // output, which may contain un-transpiled JSX and cause browser SyntaxErrors.
       // Only use extractHtml if we have no valid HTML at all.
@@ -1237,17 +1241,76 @@ function extractSectionOutline(html: string): string {
  * Apply CSS variable changes (returned as JSON by Gemini) directly into the
  * HTML's :root block without touching any JavaScript.
  */
-function applyCssVarChanges(html: string, changes: Record<string, string>): string {
+function applyCssVarChanges(html: string, changes: Record<string, unknown>): string {
   let result = html;
-  for (const [prop, value] of Object.entries(changes)) {
+  for (const [prop, value] of Object.entries(sanitizeCssVarChanges(changes))) {
     // Match "--prop-name: <anything>;" inside the CSS
     const escaped = prop.replace(/[.*+?^${}()|[\\]]/g, "\\$&");
-    result = result.replace(
-      new RegExp(`(${escaped}\\s*:)[^;]+;`),
-      `$1 ${value};`,
-    );
+    const declaration = new RegExp(`(${escaped}\\s*:)[^;]+;`);
+    if (declaration.test(result)) {
+      result = result.replace(declaration, `$1 ${value};`);
+    } else {
+      result = result.replace(/:root\s*\{/, `:root {\n  ${prop}: ${value};`);
+    }
   }
   return result;
+}
+
+/**
+ * Accept only CSS custom-property updates that cannot break out of the style
+ * tag or inject JavaScript. Chat edits must be surgical and non-destructive.
+ */
+function sanitizeCssVarChanges(changes: Record<string, unknown>): Record<string, string> {
+  const safe: Record<string, string> = {};
+  for (const [rawProp, rawValue] of Object.entries(changes)) {
+    const prop = rawProp.trim();
+    const value = String(rawValue ?? "").trim();
+    if (!/^--[a-z0-9-]{2,64}$/i.test(prop)) continue;
+    if (!value || value.length > 180) continue;
+    if (/[;{}<>]/.test(value) || /script|javascript:/i.test(value)) continue;
+    safe[prop] = value;
+  }
+  return safe;
+}
+
+function parseJsonObject<T = any>(raw: string): T | null {
+  const stripped = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    return JSON.parse(stripped) as T;
+  } catch {
+    const start = stripped.indexOf("{");
+    const end = stripped.lastIndexOf("}");
+    if (start === -1 || end <= start) return null;
+    try {
+      return JSON.parse(stripped.slice(start, end + 1)) as T;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function resolveSectionComponentName(html: string, requested: string): string | null {
+  const needle = requested.trim().toLowerCase();
+  if (!needle) return null;
+
+  const sections = [...html.matchAll(/\/\/ ── ([^\s(]+) \(([^)]+)\)/g)].map(([, type, component]) => ({
+    type,
+    component,
+    id: component.replace(/Section$/, "").replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase(),
+  }));
+
+  const match = sections.find((s) =>
+    s.component.toLowerCase() === needle ||
+    s.id === needle.replace(/\s+/g, "-") ||
+    s.type.toLowerCase() === needle ||
+    s.type.toLowerCase().includes(needle),
+  );
+
+  return match?.component ?? null;
 }
 
 function buildChatEditPrompt(
@@ -1299,7 +1362,12 @@ Return ONLY valid JSON (no markdown fences):
   "cssChanges": { "--primary": "#hex", "--background": "#hex", ... } | null,
   "textChanges": [{ "section": string, "description": string }] | null,
   "summary": string
-}`,
+}
+
+IMPORTANT:
+- "section" must be one exact component name from Page sections above (example: HeroSection), not a human label.
+- Return null for cssChanges/textChanges when no safe surgical change applies.
+- Never return a full HTML document or raw JSX from this step.`,
 
     "qa-reviewer": `Review the planned edits for quality and correctness.
 User request: "${message}"
