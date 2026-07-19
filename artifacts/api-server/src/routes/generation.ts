@@ -23,12 +23,17 @@ const GENERATION_STEPS = [
   "Color & Typography",
   "Layout Planning",
   "Copywriting",
+  "Content Personalization",
   "SEO Strategy",
+  "Image Direction",
   "Component Selection",
   "Motion & Interaction",
+  "Animation Choreography",
   "3D & Visual Effects",
   "Section Generation",
   "Assembly",
+  "Accessibility Audit",
+  "Performance Optimization",
   "Quality Review",
 ];
 
