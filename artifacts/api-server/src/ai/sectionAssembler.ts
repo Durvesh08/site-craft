@@ -1050,6 +1050,21 @@ export function stripModuleStatements(code: string): string {
  * Result: zero CDN round-trips for the React stack → no "Script error." /
  * "Page did not render within 12 seconds" from CDN failures.
  */
+
+/**
+ * Strip all ESM export statements from esbuild-transpiled output.
+ * Mirrors stripAllExports in orchestrator.ts — both must stay in sync.
+ */
+function stripAllModuleExports(code: string): string {
+  return code
+    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^export\s+default\s+/gm, "")
+    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .trim();
+}
+
 export async function assembleHTML(
   sections: SectionCode[],
   context: {
@@ -1121,12 +1136,18 @@ export async function assembleHTML(
         target: "es2020",
       });
 
-      // Strip any residual ESM artefacts (esbuild sometimes appends `export {}`)
-      const jsCode = result.code
-        .replace(/^export\s*\{\s*\}\s*;?\n?/gm, "")
-        .replace(/^export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?\n?/gm, "")
-        .replace(/^export\s+default\s+/gm, "")
-        .trim();
+      // Strip all ESM export forms esbuild may emit
+      const jsCode = stripAllModuleExports(result.code).trim();
+
+      // Server-side syntax validation — catches JavaScript that esbuild emits
+      // but would cause a browser SyntaxError inside the assembled page.
+      // new Function() compiles without executing; only SyntaxError throws.
+      try {
+        // eslint-disable-next-line no-new-func
+        new Function(jsCode);
+      } catch (syntaxErr: any) {
+        throw new Error(`Syntax check failed for ${s.componentName}: ${syntaxErr?.message}`);
+      }
 
       // Wrap in a scoping IIFE: every top-level helper / constant is local to
       // this section, so identically-named helpers in other sections can never

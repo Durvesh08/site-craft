@@ -292,6 +292,10 @@ export default function Deployments() {
         // Set all fields atomically before releasing the loadingSettings guard
         if (s.ftp_host) setFtpHost(s.ftp_host);
         if (s.ftp_username) setFtpUsername(s.ftp_username);
+        // Pre-fill password as the masked sentinel so the server can look up the
+        // real password from DB when Test Connection or Deploy is called.
+        // The settings API always returns "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" for sensitive fields.
+        if (s.ftp_password) setFtpPassword(s.ftp_password);
         // Port: use saved value, else derive from protocol
         setFtpPort(s.ftp_port || DEFAULT_PORTS[proto] || "21");
         setProtocol(proto);

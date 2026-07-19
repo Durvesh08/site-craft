@@ -726,11 +726,19 @@ async function transpileAndWrapSection(
       target: "es2020",
     });
 
-    const jsCode = result.code
-      .replace(/^export\s*\{\s*\}\s*;?\n?/gm, "")
-      .replace(/^export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?\n?/gm, "")
-      .replace(/^export\s+default\s+/gm, "")
-      .trim();
+    // Strip all ESM export forms esbuild may emit or Gemini may include
+    const jsCode = stripAllExports(result.code).trim();
+
+    // Server-side syntax check: new Function() compiles without executing.
+    // A SyntaxError here means the same error in the browser — fall through
+    // to the placeholder rather than serving broken JavaScript.
+    try {
+      // eslint-disable-next-line no-new-func
+      new Function(jsCode);
+    } catch (syntaxErr) {
+      logger.warn({ componentName, syntaxErr: String(syntaxErr) }, "Post-transpile syntax check failed — using placeholder");
+      throw syntaxErr;
+    }
 
     const indented = jsCode.split("\n").map((l) => "  " + l).join("\n");
     return (
@@ -935,10 +943,14 @@ export async function runChatEdit(
         if (fallback.length > 200) refinedHtml = fallback;
       }
     } catch {
-      // JSON parse failed — Gemini may have returned raw HTML (old behaviour).
-      // Fall back gracefully.
-      const fallback = extractHtml(refinementRaw, "Edited Page");
-      if (fallback.length > 200) refinedHtml = fallback;
+      // JSON parse failed — do NOT overwrite valid current HTML with raw Gemini
+      // output, which may contain un-transpiled JSX and cause browser SyntaxErrors.
+      // Only use extractHtml if we have no valid HTML at all.
+      if (!refinedHtml || refinedHtml.length < 500) {
+        const fallback = extractHtml(refinementRaw, "Edited Page");
+        if (fallback.length > 200) refinedHtml = fallback;
+      }
+      // If refinedHtml already equals input.currentHtml (valid page), keep it.
     }
 
     if (!refinedHtml || refinedHtml.length < 200) {
@@ -1300,6 +1312,35 @@ Return ONLY valid JSON (no markdown fences):
 }
 
 // ── Section code cleanup ──────────────────────────────────────────────────────
+
+// ── Export / module-syntax stripper ──────────────────────────────────────────
+/**
+ * Strip every form of ESM export that esbuild may emit or Gemini may include.
+ * Runs on post-esbuild output (plain JS), not on JSX source.
+ *
+ *   export {}
+ *   export { Foo, Bar }            export { Foo } from './mod'
+ *   export * from './mod'          export * as ns from './mod'
+ *   export default Foo;
+ *   export default function / class   → strips keyword, keeps declaration
+ *   export function / const / let / var → strips keyword, keeps declaration
+ *   export type { ... }            → TypeScript type-only exports
+ */
+function stripAllExports(code: string): string {
+  return code
+    // export * from '...' and export * as ns from '...'
+    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    // export { ... } and export { ... } from '...'
+    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    // export type { ... }
+    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    // export default <value> — strip keyword, keep body
+    .replace(/^export\s+default\s+/gm, "")
+    // export function/class/const/let/var — strip keyword, keep declaration
+    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .trim();
+}
+
 
 /** Strip stray import/export statements the model may have emitted despite instructions */
 function cleanComponentCode(raw: string, componentName: string): string {
