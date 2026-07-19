@@ -61,7 +61,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const res = await fetch("/api/settings");
+        const res = await fetch("/api/settings", { credentials: "include" });
         if (!res.ok) throw new Error("Failed to load settings");
         const data = await res.json();
         const settings = data.settings || {};
@@ -107,6 +107,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/auth/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           firstName,
           lastName,
@@ -131,6 +132,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings/deployment", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           ftp_host: ftpHost,
           ftp_port: ftpPort,
@@ -160,6 +162,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings/deployment/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           ftp_host: ftpHost,
           ftp_port: ftpPort,
@@ -196,6 +199,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings/ai", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           gemini_api_key: geminiKey,
         }),
@@ -217,6 +221,7 @@ export default function SettingsPage() {
       const res = await fetch("/api/settings/branding", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           company_name: companyName,
           logo_url: logoUrl,

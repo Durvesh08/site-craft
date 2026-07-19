@@ -203,6 +203,15 @@ function StatusBadge({ status }: { status: string }) {
 // ── Protocol → default port ──────────────────────────────────────────────────
 const DEFAULT_PORTS: Record<string, string> = { ftp: "21", ftps: "21", sftp: "22" };
 
+// ── Slugify project name into a safe directory name ──────────────────────────
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function Deployments() {
@@ -220,6 +229,8 @@ export default function Deployments() {
   const [ftpUsername, setFtpUsername] = useState("");
   const [ftpPassword, setFtpPassword] = useState("");
   const [ftpPath, setFtpPath] = useState("/public_html/");
+  // Base path loaded from saved settings — used to auto-build project subdirectory
+  const [savedBasePath, setSavedBasePath] = useState("/public_html/");
   const [siteUrl, setSiteUrl] = useState("");
   const [overwriteExisting, setOverwriteExisting] = useState(true);
 
@@ -275,17 +286,30 @@ export default function Deployments() {
           s.ftp_protocol === "sftp" ? "sftp"
           : s.ftp_protocol === "ftps" || s.ftp_secure === "true" ? "ftps"
           : "ftp";
+        // Save base path for project-slug auto-fill
+        const base: string = s.ftp_path || "/public_html/";
+        setSavedBasePath(base);
         // Set all fields atomically before releasing the loadingSettings guard
         if (s.ftp_host) setFtpHost(s.ftp_host);
         if (s.ftp_username) setFtpUsername(s.ftp_username);
-        if (s.ftp_path) setFtpPath(s.ftp_path);
         // Port: use saved value, else derive from protocol
         setFtpPort(s.ftp_port || DEFAULT_PORTS[proto] || "21");
         setProtocol(proto);
+        // Path will be auto-set by the project-selection effect once a project is chosen
       })
       .catch(() => { /* settings not saved yet — keep form defaults */ })
       .finally(() => setLoadingSettings(false));
   }, [isDeployModalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-generate upload path from project name when project is selected
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    const project = projects.find(p => p.id === selectedProjectId);
+    if (!project) return;
+    const slug = slugify(project.name);
+    const base = savedBasePath.endsWith("/") ? savedBasePath : savedBasePath + "/";
+    setFtpPath(base + slug + "/");
+  }, [selectedProjectId, savedBasePath]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTestConnection = async () => {
     if (!ftpHost || !ftpUsername || !ftpPassword) {
@@ -491,11 +515,11 @@ export default function Deployments() {
                     id="d-path"
                     value={ftpPath}
                     onChange={e => setFtpPath(e.target.value)}
-                    placeholder="/public_html/"
+                    placeholder="/public_html/afx-trader/"
                     className="bg-background/50 h-9 font-mono text-sm"
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    Examples: /public_html/ · /public_html/domain/ · /www/
+                    Auto-filled from your project name — each project gets its own unique folder. You can edit it.
                   </p>
                 </div>
 
