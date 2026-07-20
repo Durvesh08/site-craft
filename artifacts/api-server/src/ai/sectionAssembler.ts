@@ -984,19 +984,43 @@ export async function assembleHTML(
   // window._sc_motion so all the usual React hooks + Framer Motion APIs are in scope.
   const PREAMBLE = [
     `var React        = window.React;`,
-    `var useState     = window._sc_hooks.useState;`,
-    `var useRef       = window._sc_hooks.useRef;`,
-    `var useEffect    = window._sc_hooks.useEffect;`,
-    `var useCallback  = window._sc_hooks.useCallback;`,
-    `var useMemo      = window._sc_hooks.useMemo;`,
+    `var ReactDOM     = window.ReactDOM || window.React;`,
+    // ── React hooks: ALL 17, with safe fallback to React.* ──
+    `var _h           = window._sc_hooks || React;`,
+    `var useState     = _h.useState || React.useState;`,
+    `var useRef       = _h.useRef || React.useRef;`,
+    `var useEffect    = _h.useEffect || React.useEffect;`,
+    `var useCallback  = _h.useCallback || React.useCallback;`,
+    `var useMemo      = _h.useMemo || React.useMemo;`,
+    `var useContext   = _h.useContext || React.useContext;`,
+    `var useReducer   = _h.useReducer || React.useReducer;`,
+    `var useLayoutEffect = _h.useLayoutEffect || React.useLayoutEffect;`,
+    `var useImperativeHandle = _h.useImperativeHandle || React.useImperativeHandle;`,
+    `var useId        = _h.useId || React.useId;`,
+    `var useDebugValue = _h.useDebugValue || React.useDebugValue;`,
+    `var useTransition = _h.useTransition || React.useTransition;`,
+    `var useDeferredValue = _h.useDeferredValue || React.useDeferredValue;`,
+    `var useSyncExternalStore = _h.useSyncExternalStore || React.useSyncExternalStore;`,
+    `var useInsertionEffect = _h.useInsertionEffect || React.useInsertionEffect;`,
+    // ── createRoot ──
     `var createRoot   = window._sc_createRoot;`,
-    `var motion       = window._sc_motion.motion;`,
-    `var AnimatePresence = window._sc_motion.AnimatePresence;`,
-    `var useScroll    = window._sc_motion.useScroll;`,
-    `var useTransform = window._sc_motion.useTransform;`,
-    `var useInView    = window._sc_motion.useInView;`,
-    `var useMotionValue = window._sc_motion.useMotionValue;`,
-    `var useSpring    = window._sc_motion.useSpring;`,
+    // ── Framer Motion APIs with safe no-op fallbacks ──
+    `var _m           = window._sc_motion || {};`,
+    `var motion       = _m.motion || new Proxy({}, { get: function (_, tag) { return function (props) { return React.createElement(tag, props); }; } });`,
+    `var AnimatePresence = _m.AnimatePresence || (function (props) { return props && props.children; });`,
+    `var useScroll    = _m.useScroll || function () { return { scrollY: 0, scrollYProgress: 0 }; };`,
+    `var useTransform = _m.useTransform || function () { return 0; };`,
+    `var useInView    = _m.useInView || function () { return { inView: false, ref: null }; };`,
+    `var useMotionValue = _m.useMotionValue || function (v) { return { get: function () { return v; }, set: function () {}, on: function () {} }; };`,
+    `var useSpring    = _m.useSpring || function (v) { return v; };`,
+    `var animate      = _m.animate || function () {};`,
+    `var useAnimate   = _m.useAnimate || function () { return [null, function () {}]; };`,
+    `var useAnimationFrame = _m.useAnimationFrame || function () {};`,
+    `var useVelocity  = _m.useVelocity || function () { return 0; };`,
+    `var useMotionValueEvent = _m.useMotionValueEvent || function () {};`,
+    `var useCycle     = _m.useCycle || function (v) { return [v, function () {}]; };`,
+    `var useReducedMotion = _m.useReducedMotion || function () { return false; };`,
+    // ── Three.js ──
     `var THREE        = window.THREE || {};`,
   ].join("\n");
 
@@ -1094,9 +1118,27 @@ export async function assembleHTML(
     `}`,
   ].join("\n");
 
+  // Error Boundary class — catches runtime errors in individual sections so
+  // one broken section doesn't blank the whole page.
+  const errorBoundaryCode = [
+    `class _ScErrorBoundary extends React.Component {`,
+    `  constructor(props) { super(props); this.state = { hasError: false }; }`,
+    `  static getDerivedStateFromError() { return { hasError: true }; }`,
+    `  componentDidCatch(error, info) { console.error('Section error:', error, info); }`,
+    `  render() {`,
+    `    if (this.state.hasError) {`,
+    `      return React.createElement("div", { style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" } }, "This section could not be displayed.");`,
+    `    }`,
+    `    return this.props.children;`,
+    `  }`,
+    `}`,
+  ].join("\n");
+
   const mountCode = [
     `try {`,
-    `  createRoot(document.getElementById("root")).render(React.createElement(App, null));`,
+    `  createRoot(document.getElementById("root")).render(`,
+    `    React.createElement(_ScErrorBoundary, null, React.createElement(App, null))`,
+    `  );`,
     `} catch (err) {`,
     `  var _e = document.getElementById("_sc-error");`,
     `  var _m = document.getElementById("_sc-error-msg");`,
@@ -1116,6 +1158,7 @@ export async function assembleHTML(
     ``,
     ind(`/* ═══ APP SHELL ═══ */`, 2),
     ``,
+    ind(errorBoundaryCode, 2),
     ind(appCode, 2),
     ``,
     ind(mountCode, 2),

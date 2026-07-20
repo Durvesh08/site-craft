@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Circle, Loader2, Sparkles, AlertTriangle, ArrowRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// The 13 AI steps — must stay in sync with GENERATION_STEPS in api-server/src/ai/orchestrator.ts
+// The 18 AI steps — must stay in sync with GENERATION_STEPS in api-server/src/ai/orchestrator.ts
 const GENERATION_STEPS = [
   "Business Analysis",
   "Audience Profiling",
@@ -15,12 +15,17 @@ const GENERATION_STEPS = [
   "Color & Typography",
   "Layout Planning",
   "Copywriting",
+  "Content Personalization",
   "SEO Strategy",
+  "Image Direction",
   "Component Selection",
   "Motion & Interaction",
+  "Animation Choreography",
   "3D & Visual Effects",
   "Section Generation",
   "Assembly",
+  "Accessibility Audit",
+  "Performance Optimization",
   "Quality Review",
 ];
 
