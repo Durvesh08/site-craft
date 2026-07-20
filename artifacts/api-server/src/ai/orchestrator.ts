@@ -1108,15 +1108,21 @@ ${ctx}
 Return ONLY valid JSON (no markdown fences):
 { "brandName": string, "tagline": string, "personality": string[], "voiceTone": string, "colorDirection": string, "typographyStyle": string, "confidence": number }`,
 
-    "design-director": `You are a Design Director with deep training in color theory. Choose a distinctive, premium visual design for this landing page derived entirely from what this specific business IS — its personality, values, and emotional register.
+    "design-director": `You are a Design Director with deep training in color theory, typography, and visual systems. Your job is to design a COMPLETELY UNIQUE visual system for this landing page — not pick from a preset menu of styles.
+
+Think about what this specific business IS — its personality, values, and emotional register — and design everything from scratch: the color palette, the background system, the card treatment, the button design, the border philosophy, the shadow approach, the motion philosophy, and the decorative elements.
 
 ${ctx}
+
+CRITICAL: Every page you design must look genuinely different from any other. Do NOT default to glassmorphism, aurora gradients, glow orbs, or any "standard premium" look. If the business is a rustic artisan bakery, design something earthy and textured — not a dark glassmorphic dashboard. If it's a punk music label, design something raw and aggressive — not a soft pastel wellness page. Let the business dictate the entire visual language.
 
 COLOR DERIVATION METHOD:
 1. Read the business description carefully and identify its EMOTIONAL REGISTER. Pull these words directly from how the business describes itself (e.g. "artisan, handcrafted, earthy" → warm neutrals + clay/terracotta; "cutting-edge, technical, precise" → stark whites + electric blue/cyan; "luxurious, exclusive, rare" → black/charcoal + gold/champagne; "playful, bold, youthful" → vivid saturated primaries; "calm, restorative, clean" → pale sage + forest green; "trustworthy, established, serious" → deep navy/slate + warm white + amber accent).
 2. AVOID category clichés — if every business in this space uses the same color, this one should stand apart.
 3. Apply the 60/30/10 rule: dominant neutral/background (~60%), secondary brand color (~30%), one high-contrast accent (~10%) for CTAs.
 4. DARK vs LIGHT: Choose dark background only when tone is bold, premium, tech, Web3, gaming, or night-life. Choose light background for wellness, editorial, professional services, clean SaaS.
+
+DESIGN SYSTEM — describe each aspect in detail with SPECIFIC CSS values (not vague adjectives). This spec will be passed directly to section builders who must follow it exactly. Be concrete — give actual hex colors, pixel values, CSS property values.
 
 Return ONLY valid JSON (no markdown fences):
 {
@@ -1130,17 +1136,21 @@ Return ONLY valid JSON (no markdown fences):
   "borderColor": string (with rgba for subtle borders),
   "fontFamily": string (pick ONE name from this approved list, then we auto-load it:
     Syne | Outfit | DM Sans | Manrope | Space Grotesk | Raleway | Nunito | Plus Jakarta Sans | Inter
-    Match the font to the brand personality:
-    Syne / Space Grotesk / Clash Display → bold/tech/edgy brands
-    Outfit / DM Sans / Manrope → modern SaaS / professional
-    Raleway / Nunito → friendly/approachable/wellness
-    Plus Jakarta Sans / Inter → clean versatile default
-    Return the font name only, e.g. "Manrope" — no fallback stack needed here),
+    Match the font to the brand personality. Return the font name only, e.g. "Manrope"),
   "monoFont": string (e.g. "JetBrains Mono" — used for code/stats/technical labels),
-  "borderRadius": string (e.g. "12px"),
+  "borderRadius": string (choose based on design language: 0px for brutalist, 4px for corporate, 16px for friendly, 9999px for playful),
   "headlineGradient": string | null (e.g. "135deg, #FFD700, #FFFFFF" — only when brand has energy/boldness),
   "isDark": boolean,
   "colorRationale": string,
+  "designSystem": {
+    "backgroundApproach": string (describe in detail how section backgrounds should look — give specific CSS: e.g. "solid #faf7f2 with a subtle paper texture via SVG noise at opacity 0.04" or "radial-gradient(circle at 20% 30%, rgba(99,102,241,0.15), transparent 50%) on #0a0a0f" — NOT "make it look nice"),
+    "cardStyle": string (describe card treatment with CSS values — e.g. "white bg, 1px solid #e5e5e5, box-shadow: 0 2px 8px rgba(0,0,0,0.06), border-radius: 8px" — NOT "glass cards"),
+    "buttonStyle": string (describe button design with CSS — shape, fill, border, shadow, hover effect. e.g. "solid #1a1a1a bg, white text, border-radius: 0, padding: 14px 28px, hover: translateY(-2px) + box-shadow: 0 8px 24px rgba(0,0,0,0.15)"),
+    "borderPhilosophy": string (e.g. "1px solid #e5e5e5 everywhere, no rounded corners" or "no borders, use shadow for separation"),
+    "shadowPhilosophy": string (e.g. "soft and diffuse: 0 4px 20px rgba(0,0,0,0.08)" or "no shadows, flat design" or "dramatic: 0 20px 60px rgba(0,0,0,0.3)"),
+    "motionPhilosophy": string (e.g. "subtle fade-up on scroll, 400ms ease-out" or "springy scale-in with bounce" or "minimal motion, only hover states"),
+    "decorativeElements": string (describe 2-3 unique decorative elements this design uses — e.g. "hand-drawn SVG underlines beneath headings" or "large oversized typography as background decoration" or "geometric grid lines as section dividers")
+  },
   "confidence": number
 }`,
 
