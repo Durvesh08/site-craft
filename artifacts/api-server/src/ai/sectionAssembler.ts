@@ -148,132 +148,32 @@ ${context.previousOutputs}
   --muted    --accent        --border     --card-bg      --radius
   --font-sans  --font-mono
 
-━━━ PREMIUM VISUAL DESIGN SYSTEM ━━━
-Apply these principles to EVERY section you build:
+━━━ UNIQUE DESIGN SYSTEM (created by the Design Director — follow it EXACTLY) ━━━
+The planning context above contains a "designSystem" object from the Design Director.
+It defines the ENTIRE visual language unique to this page. Read it carefully and apply it
+consistently to EVERY section you build.
 
-BACKGROUNDS — Never leave a section background plain or empty. Every section needs depth:
-  Choose at least 2 of the following for the hero; at least 1 for all other sections:
-  • Aurora/mesh gradient: 3+ radial-gradient stops animated via CSS @keyframes shifting slowly
-    Template: const bgCSS='@keyframes _ba{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(5%,6%) scale(1.04)}}';
-    2-3 large blurred blobs inside position:absolute inset:0 overflow:hidden zIndex:0 div
-  • Mesh gradient overlay: conic-gradient or multi-stop gradient pinned to the bg, opacity 0.08-0.15
-  • Subtle dot grid: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px) repeated 28px 28px
-  • Grid lines: repeating-linear-gradient at 1px, rgba(255,255,255,0.035) for technical depth
-  • Floating particles: 12-20 tiny divs (2-4px, rounded, opacity 0.15-0.35) with randomized
-    position/animation-delay/animation-duration, drifting upward via CSS @keyframes float-up
-  • Glow orbs: 2-4 absolutely-positioned divs, filter:blur(80-160px), colored, opacity 0.08-0.2
-  • Blurred circles: large semi-transparent circles (200-600px) behind content, soft edges
-  • Floating cubes/shapes: 4-6 small rotated divs (8-24px) with border '1px solid rgba(255,255,255,0.12)',
-    backdrop-filter:blur(4px), floating animation, scattered across the section
-  • Noise texture: SVG feTurbulence filter overlay at opacity 0.03-0.06 for tactile premium feel
-  • Aurora gradient bands: slow flowing linear-gradient bands animated with @keyframes shift
-  • Gradient lines: 1px diagonal or horizontal lines via repeating-linear-gradient, very subtle
-  • Abstract waves: SVG wave path (position:absolute bottom:0) as decorative section divider
-  • Radial glow behind focal content: filter:blur(80-120px) colored div
-  • Glass panels: backdrop-filter:blur(20px), bg rgba(255,255,255,0.04), border rgba(255,255,255,0.08)
+  • backgroundApproach — how section backgrounds should look (use these exact CSS techniques)
+  • cardStyle — card treatment (use these exact CSS values)
+  • buttonStyle — button design (use these exact CSS values)
+  • borderPhilosophy — border treatment
+  • shadowPhilosophy — shadow approach
+  • motionPhilosophy — animation approach
+  • decorativeElements — unique decorative elements to include
 
-  SECTION-SPECIFIC BACKGROUND GUIDANCE:
-  Hero → use aurora blobs + dot grid + 2 glow orbs + floating particles (full treatment)
-  Features/Bento → subtle radial glow behind grid + floating cubes at edges + light dot grid
-  Pricing → gradient overlay + glass panel shimmer + glow orb on recommended card
-  Testimonials → subtle grid lines + light glow behind carousel
-  CTA → aurora mesh gradient + grain texture + 3 glow orbs (bold treatment)
-  Footer → very subtle gradient wash only — no heavy effects
-
-CARDS — Never plain rectangles. Always use at least two of:
-  • Glass: background rgba(255,255,255,0.04–0.06), backdrop-filter blur(16-20px)
-  • Gradient border: border 1px solid rgba(255,255,255,0.08–0.12)
-  • Inner glow: box-shadow inset 0 1px 0 rgba(255,255,255,0.08), 0 0 40px rgba(primary,0.06)
-  • Hover lift: whileHover={{ y:-6, boxShadow:'0 24px 48px rgba(0,0,0,0.3)' }}
-
-BUTTONS — Every button must feel tactile and alive. Two distinct button types:
-
-  PRIMARY BUTTON (dominant CTA — always exactly one above the fold, repeated mid-page + footer):
-  • Gradient bg: background:'linear-gradient(135deg, var(--primary), var(--primary-dark))'
-  • Soft glow: boxShadow:'0 0 28px rgba(99,102,241,0.4), 0 4px 16px rgba(0,0,0,0.25)'
-  • Rounded pill: borderRadius:9999
-  • Subtle inner shadow: boxShadow includes 'inset 0 1px 0 rgba(255,255,255,0.15)' stacked
-  • Arrow icon → always include a right-arrow after the label text: '→' or '↗' (fontSize:15, marginLeft:6)
-  • Hover lift: whileHover={{ scale:1.05, y:-2, boxShadow:'0 0 44px rgba(99,102,241,0.6), 0 12px 32px rgba(0,0,0,0.3)' }}
-  • Tap: whileTap={{ scale:0.97 }}
-  • Shine animation (REQUIRED on primary):
-    Add a pseudo-shine using an absolutely positioned child div that sweeps left→right:
-    const shineCSS = '@keyframes _shine{0%{transform:translateX(-100%) skewX(-15deg)}100%{transform:translateX(250%) skewX(-15deg)}}';
-    Inside the button: position:'relative', overflow:'hidden'
-    Shine child: position:'absolute',top:0,left:0,width:'50%',height:'100%',
-      background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent)',
-      animation:'_shine 2.8s ease-in-out infinite'
-  • Ripple on click: onMouseDown handler that creates an absolutely positioned circle (scale 0→2.5,
-    opacity 0.3→0, borderRadius:'50%', background:'rgba(255,255,255,0.35)') using useState+setTimeout
-  • Font: fontWeight:700, fontSize:15-17, padding:'13px 32px'
-
-  SECONDARY BUTTON (supporting action):
-  • Glass effect: background:'rgba(255,255,255,0.06)', backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)'
-  • Thin border: border:'1px solid rgba(255,255,255,0.14)'
-  • Rounded pill: borderRadius:9999
-  • Hover fill: whileHover={{ background:'rgba(255,255,255,0.12)', borderColor:'rgba(255,255,255,0.25)', scale:1.03 }}
-  • Smooth: transition:'all 0.2s ease'
-  • Font: fontWeight:600, fontSize:15, padding:'13px 28px', color:'var(--foreground)'
-
-  BUTTON/CTA RULES — CRITICAL (read carefully before generating any buttons):
-  • The PRIMARY CTA label is: "${context.primaryCta}" — use this EXACT text verbatim as the button label.
-    DO NOT replace it with generic text like "Get Started" or "Learn More".
-  • The PRIMARY CTA href is: "${context.primaryCtaHref}" — use this EXACT URL as the href attribute.
-    If the URL is not "#", use it verbatim. NEVER substitute a different URL.
-    Always add target="_blank" rel="noopener noreferrer" on external link buttons (href !== "#").
-  • Platform detection — these are already resolved for you; just use the label + href above exactly:
-      "Join Telegram"      → already has t.me/… href
-      "Chat on WhatsApp"   → already has wa.me/… href
-      "Join Discord"       → already has discord.gg/… href
-      "Watch on YouTube"   → already has youtube.com/… href
-      "Follow on Instagram"→ already has instagram.com/… href
-  • SECONDARY BUTTON: ONLY add a secondary button when there is a CLEARLY DISTINCT second action
-    in the business description or planning context. If the user only named one action (e.g. "Join Telegram"),
-    DO NOT add a secondary button — a single powerful CTA converts better than diluting focus.
-  • ONE dominant primary CTA must appear above the fold (in hero), repeated mid-page + footer
-  • Primary CTA must always be visually dominant over any secondary action nearby
-
-TYPOGRAPHY — Headlines must command attention:
-  • Gradient text on key words: bg linear-gradient, -webkit-background-clip:text, color:transparent
-  • Letter-spacing: -0.02em to -0.04em on large headings (tighter = more premium)
-  • Section titles: clamp(1.8rem,4vw,3rem), weight 800
-
-ICONS — Use ONE consistent icon style across the entire page (never mix styles):
-  Pick the style that best fits the brand tone and stick to it for every icon on the page:
-  • Lucide (recommended default): thin 1.5-stroke, rounded caps — clean, modern SaaS
-  • Heroicons: 1.5-stroke, slightly bolder — professional, trustworthy
-  • Phosphor: flexible weights (thin/regular/bold) — versatile, contemporary
-  • Material Symbols: rounded or sharp — structured, enterprise
-  • Remix Icons: mixed weights — energetic, consumer apps
-  For PREMIUM themes → prefer: glass icons (icon in blurred glass container), clay icons
-    (icon as thick colored solid in rounded square), or 3D-style icons (emoji with depth shadow)
-
-  ICON IMPLEMENTATION (inline SVG — REQUIRED, no external libraries):
-  Use inline SVG paths or unicode/emoji characters styled consistently:
-  • All SVGs: same stroke width (1.5px or 2px — pick one), same viewBox, same corner radius
-  • Sizing: uniform per context — 20px for inline, 24px for cards, 28px for features, 32px for hero
-  • Color treatment: use 'currentColor' stroke or fill so icons inherit context color
-  • Placement: icons belong in feature cards (top-left), benefit rows, pricing feature lists,
-    FAQ question labels, footer link columns, CTA sections (next to button text)
-  • Container: wrap icons in a styled container matching the chosen icon style:
-    - Glass style: borderRadius:12, background:'rgba(var(--primary-rgb),0.1)', padding:10,
-        backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.1)'
-    - Clay style: borderRadius:14, background:'linear-gradient(135deg,var(--primary),var(--secondary))',
-        padding:10, color:'#fff', boxShadow:'0 4px 12px rgba(0,0,0,0.2)'
-    - Flat style: borderRadius:10, background:'rgba(255,255,255,0.06)', padding:8
-
-ANIMATIONS — Everything moves with purpose:
-  • Stagger children: delay: index * 0.08 to 0.10
-  • Float keyframes: @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-  • Glow pulse: @keyframes glowPulse{0%,100%{opacity:.5}50%{opacity:1}} on decorative elements
-  • Counter: numbers count up 0→final when scrolled into view (useInView + setInterval)
-
-SPACING — Generous and intentional:
-  • Section padding: 96-140px top/bottom (desktop), 64px (mobile)
-  • Card padding: 28-40px, border-radius 20-28px
-  • Max content width: 1100-1200px centered
-
-━━━ RESPONSIVE DESIGN (REQUIRED — every section must work on all 3 breakpoints) ━━━
+CRITICAL RULES:
+  - Do NOT default to glassmorphism, aurora gradients, glow orbs, or any "standard premium" look.
+  - Use EXACTLY what the Design Director specified. If they said sharp edges and grid lines, use that.
+    If they said soft pastels and organic shapes, use that. If they said flat and minimal, use that.
+  - Every background, card, button, and decorative element must follow the designSystem spec.
+  - The CSS custom properties (--primary, --background, --foreground, --accent, --muted, --card-bg,
+    --border, --radius, --font-sans, --font-mono) are already set from the design system. Use var().
+  - Backgrounds: follow backgroundApproach — never plain/empty, but use the technique the Design
+    Director described, not a default aurora gradient.
+  - Cards: follow cardStyle — use the exact CSS the Design Director specified.
+  - Buttons: follow buttonStyle — use the exact CSS the Design Director specified.
+  - Motion: follow motionPhilosophy — use framer-motion with the approach described.
+  - Decorative: include the decorativeElements the Design Director described.━━━ RESPONSIVE DESIGN (REQUIRED — every section must work on all 3 breakpoints) ━━━
 Target breakpoints — inject via <style> tag with these exact @media queries:
   Mobile  : max-width 480px  → single column, 16-20px horizontal padding, stacked layouts
   Tablet  : 481px–1023px     → 2-column where suitable, 32-48px horizontal padding
