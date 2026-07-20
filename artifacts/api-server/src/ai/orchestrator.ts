@@ -42,12 +42,17 @@ const GENERATION_STEPS = [
   { name: "Color & Typography",   agent: "design-director",         model: FLASH      },
   { name: "Layout Planning",      agent: "ux-strategist",           model: FLASH      },
   { name: "Copywriting",          agent: "copywriter",              model: FLASH      },
+  { name: "Content Personalization", agent: "content-personalizer", model: FLASH },
   { name: "SEO Strategy",         agent: "seo-agent",               model: FLASH_LITE },
+  { name: "Image Direction", agent: "image-director", model: FLASH },
   { name: "Component Selection",  agent: "component-planner",       model: FLASH      },
   { name: "Motion & Interaction", agent: "motion-designer",         model: FLASH      },
+  { name: "Animation Choreography", agent: "animation-choreographer", model: FLASH },
   { name: "3D & Visual Effects",  agent: "visual-effects-designer", model: FLASH      },
   { name: "Section Generation",   agent: "section-generator",       model: FLASH      },
   { name: "Assembly",             agent: "assembler",               model: FLASH      },
+  { name: "Accessibility Audit", agent: "accessibility-auditor", model: FLASH_LITE },
+  { name: "Performance Optimization", agent: "performance-optimizer", model: FLASH_LITE },
   { name: "Quality Review",       agent: "qa-reviewer",             model: FLASH_LITE },
 ];
 
@@ -344,8 +349,8 @@ export async function runGeneration(
 
           // Full planning context for every section prompt
           const planningContext = [
-            "design-director", "ux-strategist", "copywriter",
-            "seo-agent", "component-planner", "motion-designer", "visual-effects-designer",
+            "design-director", "ux-strategist", "copywriter", "content-personalizer",
+            "seo-agent", "image-director", "component-planner", "motion-designer", "animation-choreographer", "visual-effects-designer",
           ]
             .map(agent => agentOutputs[agent] ? `[${agent}]\n${agentOutputs[agent].slice(0, 800)}` : "")
             .filter(Boolean)
@@ -439,6 +444,70 @@ export async function runGeneration(
             .where(eq(aiJobStepsTable.id, dbStep.id));
 
           logger.info({ htmlLen: html.length }, "Assembly complete");
+          continue;
+        }
+// ── Accessibility Audit — analyze assembled HTML for WCAG compliance ──────
+        if (step.agent === "accessibility-auditor") {
+          const html = agentOutputs["assembler"] ?? "";
+          const auditPrompt = `You are an expert Accessibility Auditor (WCAG 2.1 AA). Analyze the following HTML for accessibility issues.
+
+Check for:
+- Missing or incorrect ARIA labels and roles
+- Color contrast below 4.5:1 for text
+- Missing alt text on images
+- Non-keyboard-navigable interactive elements
+- Missing form labels
+- Missing skip-to-content link
+- Missing language attribute
+- Improper heading hierarchy
+- Missing focus indicators
+
+Return ONLY valid JSON (no markdown fences):
+{ "issues": [{ "severity": "critical"|"serious"|"moderate"|"minor", "element": string, "description": string, "recommendation": string }], "overallScore": number, "summary": string, "confidence": number }
+
+HTML to analyze:
+${html.slice(0, 60000)}`;
+
+          const auditOutput = await callGemini(genai, FLASH_LITE, auditPrompt, 8192, undefined, 0.5);
+          agentOutputs["accessibility-auditor"] = auditOutput;
+
+          await db.update(aiJobStepsTable)
+            .set({ status: "completed", completedAt: new Date(), outputJson: JSON.stringify({ output: auditOutput }) })
+            .where(eq(aiJobStepsTable.id, dbStep.id));
+
+          logger.info({ outputLen: auditOutput.length }, "Accessibility audit complete");
+          continue;
+        }
+
+        // ── Performance Optimization — analyze assembled HTML for perf issues ──────
+        if (step.agent === "performance-optimizer") {
+          const html = agentOutputs["assembler"] ?? "";
+          const perfPrompt = `You are a Web Performance Optimization expert. Analyze the following HTML for performance issues.
+
+Check for:
+- Render-blocking resources (scripts/CSS in <head>)
+- Missing lazy loading on images/iframes
+- Oversized inline styles or scripts
+- Missing font-display: swap
+- Unoptimized animations (layout thrashing, non-composited properties)
+- Missing preconnect/dns-prefetch for external resources
+- Excessive DOM depth
+- Missing critical CSS inlining
+
+Return ONLY valid JSON (no markdown fences):
+{ "issues": [{ "severity": "high"|"medium"|"low", "description": string, "recommendation": string }], "overallScore": number, "estimatedLoadTime": string, "summary": string, "confidence": number }
+
+HTML to analyze:
+${html.slice(0, 60000)}`;
+
+          const perfOutput = await callGemini(genai, FLASH_LITE, perfPrompt, 8192, undefined, 0.5);
+          agentOutputs["performance-optimizer"] = perfOutput;
+
+          await db.update(aiJobStepsTable)
+            .set({ status: "completed", completedAt: new Date(), outputJson: JSON.stringify({ output: perfOutput }) })
+            .where(eq(aiJobStepsTable.id, dbStep.id));
+
+          logger.info({ outputLen: perfOutput.length }, "Performance optimization analysis complete");
           continue;
         }
 
@@ -1180,6 +1249,47 @@ GLOBAL DECISIONS:
 
 Return ONLY valid JSON (no markdown fences):
 { "recommendedIntensity": "subtle"|"bold", "heroBackgroundEffect": string, "useGrainOverlay": boolean, "useGradientGlow": boolean, "tiltCardsOn": string[], "parallaxOn": string[], "glassmorphismOn": string[], "usePulsingLiveIndicator": boolean, "reasoning": string, "confidence": number }`,
+
+    "content-personalizer": `You are a Content Personalization expert. Adapt the copywriting tone and messaging to resonate with the specific target audience identified by the audience-strategist.
+${ctx}
+
+Analyze the audience persona and business analysis, then personalize the messaging:
+- Adjust tone (formal/casual/technical/friendly) to match audience expectations
+- Highlight benefits that matter most to this specific audience
+- Adjust vocabulary and reading level to match the audience
+- Suggest personalized headline variants that speak directly to the persona
+- Recommend social proof elements that build trust with this audience
+
+Return ONLY valid JSON (no markdown fences):
+{ "tone": string, "toneRationale": string, "headlineVariants": string[], "keyBenefits": string[], "vocabularyAdjustments": string, "socialProofSuggestions": string[], "confidence": number }`,
+
+    "image-director": `You are an Image Direction specialist for premium landing pages. Plan the visual imagery strategy — hero images, supporting visuals, icons, and Open Graph images.
+${ctx}
+
+Based on the brand identity and business type, specify:
+- Hero visual concept (what the main image/illustration should depict)
+- Supporting imagery for feature sections
+- Icon style (line/solid/duotone/3D)
+- Image treatment (photo/illustration/3D render/abstract)
+- Color grading direction for all imagery
+- OG image concept for social sharing
+
+Return ONLY valid JSON (no markdown fences):
+{ "heroVisual": { "concept": string, "style": string, "treatment": string }, "supportingVisuals": [{ "section": string, "concept": string, "style": string }], "iconStyle": string, "imageTreatment": string, "colorGrading": string, "ogImageConcept": string, "confidence": number }`,
+
+    "animation-choreographer": `You are an Animation Choreographer for premium landing pages. Coordinate all motion across sections so the page feels like a cohesive cinematic experience — not a collection of random animations.
+${ctx}
+
+Based on the motion-designer and visual-effects-designer outputs, create a unified animation timeline:
+- Define scroll-driven motion progression (what animates as user scrolls down)
+- Ensure entrance animations stagger naturally between sections
+- Coordinate color/glow shifts to flow down the page
+- Plan 3D camera/element movements that connect sections visually
+- Avoid motion conflicts (two heavy animations at the same scroll position)
+- Define transition styles between sections (fade/slide/morph)
+
+Return ONLY valid JSON (no markdown fences):
+{ "scrollProgression": string, "sectionTransitions": [{ "from": string, "to": string, "transition": string }], "coordinatedTiming": { "staggerPattern": string, "maxConcurrentAnimations": number }, "colorFlow": string, "motion3DCoordination": string, "antiConflictRules": string[], "confidence": number }`,
 
     "qa-reviewer": `You are a QA Reviewer for premium landing pages. Evaluate against these exact standards:
 
