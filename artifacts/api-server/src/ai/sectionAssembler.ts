@@ -1281,7 +1281,7 @@ ${context.globalCSS}
   <script>${REACT_RUNTIME_JS}<\/script>
 
   <!-- Generated landing page -->
-  <script>${transpiledJS}<\/script>
+  <script>${transpiledJS.replace(/<\/script>/gi, "<\\/script>")}<\/script>
 </body>
 </html>`;
 }

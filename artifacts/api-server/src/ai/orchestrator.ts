@@ -1542,8 +1542,34 @@ function cleanComponentCode(raw: string, componentName: string): string {
 
   // Remove import statements (single-line and multi-line)
   code = code.replace(/^import\s[\s\S]*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, "");
-  // Remove bare export keywords while keeping the declaration that follows
-  code = code.replace(/^export\s+(default\s+)?/gm, "");
+
+  // Remove ALL ESM export forms properly.
+  //
+  // The old single-pass regex  /^export\s+(default\s+)?/gm  only stripped the
+  // `export ` keyword from the START of the line, leaving behind:
+  //   export { HeroSection as e }  →  { HeroSection as e }
+  //   export { A\n  as e\n}        →  {\n  A\n  as e\n}
+  //
+  // The leftover `{ X as e }` or multiline `{ X\n  as e\n}` blocks cause
+  // esbuild (tsx loader) to throw "Expected ';' but found 'e'" — the section
+  // falls back to a grey placeholder on every render.
+  //
+  // The fix: use the same complete multi-pattern strip that sectionAssembler's
+  // stripModuleStatements already uses, so NO export residue reaches esbuild.
+  //
+  // Order matters: re-export / named exports must be stripped before the
+  // "export function/const/…" pattern so the latter never sees `export {`.
+  code = code
+    // export * from '...'  /  export * as ns from '...'
+    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    // export { X }  /  export { X, Y }  /  export { X } from '...'  (single- AND multi-line)
+    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    // export type { ... }  (TypeScript type-only re-exports)
+    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    // export default <value/expr>  →  keep the body, drop the keyword
+    .replace(/^export\s+default\s+/gm, "")
+    // export function / class / const / let / var  →  drop only the `export` keyword
+    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1");
   code = code.trim();
 
   // Guard: if nothing useful came back, use the safe fallback
