@@ -977,7 +977,10 @@ export async function assembleHTML(
   const { transform } = await import("esbuild");
 
   const ordered = [...sections].sort((a, b) => a.plan.order - b.plan.order);
-  const componentNames = ordered.map(s => s.componentName);
+  // Sanitize to valid JS identifiers (hyphens, spaces, leading digits break the IIFE wrapper)
+  const componentNames = ordered.map(s =>
+    (s.componentName || "Section").replace(/[^a-zA-Z0-9_$]/g, "_").replace(/^(\d)/, "_$1") || "Section"
+  );
 
   // Preamble: map our pre-bundled globals to the names the AI-generated code uses.
   // The runtime bundle sets window.React, window._sc_hooks, window._sc_createRoot,
@@ -1046,15 +1049,15 @@ export async function assembleHTML(
   //      + App + mount — no combined JSX transform needed at all
   const transpiledSections: string[] = [];
 
-  for (const s of ordered) {
+  for (let _si = 0; _si < ordered.length; _si++) {
+    const s = ordered[_si];
+    const componentName = componentNames[_si]; // sanitized
     const cleanedCode = stripModuleStatements(s.code.trim());
 
     try {
       // Transform this section's JSX → plain JS (React.createElement calls).
-      // We deliberately omit `format` so esbuild outputs clean script-style JS
-      // with no IIFE/ESM/CJS wrapper — we add our own scoping IIFE below.
       const result = await transform(cleanedCode, {
-        loader: "tsx",  // tsx handles TypeScript annotations Gemini generates (interfaces, generics, type casts)
+        loader: "tsx",
         jsxFactory: "React.createElement",
         jsxFragment: "React.Fragment",
         target: "es2020",
@@ -1063,43 +1066,42 @@ export async function assembleHTML(
       // Strip all ESM export forms esbuild may emit
       const jsCode = stripAllModuleExports(result.code).trim();
 
-      // Server-side syntax validation — catches JavaScript that esbuild emits
-      // but would cause a browser SyntaxError inside the assembled page.
-      // new Function() compiles without executing; only SyntaxError throws.
+      // Syntax check #1: raw transpiled code
       try {
-        // eslint-disable-next-line no-new-func
         new Function(jsCode);
       } catch (syntaxErr: any) {
-        throw new Error(`Syntax check failed for ${s.componentName}: ${syntaxErr?.message}`);
+        throw new Error(`Syntax check failed for ${componentName}: ${syntaxErr?.message}`);
       }
 
-      // Wrap in a scoping IIFE: every top-level helper / constant is local to
-      // this section, so identically-named helpers in other sections can never
-      // conflict.  The component function is returned and assigned to a `var`
-      // in the outer scope so App() can reference it.
+      // Wrap in a scoping IIFE
       const indented = jsCode.split("\n").map(l => "  " + l).join("\n");
-      transpiledSections.push(
-        `// ── ${s.plan.type} (${s.componentName})\n` +
-        `var ${s.componentName} = (function () {\n` +
+      const wrappedSection =
+        `// ── ${s.plan.type} (${componentName})\n` +
+        `var ${componentName} = (function () {\n` +
         `${indented}\n` +
-        `  return ${s.componentName};\n` +
-        `}());`
-      );
+        `  return ${componentName};\n` +
+        `}());`;
 
-      logger.info({ component: s.componentName, jsLen: jsCode.length }, "Section transpiled OK");
+      // Syntax check #2: the WRAPPED version (catches bad component names,
+      // IIFE wrapper issues that the raw jsCode check misses)
+      try {
+        new Function(wrappedSection);
+        transpiledSections.push(wrappedSection);
+      } catch (wrapErr: any) {
+        logger.warn({ component: componentName, error: wrapErr?.message }, "Wrapped section syntax check failed — using placeholder");
+        transpiledSections.push(
+          `function ${componentName}() { return React.createElement("div", { style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" } }, "Section unavailable."); }`
+        );
+      }
+
+      logger.info({ component: componentName, jsLen: jsCode.length }, "Section transpiled OK");
     } catch (err: any) {
       logger.warn(
-        { sectionType: s.plan.type, component: s.componentName, esbuildError: err?.message },
+        { sectionType: s.plan.type, component: componentName, esbuildError: err?.message },
         "Section JSX transpile failed — using placeholder",
       );
-      // Fallback is pure React.createElement — no JSX, cannot fail
       transpiledSections.push(
-        `// ── ${s.plan.type} (${s.componentName}) [placeholder]\n` +
-        `function ${s.componentName}() {\n` +
-        `  return React.createElement("section", {\n` +
-        `    style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" }\n` +
-        `  }, React.createElement("p", null, "[${s.plan.type} — could not render]"));\n` +
-        `}`
+        `function ${componentName}() { return React.createElement("div", { style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" } }, "[${s.plan.type} — could not render]"); }`
       );
     }
   }
@@ -1112,7 +1114,7 @@ export async function assembleHTML(
     `function App() {`,
     `  return React.createElement(React.Fragment, null,`,
     componentNames.map((n, i) =>
-      `    React.createElement(${n}, null)${i < componentNames.length - 1 ? "," : ""}`
+      `    React.createElement(_ScErrorBoundary, null, React.createElement(${n}, null))${i < componentNames.length - 1 ? "," : ""}`
     ).join("\n"),
     `  );`,
     `}`,
@@ -1150,7 +1152,7 @@ export async function assembleHTML(
   const ind = (code: string, n: number) =>
     code.split("\n").map(l => " ".repeat(n) + l).join("\n");
 
-  const transpiledJS = [
+  let transpiledJS = [
     `(function () {`,
     ind(PREAMBLE, 2),
     ``,
@@ -1164,6 +1166,50 @@ export async function assembleHTML(
     ind(mountCode, 2),
     `}());`,
   ].join("\n");
+
+  // ── FINAL syntax check on the COMPLETE assembled script ──
+  // Per-section checks catch individual issues, but the full assembly
+  // (PREAMBLE + all sections + errorBoundary + App + mount) could still fail.
+  // If it does, iteratively replace sections with placeholders until valid.
+  const rebuildJS = (sections: string[]) => [
+    `(function () {`,
+    ind(PREAMBLE, 2), ``,
+    sections.map(s => ind(s, 2)).join("\n\n"), ``,
+    ind(`/* APP SHELL */`, 2), ``,
+    ind(errorBoundaryCode, 2), ind(appCode, 2), ``,
+    ind(mountCode, 2), `}());`,
+  ].join("\n");
+
+  try {
+    new Function(transpiledJS);
+  } catch (fullErr: any) {
+    logger.warn({ error: fullErr?.message }, "Full assembled script failed syntax check — isolating broken section(s)");
+
+    // Try replacing each section one by one
+    let fixed = false;
+    for (let i = 0; i < transpiledSections.length; i++) {
+      const testSections = [...transpiledSections];
+      testSections[i] = `function ${componentNames[i]}() { return React.createElement("div", { style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" } }, "Section unavailable."); }`;
+      const testJS = rebuildJS(testSections);
+      try {
+        new Function(testJS);
+        transpiledSections[i] = testSections[i];
+        transpiledJS = testJS;
+        logger.info({ sectionIndex: i, component: componentNames[i] }, "Replaced broken section with placeholder");
+        fixed = true;
+        break;
+      } catch { /* not this section — continue */ }
+    }
+
+    if (!fixed) {
+      // Last resort: replace ALL sections with safe placeholders
+      logger.error("Could not isolate broken section — replacing all sections with placeholders");
+      const safeSections = componentNames.map(n =>
+        `function ${n}() { return React.createElement("div", { style: { padding: "40px 24px", textAlign: "center", color: "#94a3b8" } }, "Content loading..."); }`
+      );
+      transpiledJS = rebuildJS(safeSections);
+    }
+  }
 
   const favicon = context.faviconUrl
     ? `\n  <link rel="icon" href="${context.faviconUrl}">`
