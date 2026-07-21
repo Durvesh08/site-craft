@@ -58,15 +58,25 @@ export function parseSectionPlan(componentPlannerOutput: string): SectionPlan[] 
     const raw: any[] = parsed.sectionPlan ?? parsed.sections ?? [];
     if (!Array.isArray(raw) || raw.length === 0) return defaultSectionPlan();
 
-    const plan: SectionPlan[] = raw.slice(0, 12).map((s: any, i: number) => ({
-      id: (s.id ?? s.name ?? `section-${i}`)
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, ""),
-      type: s.type ?? s.componentType ?? "content-section",
-      order: typeof s.order === "number" ? s.order : i,
-      brief: s.brief ?? s.purpose ?? s.description ?? "",
-    }));
+    const plan: SectionPlan[] = raw.slice(0, 12).map((s: any, i: number) => {
+      const baseBrief = s.brief ?? s.purpose ?? s.description ?? "";
+      const details = [
+        baseBrief,
+        s.conversionJob ? `Conversion job: ${s.conversionJob}` : "",
+        s.mobileBehavior ? `Mobile behavior: ${s.mobileBehavior}` : "",
+        s.visualAccent ? `Visual accent: ${s.visualAccent}` : "",
+      ].filter(Boolean).join("\n");
+
+      return {
+        id: (s.id ?? s.name ?? `section-${i}`)
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, ""),
+        type: s.type ?? s.componentType ?? "content-section",
+        order: typeof s.order === "number" ? s.order : i,
+        brief: details,
+      };
+    });
 
     // Always ensure a nav and footer are present
     const hasNav    = plan.some(s => s.id === "nav" || s.type.includes("nav"));
@@ -173,7 +183,28 @@ CRITICAL RULES:
   - Cards: follow cardStyle — use the exact CSS the Design Director specified.
   - Buttons: follow buttonStyle — use the exact CSS the Design Director specified.
   - Motion: follow motionPhilosophy — use framer-motion with the approach described.
-  - Decorative: include the decorativeElements the Design Director described.━━━ RESPONSIVE DESIGN (REQUIRED — every section must work on all 3 breakpoints) ━━━
+  - Decorative: include the decorativeElements the Design Director described.
+
+━━━ PREMIUM OUTPUT CONTRACT ━━━
+Every section must feel custom to this specific business, not like a reusable template.
+Before writing code, silently decide:
+  1. What is this section's conversion job? (attention, proof, explanation, objection handling, close)
+  2. What is the one memorable visual idea for this section?
+  3. What content would make a visitor trust this business more?
+  4. What mobile layout prevents crowding, clipping, and horizontal scroll?
+
+QUALITY REQUIREMENTS:
+  - Use real business-specific copy from the context. Avoid vague placeholders like "Powerful features".
+  - Include one premium visual detail per non-footer section: metric card, timeline, product stage,
+    comparison strip, safe CSS mockup, animated stat, texture, or tasteful 3D/particle accent.
+  - Never create a one-note palette. Use --primary, --secondary, --accent, --muted, and neutral surfaces
+    with a clear hierarchy.
+  - Do not overuse cards. Use full-width sections, rhythm, whitespace, and strong typography.
+  - Keep primary content visible immediately. Do not hide text until animations/assets load.
+  - All animations must be composited-friendly: opacity, transform, filter. Avoid layout-thrashing loops.
+  - If any optional visual cannot run, the JSX/CSS fallback must still look intentionally designed.
+
+━━━ RESPONSIVE DESIGN (REQUIRED — every section must work on all 3 breakpoints) ━━━
 Target breakpoints — inject via <style> tag with these exact @media queries:
   Mobile  : max-width 480px  → single column, 16-20px horizontal padding, stacked layouts
   Tablet  : 481px–1023px     → 2-column where suitable, 32-48px horizontal padding
@@ -244,6 +275,9 @@ RESPONSIVE RULES per element type:
 9. Every section root element must have id="${section.id}" for anchor navigation
 10. QUALITY BAR: the output must look like Stripe, Linear, or Framer — reject anything that
     resembles Bootstrap, WordPress, or a generic website builder template
+11. RENDER RESILIENCE: content must render even if images, fonts, Three.js, or WebGL fail.
+    Never hide primary copy behind loading states. Never return null while waiting for assets.
+    Every visual effect must be decorative and safely skippable.
 
 ━━━ CRITICAL: IMAGES & MEDIA ━━━
 NEVER generate fake product/hero image URLs that will 404. Broken images look worse than no image.
@@ -415,16 +449,20 @@ function getSectionTypeRules(type: string): string {
       whileHover={{ background:'rgba(255,255,255,0.12)', scale:1.03 }}
 
 - THREE.JS PARTICLE SYSTEM (REQUIRED for hero sections — makes the page feel alive):
-  Add a full-viewport canvas behind the content using Three.js. This is a REQUIRED element, not optional.
+  Add a full-viewport canvas behind the content using Three.js when window.THREE is available.
+  The hero MUST still look premium without Three.js because it loads asynchronously in previews.
   Implementation pattern — copy this exactly inside the component function:
 
     const canvasRef = useRef(null);
     useEffect(() => {
       if (!canvasRef.current || !window.THREE) return;
+      const canvas = canvasRef.current;
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) return;
       const scene = new window.THREE.Scene();
       const camera = new window.THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
       camera.position.z = 5;
-      const renderer = new window.THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
+      const renderer = new window.THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       const count = 120;
@@ -445,6 +483,7 @@ function getSectionTypeRules(type: string): string {
 
   Place the canvas element FIRST inside the section, before aurora blobs and content:
     <canvas ref={canvasRef} style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0}} />
+  Also include the CSS aurora/static decorative background underneath so the page is beautiful when Three.js is unavailable.
 
 - FLOATING AMBIENT ELEMENTS (strongly recommended for visual richness):
     Add 2-4 small decorative floating elements in the hero background area using position:absolute, zIndex:1
@@ -1138,9 +1177,11 @@ export async function assembleHTML(
 
   const mountCode = [
     `try {`,
+    `  window.__scRenderStarted = true;`,
     `  createRoot(document.getElementById("root")).render(`,
     `    React.createElement(_ScErrorBoundary, null, React.createElement(App, null))`,
     `  );`,
+    `  requestAnimationFrame(function () { document.documentElement.setAttribute("data-sc-rendered", "true"); });`,
     `} catch (err) {`,
     `  var _e = document.getElementById("_sc-error");`,
     `  var _m = document.getElementById("_sc-error-msg");`,
@@ -1212,14 +1253,19 @@ export async function assembleHTML(
   }
 
   const favicon = context.faviconUrl
-    ? `\n  <link rel="icon" href="${context.faviconUrl}">`
+    ? `\n  <link rel="icon" href="${escAttr(context.faviconUrl)}">`
     : "";
 
-  // Detect Three.js usage — only load from CDN when actually needed
+  // Detect Three.js usage — only load from CDN when actually needed.
+  // This script must be non-blocking: if the CDN is slow, the generated page
+  // should still mount and simply skip decorative 3D effects.
   const usesThree = transpiledSections.some(c => /\bTHREE\b/.test(c));
   const threeScript = usesThree
-    ? `\n  <script src="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.min.js"><\/script>`
+    ? `\n  <script async src="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.min.js" onload="window.__scThreeLoaded=true" onerror="window.__scThreeFailed=true"><\/script>`
     : "";
+
+  const runtimeScript = safeInlineScript(REACT_RUNTIME_JS);
+  const pageScript = safeInlineScript(transpiledJS);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1255,6 +1301,10 @@ ${context.globalCSS}
   <script>
     // Error overlay handlers
     window.addEventListener('error', function(e) {
+      if (e.target && e.target !== window) {
+        var tag = e.target.tagName;
+        if (tag !== 'SCRIPT') return;
+      }
       var el = document.getElementById('_sc-error');
       var msg = document.getElementById('_sc-error-msg');
       if (el) el.classList.add('show');
@@ -1268,20 +1318,20 @@ ${context.globalCSS}
     });
     setTimeout(function() {
       var root = document.getElementById('root');
-      if (root && root.childElementCount === 0) {
+      if (root && root.childElementCount === 0 && !window.__scRenderStarted) {
         var el = document.getElementById('_sc-error');
         var msg = document.getElementById('_sc-error-msg');
         if (el) el.classList.add('show');
-        if (msg) msg.textContent = 'Page did not render within 15 seconds.';
+        if (msg) msg.textContent = 'Page did not start rendering within 15 seconds.';
       }
     }, 15000);
   <\/script>
 
   <!-- React 18 + framer-motion runtime (pre-bundled, no CDN) -->
-  <script>${REACT_RUNTIME_JS}<\/script>
+  <script>${runtimeScript}<\/script>
 
   <!-- Generated landing page -->
-  <script>${transpiledJS.replace(/<\/script>/gi, "<\\/script>")}<\/script>
+  <script>${pageScript}<\/script>
 </body>
 </html>`;
 }
@@ -1292,6 +1342,18 @@ ${context.globalCSS}
 
 function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function escAttr(s: string): string {
+  return escHtml(s).replace(/'/g, "&#39;");
+}
+
+function safeInlineScript(code: string): string {
+  return code
+    .replace(/<\/script/gi, "<\\/script")
+    .replace(/<!--/g, "<\\!--")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 function indentCode(code: string, spaces: number): string {

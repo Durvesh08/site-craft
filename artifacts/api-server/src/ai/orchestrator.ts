@@ -1093,20 +1093,26 @@ ${input.previousOutputs ? `\nContext from previous agents:\n${input.previousOutp
 
   const prompts: Record<string, string> = {
 
-    "business-analyzer": `You are a Business Analyzer. Analyse the business and extract key attributes.
+    "business-analyzer": `You are a Business Analyzer and Market Positioning Strategist. Analyse the business and extract the sharp strategic foundation every later design agent should follow.
 ${ctx}
-Return ONLY valid JSON (no markdown fences):
-{ "businessType": string, "products": string[], "audience": string, "differentiators": string[], "tone": string, "goals": string[], "trustSignals": string[], "confidence": number }`,
 
-    "audience-strategist": `You are an Audience Strategist. Create a detailed customer persona.
-${ctx}
-Return ONLY valid JSON (no markdown fences):
-{ "primaryPersona": { "name": string, "age": string, "painPoints": string[], "motivations": string[], "objections": string[] }, "buyingTriggers": string[], "confidence": number }`,
+Do not stay generic. Identify the category, the buyer's current alternative, the core promise, the strongest differentiator, proof that can be shown honestly, and the messages/design cliches this landing page must avoid.
 
-    "brand-strategist": `You are a Brand Strategist. Generate a complete brand identity.
+Return ONLY valid JSON (no markdown fences):
+{ "businessType": string, "category": string, "products": string[], "audience": string, "currentAlternatives": string[], "corePromise": string, "differentiators": string[], "messagesToAvoid": string[], "tone": string, "goals": string[], "trustSignals": string[], "confidence": number }`,
+
+    "audience-strategist": `You are an Audience Strategist and Conversion Psychologist. Create a detailed customer persona and translate it into persuasive landing-page decisions.
 ${ctx}
 Return ONLY valid JSON (no markdown fences):
-{ "brandName": string, "tagline": string, "personality": string[], "voiceTone": string, "colorDirection": string, "typographyStyle": string, "confidence": number }`,
+{ "primaryPersona": { "name": string, "age": string, "context": string, "painPoints": string[], "motivations": string[], "objections": string[] }, "buyingTriggers": string[], "trustNeeds": string[], "copyToneRules": string[], "visualComfortZone": string, "confidence": number }`,
+
+    "brand-strategist": `You are a Brand Strategist and Offer Architect. Generate a complete brand identity plus a clear offer architecture.
+${ctx}
+
+Define a brand that feels specific to this business and an offer that a visitor can understand in 5 seconds. Include the promise, risk reducers, CTA hierarchy, and credibility angle.
+
+Return ONLY valid JSON (no markdown fences):
+{ "brandName": string, "tagline": string, "personality": string[], "voiceTone": string, "coreOffer": string, "primaryOutcome": string, "ctaHierarchy": { "primary": string, "secondary": string }, "riskReducers": string[], "colorDirection": string, "typographyStyle": string, "confidence": number }`,
 
     "design-director": `You are a Design Director with deep training in color theory, typography, and visual systems. Your job is to design a COMPLETELY UNIQUE visual system for this landing page — not pick from a preset menu of styles.
 
@@ -1154,7 +1160,7 @@ Return ONLY valid JSON (no markdown fences):
   "confidence": number
 }`,
 
-    "ux-strategist": `You are an elite UX Strategist and Creative Director. Plan a premium landing page layout for a Stripe/Linear/Framer-tier product.
+    "ux-strategist": `You are an elite UX Strategist, Information Architect, and Creative Director. Plan a premium landing page layout for a Stripe/Linear/Framer-tier product.
 ${ctx}
 
 MISSION: Plan 7-10 sections as individual React components. The result must look world-class — never generic. Vary the hero type and section mix based on this specific business, not a standard template.
@@ -1176,9 +1182,11 @@ RULES:
 - Include at least: hero + features/bento + social proof + CTA + footer
 - Choose sections that logically tell this specific business's story
 - Each page must have a unique section order — avoid identical generic layouts
+- Define the persuasive job of every section: attention, understanding, desire, proof, objection handling, conversion
+- Plan mobile scan order explicitly so the generated sections remain strong on narrow screens
 
 Return ONLY valid JSON (no markdown fences):
-{ "sections": [{ "name": string, "type": string, "purpose": string, "order": number }], "heroType": string, "layoutRationale": string, "aboveFoldCta": string, "confidence": number }`,
+{ "sections": [{ "name": string, "type": string, "purpose": string, "conversionJob": string, "mobilePriority": string, "order": number }], "heroType": string, "layoutRationale": string, "aboveFoldCta": string, "navLabels": string[], "confidence": number }`,
 
     "copywriter": `You are a world-class Copywriter for premium SaaS and consumer brands. Write bold, specific, conversion-optimised copy that makes people say "this is exactly what I need."
 ${ctx}
@@ -1199,7 +1207,7 @@ ${ctx}
 Return ONLY valid JSON (no markdown fences):
 { "title": string, "description": string, "keywords": string[], "h1": string, "schemaType": string, "confidence": number }`,
 
-    "component-planner": `You are a Component Planner and Creative Director mapping a layout to premium React sections. Each section will be built independently so your brief must be highly specific.
+    "component-planner": `You are a Component Planner, Responsive Systems Designer, and Creative Director mapping a layout to premium React sections. Each section will be built independently so your brief must be highly specific.
 ${ctx}
 
 For each section specify:
@@ -1210,6 +1218,8 @@ For each section specify:
   · The visual technique (glassmorphism, mesh gradient, bento asymmetric grid, etc.)
   · What specific data/content to show (which metrics, which features, which copy angle)
   · What makes THIS section look premium and unique vs a generic template
+  · Mobile behavior and overflow risks to avoid
+  · What visual proof, motion, or 3D accent belongs in this section
 
 HEADLINE STYLE (choose to match brand):
 - "gradient-text": gradient clipped to text — tech, SaaS, bold brands
@@ -1218,14 +1228,15 @@ HEADLINE STYLE (choose to match brand):
 
 Return ONLY valid JSON (no markdown fences):
 {
-  "sectionPlan": [{ "id": string, "type": string, "order": number, "brief": string }],
+  "sectionPlan": [{ "id": string, "type": string, "order": number, "brief": string, "mobileBehavior": string, "visualAccent": string }],
   "headlineStyle": "gradient-text" | "solid-text" | "split-color-text",
   "gradientColors": string | null,
   "heroType": string,
+  "responsiveRules": string[],
   "confidence": number
 }`,
 
-    "motion-designer": `You are a Motion Designer for premium landing pages (Stripe/Linear/Framer-tier motion). Every element must have purposeful motion — nothing static.
+    "motion-designer": `You are a Motion Designer and Interaction Designer for premium landing pages (Stripe/Linear/Framer-tier motion). Every element must have purposeful motion, but the page must remain fast and readable.
 ${ctx}
 
 MOTION PHILOSOPHY:
@@ -1234,13 +1245,15 @@ MOTION PHILOSOPHY:
 - Ambient: floating elements drift, glows pulse, hero background shifts slowly
 - Counter: numbers count up when scrolled into view (useInView + setInterval)
 - Max duration: 0.7s for entrance animations, 0.2s for hover interactions
+- Respect reduced-motion users: animations should degrade to opacity/none if needed
+- Heavy ambient effects must be limited to hero or one visual section
 
 All via Framer Motion: whileInView, initial, animate, transition, whileHover, whileTap, useInView
 
 Return ONLY valid JSON (no markdown fences):
-{ "globalEasing": string, "scrollReveal": { "technique": string, "defaultAnimation": string, "staggerMs": number }, "sections": [{ "sectionId": string, "entrance": string, "durationMs": number, "hoverInteractions": string[], "ambientAnimation": string }], "microInteractions": string[], "confidence": number }`,
+{ "globalEasing": string, "scrollReveal": { "technique": string, "defaultAnimation": string, "staggerMs": number }, "sections": [{ "sectionId": string, "entrance": string, "durationMs": number, "hoverInteractions": string[], "ambientAnimation": string, "reducedMotionFallback": string }], "microInteractions": string[], "performanceLimits": string[], "confidence": number }`,
 
-    "visual-effects-designer": `You are a Visual Effects Director for premium landing pages. Every section must have visual depth — never a plain background.
+    "visual-effects-designer": `You are a Visual Effects Director and lightweight 3D Scene Planner for premium landing pages. Every section must have visual depth, and 3D must enhance the page without becoming a render dependency.
 ${ctx}
 
 HERO BACKGROUND (pick ONE based on brand tone):
@@ -1256,9 +1269,12 @@ GLOBAL DECISIONS:
 - useGrainOverlay: SVG noise on sections for tactile premium feel
 - glassmorphismOn: list sections where cards should use backdrop-filter:blur + rgba + gradient border
 - usePulsingLiveIndicator: pulsing green dot on live metrics/activity sections
+- 3D/WebGL is optional decoration. The page must still look complete if window.THREE is unavailable.
+- Prefer one lightweight hero particle field or product-stage effect; keep particle counts under 160.
+- Avoid blocking render with external assets, remote model files, or required image URLs.
 
 Return ONLY valid JSON (no markdown fences):
-{ "recommendedIntensity": "subtle"|"bold", "heroBackgroundEffect": string, "useGrainOverlay": boolean, "useGradientGlow": boolean, "tiltCardsOn": string[], "parallaxOn": string[], "glassmorphismOn": string[], "usePulsingLiveIndicator": boolean, "reasoning": string, "confidence": number }`,
+{ "recommendedIntensity": "subtle"|"bold", "heroBackgroundEffect": string, "use3D": boolean, "hero3DScene": string, "fallbackIfNoWebGL": string, "useGrainOverlay": boolean, "useGradientGlow": boolean, "tiltCardsOn": string[], "parallaxOn": string[], "glassmorphismOn": string[], "usePulsingLiveIndicator": boolean, "performanceBudget": string, "reasoning": string, "confidence": number }`,
 
     "content-personalizer": `You are a Content Personalization expert. Adapt the copywriting tone and messaging to resonate with the specific target audience identified by the audience-strategist.
 ${ctx}
@@ -1273,7 +1289,7 @@ Analyze the audience persona and business analysis, then personalize the messagi
 Return ONLY valid JSON (no markdown fences):
 { "tone": string, "toneRationale": string, "headlineVariants": string[], "keyBenefits": string[], "vocabularyAdjustments": string, "socialProofSuggestions": string[], "confidence": number }`,
 
-    "image-director": `You are an Image Direction specialist for premium landing pages. Plan the visual imagery strategy — hero images, supporting visuals, icons, and Open Graph images.
+    "image-director": `You are an Image Direction specialist and Asset Curator for premium landing pages. Plan the visual imagery strategy — hero images, supporting visuals, icons, and Open Graph images — using assets that will not break render.
 ${ctx}
 
 Based on the brand identity and business type, specify:
@@ -1283,11 +1299,13 @@ Based on the brand identity and business type, specify:
 - Image treatment (photo/illustration/3D render/abstract)
 - Color grading direction for all imagery
 - OG image concept for social sharing
+- Safe fallback visuals if no reliable product image exists
+- Broken asset avoidance: no fake logo clouds, no made-up Unsplash URLs, no external model files
 
 Return ONLY valid JSON (no markdown fences):
-{ "heroVisual": { "concept": string, "style": string, "treatment": string }, "supportingVisuals": [{ "section": string, "concept": string, "style": string }], "iconStyle": string, "imageTreatment": string, "colorGrading": string, "ogImageConcept": string, "confidence": number }`,
+{ "heroVisual": { "concept": string, "style": string, "treatment": string, "safeFallback": string }, "supportingVisuals": [{ "section": string, "concept": string, "style": string, "fallback": string }], "iconStyle": string, "imageTreatment": string, "colorGrading": string, "ogImageConcept": string, "assetRules": string[], "confidence": number }`,
 
-    "animation-choreographer": `You are an Animation Choreographer for premium landing pages. Coordinate all motion across sections so the page feels like a cohesive cinematic experience — not a collection of random animations.
+    "animation-choreographer": `You are an Animation Choreographer and Render Resilience Reviewer for premium landing pages. Coordinate all motion across sections so the page feels cohesive, cinematic, and robust — not a collection of random animations.
 ${ctx}
 
 Based on the motion-designer and visual-effects-designer outputs, create a unified animation timeline:
@@ -1297,9 +1315,11 @@ Based on the motion-designer and visual-effects-designer outputs, create a unifi
 - Plan 3D camera/element movements that connect sections visually
 - Avoid motion conflicts (two heavy animations at the same scroll position)
 - Define transition styles between sections (fade/slide/morph)
+- Define graceful fallback behavior for failed WebGL, blocked CDN resources, and reduced-motion preferences
+- Avoid animations that keep the root empty, rely on remote assets, or hide content until a library loads
 
 Return ONLY valid JSON (no markdown fences):
-{ "scrollProgression": string, "sectionTransitions": [{ "from": string, "to": string, "transition": string }], "coordinatedTiming": { "staggerPattern": string, "maxConcurrentAnimations": number }, "colorFlow": string, "motion3DCoordination": string, "antiConflictRules": string[], "confidence": number }`,
+{ "scrollProgression": string, "sectionTransitions": [{ "from": string, "to": string, "transition": string }], "coordinatedTiming": { "staggerPattern": string, "maxConcurrentAnimations": number }, "colorFlow": string, "motion3DCoordination": string, "fallbackRules": string[], "antiConflictRules": string[], "confidence": number }`,
 
     "qa-reviewer": `You are a QA Reviewer for premium landing pages. Evaluate against these exact standards:
 
@@ -1331,9 +1351,15 @@ LINK VALIDATION (deduct 15pts per failure):
 - CTA buttons have target="_blank" rel="noopener noreferrer" for external links
 - All section roots have id attributes for anchor navigation
 
+RENDER RESILIENCE (fail if any critical issue):
+- Page must mount without waiting for Three.js, image URLs, fonts, or any remote visual asset
+- One section runtime error must not blank the entire page
+- No generated code may include import/export statements, TypeScript-only syntax, or required browser globals without guards
+- 3D effects must check for window.THREE / WebGL and provide a CSS/JSX fallback
+
 ${ctx}
 Return ONLY valid JSON (no markdown fences):
-{ "visualScore": number, "seoScore": number, "accessibilityScore": number, "performanceScore": number, "issues": string[], "suggestions": string[] }`,
+{ "visualScore": number, "seoScore": number, "accessibilityScore": number, "performanceScore": number, "renderResilienceScore": number, "issues": string[], "criticalRenderRisks": string[], "suggestions": string[] }`,
   };
 
   return prompts[agent] ?? `You are an AI agent. Process the following and return JSON:\n${ctx}`;

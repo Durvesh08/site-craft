@@ -62,7 +62,7 @@ export default function Home() {
           
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground leading-[1.1]">
             Direct your vision.<br />
-            Let <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">10 AI agents</span> build it.
+            Let <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">18 AI agents</span> build it.
           </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">

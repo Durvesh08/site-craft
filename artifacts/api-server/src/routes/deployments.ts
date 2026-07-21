@@ -70,6 +70,34 @@ interface DeployCredentials {
   protocol: "ftp" | "ftps" | "sftp";
 }
 
+function splitHostPort(hostWithPort: string): { host: string; port?: number } {
+  const match = /^([^:]+):(\d+)$/.exec(hostWithPort);
+  if (!match) return { host: hostWithPort };
+  return { host: match[1], port: Number(match[2]) };
+}
+
+function parseEndpoint(raw: string): { host: string; port?: number; inferredProtocol?: "ftp" | "ftps" | "sftp"; path?: string } {
+  const trimmed = raw.trim();
+  const match = /^(ftp|ftps|sftp):\/\/([^/]+)(\/.*)?$/i.exec(trimmed);
+  if (match) {
+    const parsedHost = splitHostPort(match[2].replace(/\/+$/, ""));
+    return {
+      inferredProtocol: match[1].toLowerCase() as "ftp" | "ftps" | "sftp",
+      host: parsedHost.host,
+      port: parsedHost.port,
+      path: match[3],
+    };
+  }
+
+  const [hostPart, ...pathParts] = trimmed.split("/");
+  const parsedHost = splitHostPort(hostPart.replace(/\/+$/, ""));
+  return {
+    host: parsedHost.host,
+    port: parsedHost.port,
+    path: pathParts.length ? `/${pathParts.join("/")}` : undefined,
+  };
+}
+
 function normalizeRemotePath(path?: string | null): string {
   const raw = (path || "/public_html/").trim();
   const withoutScheme = raw.replace(/^(ftp|ftps|sftp):\/\/[^/]+/i, "");
@@ -154,9 +182,10 @@ async function resolveCredentials(
 
   // Strip any protocol prefix users commonly paste (ftp://host → host, sftp://host → host)
   const rawHost  = overrides.host     || saved["ftp_host"]     || "";
-  const host     = rawHost.replace(/^(ftp|ftps|sftp):\/\//i, "").replace(/\/+$/, "");
+  const endpoint = parseEndpoint(rawHost);
+  const host     = endpoint.host;
   const username = overrides.username || saved["ftp_username"] || "";
-  const path     = normalizeRemotePath(overrides.path || saved["ftp_path"] || "/public_html/");
+  const path     = normalizeRemotePath(overrides.path || endpoint.path || saved["ftp_path"] || "/public_html/");
 
   // Password: if override provided and not masked, use it; else decrypt saved
   let password = overrides.password || "";
@@ -183,7 +212,9 @@ async function resolveCredentials(
   const overrideProto = overrides.protocol || "";
   const savedProto    = saved["ftp_protocol"] || "";
 
-  if (overrideProto === "ftps" || overrideProto === "sftp") {
+  if (endpoint.inferredProtocol) {
+    protocol = endpoint.inferredProtocol;
+  } else if (overrideProto === "ftps" || overrideProto === "sftp") {
     // User explicitly chose FTPS or SFTP in the deploy form — honour it.
     protocol = overrideProto as "ftps" | "sftp";
   } else if (savedProto === "ftps" || savedProto === "sftp") {
@@ -196,7 +227,10 @@ async function resolveCredentials(
   // else: both override and saved are "ftp" (or absent) → plain FTP is correct.
 
   // Port — resolved AFTER protocol so SFTP default of 22 applies correctly.
-  const port = overrides.port || (saved["ftp_port"] ? Number(saved["ftp_port"]) : (protocol === "sftp" ? 22 : 21));
+  const rawPort = endpoint.port || overrides.port || (saved["ftp_port"] ? Number(saved["ftp_port"]) : undefined);
+  const port = Number.isFinite(rawPort) && rawPort! > 0
+    ? rawPort!
+    : (protocol === "sftp" ? 22 : 21);
 
   return { host, port, username, password, remotePath: path, protocol };
 }
@@ -255,60 +289,57 @@ async function uploadViaFtp(opts: UploadOptions): Promise<string> {
     });
   };
 
-  let usedSecure = creds.protocol === "ftps";
   try {
+    let usedSecure = creds.protocol === "ftps";
     await tryAccess(usedSecure);
+    await appendLog(deploymentId, `Connected${usedSecure && creds.protocol !== "ftps" ? " (auto-upgraded to FTPS)" : ""}. Uploading to ${creds.remotePath}…`);
+    await setProgress(deploymentId, 20);
+
+    await client.ensureDir(creds.remotePath);
+    await client.cd(creds.remotePath);
+
+    const liveUrl = opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
+    const files = buildDeployFiles(html, liveUrl);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const remoteName = file.name;
+
+      // No-overwrite check
+      if (!overwriteExisting) {
+        try {
+          const listing = await client.list();
+          if (listing.some(f => f.name === file.name)) {
+            await appendLog(deploymentId, `Skipping ${file.name} (already exists, overwrite=false)`);
+            await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
+            continue;
+          }
+        } catch { /* ignore list errors — proceed with upload */ }
+      }
+
+      await appendLog(deploymentId, `Uploading ${file.name}…`);
+      const buf = Buffer.from(file.content, "utf-8");
+      const { Readable } = await import("stream");
+      const stream = Readable.from(buf);
+      await client.uploadFrom(stream, remoteName);
+      await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
+      await appendLog(deploymentId, `✓ ${file.name} uploaded (${buf.length} bytes)`);
+    }
+
+    await appendLog(deploymentId, "All files uploaded successfully.");
+    await setProgress(deploymentId, 100);
+
+    return liveUrl;
   } catch (err: any) {
-    // 530 "Login incorrect" / "Not logged in" means the server requires FTPS
-    // before it will accept credentials — auto-upgrade and retry once.
     const is530 = err?.code === 530 || String(err?.message ?? "").includes("530");
-    if (!usedSecure && is530) {
-      await appendLog(deploymentId, "Plain FTP returned 530 — auto-retrying with FTPS (TLS)…");
-      await tryAccess(true);
-      usedSecure = true;
-    } else {
-      throw err;
-    }
+    const canRetryFtps = creds.protocol === "ftp" && is530;
+    if (!canRetryFtps) throw err;
+
+    await appendLog(deploymentId, "Plain FTP returned 530 — auto-retrying with FTPS (TLS)…");
+    return await uploadViaFtp({ ...opts, creds: { ...creds, protocol: "ftps" } });
+  } finally {
+    client.close();
   }
-  await appendLog(deploymentId, `Connected${usedSecure && creds.protocol !== "ftps" ? " (auto-upgraded to FTPS)" : ""}. Uploading to ${creds.remotePath}…`);
-  await setProgress(deploymentId, 20);
-
-  await client.ensureDir(creds.remotePath);
-  await client.cd(creds.remotePath);
-
-  const liveUrl = opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
-  const files = buildDeployFiles(html, liveUrl);
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const remoteName = file.name;
-
-    // No-overwrite check
-    if (!overwriteExisting) {
-      try {
-        const listing = await client.list();
-        if (listing.some(f => f.name === file.name)) {
-          await appendLog(deploymentId, `Skipping ${file.name} (already exists, overwrite=false)`);
-          await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
-          continue;
-        }
-      } catch { /* ignore list errors — proceed with upload */ }
-    }
-
-    await appendLog(deploymentId, `Uploading ${file.name}…`);
-    const buf = Buffer.from(file.content, "utf-8");
-    const { Readable } = await import("stream");
-    const stream = Readable.from(buf);
-    await client.uploadFrom(stream, remoteName);
-    await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
-    await appendLog(deploymentId, `✓ ${file.name} uploaded (${buf.length} bytes)`);
-  }
-
-  client.close();
-  await appendLog(deploymentId, "All files uploaded successfully.");
-  await setProgress(deploymentId, 100);
-
-  return liveUrl;
 }
 
 async function uploadViaSftp(opts: UploadOptions): Promise<string> {
@@ -318,48 +349,51 @@ async function uploadViaSftp(opts: UploadOptions): Promise<string> {
   await appendLog(deploymentId, `Connecting via SFTP to ${creds.host}:${creds.port}…`);
   await setProgress(deploymentId, 10);
 
-  await sftp.connect({
-    host: creds.host,
-    port: creds.port,
-    username: creds.username,
-    password: creds.password,
-    readyTimeout: 20000,
-  });
+  try {
+    await sftp.connect({
+      host: creds.host,
+      port: creds.port,
+      username: creds.username,
+      password: creds.password,
+      readyTimeout: 20000,
+    });
 
-  await appendLog(deploymentId, `SFTP connected. Uploading to ${creds.remotePath}…`);
-  await setProgress(deploymentId, 20);
+    await appendLog(deploymentId, `SFTP connected. Uploading to ${creds.remotePath}…`);
+    await setProgress(deploymentId, 20);
 
-  // Ensure remote path exists
-  try { await sftp.mkdir(creds.remotePath, true); } catch { /* already exists */ }
+    // Ensure remote path exists
+    try { await sftp.mkdir(creds.remotePath, true); } catch { /* already exists */ }
 
-  const liveUrl = opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
-  const files = buildDeployFiles(html, liveUrl);
+    const liveUrl = opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
+    const files = buildDeployFiles(html, liveUrl);
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const remotePath = joinRemotePath(creds.remotePath, file.name);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const remotePath = joinRemotePath(creds.remotePath, file.name);
 
-    if (!overwriteExisting) {
-      const exists = await sftp.exists(remotePath);
-      if (exists) {
-        await appendLog(deploymentId, `Skipping ${file.name} (already exists, overwrite=false)`);
-        await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
-        continue;
+      if (!overwriteExisting) {
+        const exists = await sftp.exists(remotePath);
+        if (exists) {
+          await appendLog(deploymentId, `Skipping ${file.name} (already exists, overwrite=false)`);
+          await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
+          continue;
+        }
       }
+
+      await appendLog(deploymentId, `Uploading ${file.name}…`);
+      const buf = Buffer.from(file.content, "utf-8");
+      await sftp.put(buf, remotePath);
+      await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
+      await appendLog(deploymentId, `✓ ${file.name} uploaded (${buf.length} bytes)`);
     }
 
-    await appendLog(deploymentId, `Uploading ${file.name}…`);
-    const buf = Buffer.from(file.content, "utf-8");
-    await sftp.put(buf, remotePath);
-    await setProgress(deploymentId, 20 + Math.round(((i + 1) / files.length) * 70));
-    await appendLog(deploymentId, `✓ ${file.name} uploaded (${buf.length} bytes)`);
+    await appendLog(deploymentId, "All files uploaded successfully via SFTP.");
+    await setProgress(deploymentId, 100);
+
+    return liveUrl;
+  } finally {
+    try { await sftp.end(); } catch {}
   }
-
-  await sftp.end();
-  await appendLog(deploymentId, "All files uploaded successfully via SFTP.");
-  await setProgress(deploymentId, 100);
-
-  return liveUrl;
 }
 
 async function runUpload(
@@ -576,10 +610,21 @@ router.get("/projects/:id/deployments", async (req: Request, res: Response) => {
       return;
     }
 
+    const [project] = await db
+      .select({ id: projectsTable.id })
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)))
+      .limit(1);
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
     const deployments = await db
       .select()
       .from(deploymentsTable)
-      .where(eq(deploymentsTable.projectId, params.data.id))
+      .where(and(eq(deploymentsTable.projectId, params.data.id), eq(deploymentsTable.userId, req.user!.id)))
       .orderBy(desc(deploymentsTable.createdAt));
 
     res.json({ deployments: deployments.map(toDeploymentResponse) });
@@ -638,6 +683,31 @@ router.post("/deployments/:id/rollback", async (req: Request, res: Response) => 
       return;
     }
 
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, deployment.projectId), eq(projectsTable.userId, req.user!.id)))
+      .limit(1);
+
+    if (!project?.generatedHtml) {
+      res.status(400).json({ error: "BadRequest", message: "Project has no generated HTML to redeploy." });
+      return;
+    }
+
+    const creds = await resolveCredentials(req.user!.id, {
+      host: deployment.ftpHost || undefined,
+      port: deployment.ftpPort || undefined,
+      protocol: deployment.protocol || undefined,
+    });
+
+    if (!creds) {
+      res.status(400).json({
+        error: "BadRequest",
+        message: "Could not resolve FTP credentials. Check Settings → FTP Server Protocols.",
+      });
+      return;
+    }
+
     const [rollback] = await db
       .insert(deploymentsTable)
       .values({
@@ -653,6 +723,16 @@ router.post("/deployments/:id/rollback", async (req: Request, res: Response) => 
         deploymentLog: "[Rollback deployment]\n",
       })
       .returning();
+
+    runUpload(
+      rollback.id,
+      deployment.projectId,
+      req.user!.id,
+      creds,
+      project.generatedHtml,
+      deployment.liveUrl || undefined,
+      true,
+    ).catch(err => logger.error({ err, deploymentId: rollback.id }, "rollback runUpload threw"));
 
     res.status(202).json(toDeploymentResponse(rollback));
   } catch (err) {

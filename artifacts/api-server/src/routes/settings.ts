@@ -8,6 +8,27 @@ const router: IRouter = Router();
 
 const SENSITIVE_KEYS = ["ftp_password", "gemini_api_key"];
 
+function splitDeploymentHostPort(hostWithPort: string): { host: string; port?: number } {
+  const match = /^([^:]+):(\d+)$/.exec(hostWithPort);
+  if (!match) return { host: hostWithPort };
+  return { host: match[1], port: Number(match[2]) };
+}
+
+function parseDeploymentEndpoint(raw: string): { host: string; port?: number; inferredProtocol?: "ftp" | "ftps" | "sftp" } {
+  const trimmed = raw.trim();
+  const match = /^(ftp|ftps|sftp):\/\/([^/]+)/i.exec(trimmed);
+  if (match) {
+    const parsedHost = splitDeploymentHostPort(match[2].replace(/\/+$/, ""));
+    return {
+      inferredProtocol: match[1].toLowerCase() as "ftp" | "ftps" | "sftp",
+      host: parsedHost.host,
+      port: parsedHost.port,
+    };
+  }
+  const parsedHost = splitDeploymentHostPort(trimmed.split("/")[0].replace(/\/+$/, ""));
+  return { host: parsedHost.host, port: parsedHost.port };
+}
+
 function requireAuth(req: Request, res: Response): boolean {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized", message: "Login required" });
@@ -196,16 +217,23 @@ router.post("/settings/deployment/test", async (req: Request, res: Response) => 
       password = decrypt(saved.value);
     }
 
-    // Determine protocol
+    const endpoint = parseDeploymentEndpoint(ftp_host);
+
+    // Determine protocol. A protocol pasted into the host field wins because
+    // users often paste full URLs like sftp://hostinger-server/public_html.
     const protocol: "ftp" | "ftps" | "sftp" =
-      ftp_protocol === "sftp" ? "sftp"
+      endpoint.inferredProtocol ? endpoint.inferredProtocol
+      : ftp_protocol === "sftp" ? "sftp"
       : ftp_protocol === "ftps" || ftp_secure === "true" || ftp_secure === true ? "ftps"
       : "ftp";
 
-    const port = ftp_port ? Number(ftp_port) : (protocol === "sftp" ? 22 : 21);
+    const requestedPort = ftp_port ? Number(ftp_port) : undefined;
+    const port = endpoint.port ||
+      (Number.isFinite(requestedPort) && requestedPort! > 0
+        ? requestedPort!
+        : (protocol === "sftp" ? 22 : 21));
 
-    // Strip any protocol prefix the user may have pasted (ftp://host → host)
-    const cleanHost = ftp_host.replace(/^(ftp|ftps|sftp):\/\//i, "").replace(/\/+$/, "");
+    const cleanHost = endpoint.host;
 
     if (protocol === "sftp") {
       // SFTP test via ssh2-sftp-client
