@@ -11,6 +11,7 @@
  *    the iframe (which would replace the preview)
  */
 export function injectLinkGuard(html: string): string {
+  const repairedHtml = repairGeneratedScript(html);
   const guard = `<script>
 (function(){
   document.addEventListener('click', function(e){
@@ -33,9 +34,33 @@ export function injectLinkGuard(html: string): string {
 </script>`;
 
   // Prefer injecting just before </body> so all DOM is ready
-  if (html.includes('</body>')) {
-    return html.replace('</body>', guard + '\n</body>');
+  if (repairedHtml.includes('</body>')) {
+    return repairedHtml.replace('</body>', guard + '\n</body>');
   }
   // Fallback: append at end
-  return html + '\n' + guard;
+  return repairedHtml + '\n' + guard;
+}
+
+function repairGeneratedScript(html: string): string {
+  return html.replace(
+    /(<!-- Generated landing page -->\s*<script\b[^>]*>)([\s\S]*?)(<\/script>)/,
+    (_, open, js: string, close) => open + stripBrokenExports(js) + close,
+  );
+}
+
+function stripBrokenExports(js: string): string {
+  return js
+    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^export\s+default\s+/gm, "")
+    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .replace(
+      /(^|[;\n])\s*\{\s*(?=[^}\n]*\sas\s)[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?)*\s*\}\s*;?/g,
+      "$1",
+    )
+    .replace(
+      /^\s*\{\s*(?:\n\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$]*)?\s*,?)+\n\s*\}\s*;?\n?/gm,
+      "",
+    );
 }

@@ -1001,6 +1001,14 @@ function stripAllModuleExports(code: string): string {
     .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     .replace(/^export\s+default\s+/gm, "")
     .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .replace(
+      /(^|[;\n])\s*\{\s*(?=[^}\n]*\sas\s)[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?)*\s*\}\s*;?/g,
+      "$1",
+    )
+    .replace(
+      /^\s*\{\s*(?:\n\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$]*)?\s*,?)+\n\s*\}\s*;?\n?/gm,
+      "",
+    )
     .trim();
 }
 

@@ -1554,6 +1554,14 @@ function stripAllExports(code: string): string {
     .replace(/^export\s+default\s+/gm, "")
     // export function/class/const/let/var — strip keyword, keep declaration
     .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .replace(
+      /(^|[;\n])\s*\{\s*(?=[^}\n]*\sas\s)[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?)*\s*\}\s*;?/g,
+      "$1",
+    )
+    .replace(
+      /^\s*\{\s*(?:\n\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$]*)?\s*,?)+\n\s*\}\s*;?\n?/gm,
+      "",
+    )
     .trim();
 }
 

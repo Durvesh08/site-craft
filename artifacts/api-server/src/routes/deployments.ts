@@ -118,12 +118,20 @@ function stripGeneratedScriptExports(js: string): string {
     .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     .replace(/^export\s+default\s+/gm, "")
-    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1");
+    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .replace(
+      /(^|[;\n])\s*\{\s*(?=[^}\n]*\sas\s)[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?)*\s*\}\s*;?/g,
+      "$1",
+    )
+    .replace(
+      /^\s*\{\s*(?:\n\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$]*)?\s*,?)+\n\s*\}\s*;?\n?/gm,
+      "",
+    );
 }
 
 function patchHtmlForDeployment(html: string): string {
   return html.replace(
-    /(<!-- Generated landing page -->\s*<script>)([\s\S]*?)(<\/script>)/,
+    /(<!-- Generated landing page -->\s*<script\b[^>]*>)([\s\S]*?)(<\/script>)/,
     (_, open, js: string, close) => open + stripGeneratedScriptExports(js) + close,
   );
 }

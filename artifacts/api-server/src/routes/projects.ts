@@ -43,14 +43,26 @@ function stripScriptExports(js: string): string {
     // export default <expression> — strip keyword, keep body
     .replace(/^export\s+default\s+/gm, "")
     // export function / class / const / let / var — strip keyword
-    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1");
+    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    // Repair pages already corrupted by older export stripping:
+    //   export { HeroSection as e }  ->  { HeroSection as e }
+    // That naked block is invalid in non-module scripts and throws
+    // "Unexpected identifier 'e'" in the preview iframe.
+    .replace(
+      /(^|[;\n])\s*\{\s*(?=[^}\n]*\sas\s)[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?)*\s*\}\s*;?/g,
+      "$1",
+    )
+    .replace(
+      /^\s*\{\s*(?:\n\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$]*)?\s*,?)+\n\s*\}\s*;?\n?/gm,
+      "",
+    );
 }
 
 function patchHtml(html: string | null): string | null {
   if (!html) return null;
   // Target only the generated landing page <script> (after the React runtime)
   return html.replace(
-    /(<!-- Generated landing page -->\s*<script>)([\s\S]*?)(<\/script>)/,
+    /(<!-- Generated landing page -->\s*<script\b[^>]*>)([\s\S]*?)(<\/script>)/,
     (_, open, js: string, close) => open + stripScriptExports(js) + close,
   );
 }
