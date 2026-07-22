@@ -22,14 +22,14 @@ import {
 } from "./sectionAssembler";
 
 // ── Models ────────────────────────────────────────────────────────────────────
-// gemini-2.0-flash-lite and gemini-2.0-flash are no longer available.
-// FLASH_LITE / FLASH_FAST / FLASH → gemini-2.5-flash: best workhorse model, thinking budget
-//   configured per call site (0 for zero-overhead, non-thinking steps).
-// PRO   → gemini-2.5-pro: premium model with thinking budget for complex JSX generation.
+// gemini-2.0-flash-lite, gemini-2.0-flash, and gemini-2.5-pro are unavailable
+// on Tier 1 / new-user AI Studio accounts.
+// All constants now resolve to gemini-2.5-flash — the best universally
+// available workhorse model. Thinking budget is configured per call site.
 const FLASH_LITE = "gemini-2.5-flash"; // fast, zero thinking overhead
 const FLASH_FAST = "gemini-2.5-flash"; // alias — use where speed matters most
 const FLASH      = "gemini-2.5-flash"; // thinking disabled at call site
-const PRO        = "gemini-2.5-pro";   // limited thinking for complex codegen
+const PRO        = "gemini-2.5-flash"; // was gemini-2.5-pro; unavailable on Tier 1
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.
@@ -140,8 +140,8 @@ async function getAgentPromptAndModel(
 }
 
 function getFallbackModel(model: string): string | null {
-  if (model === "gemini-2.5-pro") return "gemini-2.5-flash";
-  if (model === "gemini-2.0-flash") return "gemini-2.5-flash";
+  // Any model that isn't gemini-2.5-flash can fall back to it
+  if (model !== "gemini-2.5-flash") return "gemini-2.5-flash";
   return null;
 }
 
@@ -396,19 +396,13 @@ export async function runGeneration(
               });
 
               try {
-                let rawCode: string;
-                try {
-                  rawCode = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
-                  logger.info({ sectionId: section.id }, "Section generated with PRO model");
-                } catch (proErr) {
-                  logger.warn({ proErr: String(proErr), sectionId: section.id },
-                    "PRO model failed for section — retrying with Flash");
-                  rawCode = await callGemini(genai, FLASH, prompt, 32768, undefined, 0.8);
-                  logger.info({ sectionId: section.id }, "Section generated with Flash fallback");
-                }
+                // PRO and FLASH both resolve to gemini-2.5-flash on Tier 1,
+                // so a single call is sufficient — no PRO→Flash retry needed.
+                const rawCode = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
+                logger.info({ sectionId: section.id }, "Section generated successfully");
                 return { plan: section, componentName, code: cleanComponentCode(rawCode, componentName) } as SectionCode;
               } catch (err) {
-                logger.error({ err, sectionId: section.id }, "Section generation failed on both PRO and Flash");
+                logger.error({ err, sectionId: section.id }, "Section generation failed");
                 return {
                   plan: section,
                   componentName,
