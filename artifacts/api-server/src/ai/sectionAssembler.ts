@@ -1445,15 +1445,16 @@ ${context.globalCSS}
   <script>
     // Error overlay handlers
     window.addEventListener('error', function(e) {
-      if (e.target && e.target !== window) {
-        var tag = e.target.tagName;
-        if (tag !== 'SCRIPT') return;
+      // Ignore resource loading errors (like CDN script failures in sandboxed iframes).
+      // Actual JS runtime errors have an e.message.
+      if (!e.message && e.target && e.target !== window) {
+        return;
       }
       var el = document.getElementById('_sc-error');
       var msg = document.getElementById('_sc-error-msg');
       if (el) el.classList.add('show');
       if (msg) msg.textContent = (e.message || 'Unknown error') + (e.filename ? '\\n' + e.filename + ':' + e.lineno : '');
-    });
+    }, true); // Use capture phase to catch resource errors if we wanted, but we ignore them.
     window.addEventListener('unhandledrejection', function(e) {
       var el = document.getElementById('_sc-error');
       var msg = document.getElementById('_sc-error-msg');
