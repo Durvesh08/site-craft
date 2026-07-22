@@ -35,21 +35,21 @@ function requireAuth(req: Request, res: Response): boolean {
 function stripScriptExports(js: string): string {
   return js
     // export * from '...'  /  export * as ns from '...'
-    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^\s*export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
     // export { … }  /  export { … } from '...'
-    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     // export type { … }
-    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     // export default <expression> — strip keyword, keep body
-    .replace(/^export\s+default\s+/gm, "")
+    .replace(/^\s*export\s+default\s+/gm, "")
     // export function / class / const / let / var — strip keyword
-    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .replace(/^\s*export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
     // Repair pages already corrupted by older export stripping:
     //   export { HeroSection as e }  ->  { HeroSection as e }
     // That naked block is invalid in non-module scripts and throws
     // "Unexpected identifier 'e'" in the preview iframe.
     .replace(
-      /(^|[;\n])\s*\{\s*(?=[^}\n]*\sas\s)[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?)*\s*\}\s*;?/g,
+      /(^|[;\n])\s*\{\s*(?=[^}]*\sas\s)[A-Za-z_$\s][\w$\s,]*(?:\s+as\s+[A-Za-z_$][\w$]*)?(?:\s*,\s*[A-Za-z_$\s][\w$\s,]*(?:\s+as\s+[A-Za-z_$][\w$]*)?)*\s*\}\s*;?/g,
       "$1",
     )
     .replace(

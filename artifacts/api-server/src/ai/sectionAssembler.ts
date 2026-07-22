@@ -448,37 +448,172 @@ function getSectionTypeRules(type: string): string {
       border:'1px solid rgba(255,255,255,0.14)', fontWeight:600, fontSize:15
       whileHover={{ background:'rgba(255,255,255,0.12)', scale:1.03 }}
 
-- THREE.JS PARTICLE SYSTEM (REQUIRED for hero sections — makes the page feel alive):
-  Add a full-viewport canvas behind the content using Three.js when window.THREE is available.
+- THREE.JS 3D SCENE (REQUIRED for hero sections — choose the scene type that was specified by the visual-effects-designer):
   The hero MUST still look premium without Three.js because it loads asynchronously in previews.
-  Implementation pattern — copy this exactly inside the component function:
+  Always wrap ALL Three.js code inside \`if (!canvasRef.current || !window.THREE) return;\`.
+  Always place the canvas FIRST inside the section (before aurora blobs and content), before the aurora/static background.
+
+  ── SCENE 1: "floating-geometry" ──
+  Best for: tech, SaaS, AI, developer tools. Rotating icosahedron + torus + small cube, glowing edges, color matches brand.
+  Copy this inside the component function:
 
     const canvasRef = useRef(null);
     useEffect(() => {
       if (!canvasRef.current || !window.THREE) return;
-      const canvas = canvasRef.current;
-      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-      if (!gl) return;
-      const scene = new window.THREE.Scene();
-      const camera = new window.THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.z = 5;
-      const renderer = new window.THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      const THREE = window.THREE;
+      const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      const count = 120;
-      const positions = new Float32Array(count * 3);
-      for (let i = 0; i < count * 3; i++) positions[i] = (Math.random() - 0.5) * 14;
-      const geo = new window.THREE.BufferGeometry();
-      geo.setAttribute('position', new window.THREE.BufferAttribute(positions, 3));
-      const mat = new window.THREE.PointsMaterial({ color: 0x6366f1, size: 0.06, transparent: true, opacity: 0.55 });
-      const points = new window.THREE.Points(geo, mat);
-      scene.add(points);
-      let frameId = 0;
-      const tick = () => { frameId = requestAnimationFrame(tick); points.rotation.y += 0.0008; points.rotation.x += 0.0004; renderer.render(scene, camera); };
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.z = 6;
+      const light = new THREE.PointLight(0x6366f1, 2, 20); light.position.set(3, 4, 5); scene.add(light);
+      scene.add(new THREE.AmbientLight(0x1e1b4b, 0.8));
+      const mat = new THREE.MeshStandardMaterial({ color: 0x6366f1, wireframe: true, transparent: true, opacity: 0.55 });
+      const ico = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5, 1), mat); ico.position.set(-1.5, 0.5, 0); scene.add(ico);
+      const tor = new THREE.Mesh(new THREE.TorusGeometry(1, 0.35, 16, 60), new THREE.MeshStandardMaterial({ color: 0x8b5cf6, wireframe: true, transparent: true, opacity: 0.45 })); tor.position.set(2, -0.5, -1); scene.add(tor);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xa78bfa, wireframe: true, transparent: true, opacity: 0.5 })); box.position.set(0, -1.8, 1); scene.add(box);
+      let fId = 0;
+      const tick = (t = 0) => { fId = requestAnimationFrame(tick); ico.rotation.y = t*0.0004; ico.rotation.x = t*0.0002; tor.rotation.x = t*0.0005; tor.rotation.z = t*0.0003; box.rotation.y = t*0.0006; box.rotation.x = t*0.0004; renderer.render(scene, camera); };
       tick();
-      const onResize = () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
-      window.addEventListener('resize', onResize);
-      return () => { cancelAnimationFrame(frameId); window.removeEventListener('resize', onResize); renderer.dispose(); };
+      const onR = () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+      window.addEventListener('resize', onR);
+      return () => { cancelAnimationFrame(fId); window.removeEventListener('resize', onR); renderer.dispose(); };
+    }, []);
+
+  ── SCENE 2: "particle-galaxy" ──
+  Best for: Web3, gaming, biotech, futuristic brands. 1000 points forming galaxy/helix, slow orbit.
+  Copy this inside the component function:
+
+    const canvasRef = useRef(null);
+    useEffect(() => {
+      if (!canvasRef.current || !window.THREE) return;
+      const THREE = window.THREE;
+      const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: false });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 2, 8);
+      const count = 1000;
+      const pos = new Float32Array(count * 3);
+      const col = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 12; const r = (i / count) * 5;
+        pos[i*3] = Math.cos(angle) * r + (Math.random()-0.5)*0.6;
+        pos[i*3+1] = (Math.random()-0.5)*1.2;
+        pos[i*3+2] = Math.sin(angle) * r + (Math.random()-0.5)*0.6;
+        const t = i / count; col[i*3] = 0.39 + t*0.4; col[i*3+1] = 0.4 - t*0.1; col[i*3+2] = 0.95 - t*0.2;
+      }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.04, vertexColors: true, transparent: true, opacity: 0.75 }));
+      scene.add(pts);
+      let fId = 0; const tick = () => { fId = requestAnimationFrame(tick); pts.rotation.y += 0.001; renderer.render(scene, camera); }; tick();
+      const onR = () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+      window.addEventListener('resize', onR);
+      return () => { cancelAnimationFrame(fId); window.removeEventListener('resize', onR); renderer.dispose(); };
+    }, []);
+
+  ── SCENE 3: "product-stage" ──
+  Best for: consumer apps, mobile SaaS, products with a defined UI. Glowing circular platform with dramatic lighting.
+  Copy this inside the component function:
+
+    const canvasRef = useRef(null);
+    useEffect(() => {
+      if (!canvasRef.current || !window.THREE) return;
+      const THREE = window.THREE;
+      const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 3, 8); camera.lookAt(0, 0, 0);
+      const ambient = new THREE.AmbientLight(0xffffff, 0.3); scene.add(ambient);
+      const key = new THREE.SpotLight(0x6366f1, 3, 20, Math.PI/6, 0.4); key.position.set(-4, 8, 4); key.castShadow = true; scene.add(key);
+      const fill = new THREE.PointLight(0x8b5cf6, 1.5, 15); fill.position.set(4, 2, 3); scene.add(fill);
+      const rim = new THREE.PointLight(0xa78bfa, 1, 12); rim.position.set(0, -2, -4); scene.add(rim);
+      const platform = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 0.18, 64), new THREE.MeshStandardMaterial({ color: 0x1e1b4b, metalness: 0.6, roughness: 0.3 })); platform.position.y = -1.5; platform.receiveShadow = true; scene.add(platform);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(3, 0.04, 8, 64), new THREE.MeshStandardMaterial({ color: 0x6366f1, emissive: 0x6366f1, emissiveIntensity: 0.8 })); ring.rotation.x = Math.PI/2; ring.position.y = -1.41; scene.add(ring);
+      let fId = 0; const tick = () => { fId = requestAnimationFrame(tick); ring.rotation.z += 0.003; renderer.render(scene, camera); }; tick();
+      const onR = () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+      window.addEventListener('resize', onR);
+      return () => { cancelAnimationFrame(fId); window.removeEventListener('resize', onR); renderer.dispose(); };
+    }, []);
+
+  ── SCENE 4: "waveform-terrain" ──
+  Best for: music, audio, data visualization, fintech. Sine-wave terrain mesh that breathes in real-time.
+  Copy this inside the component function:
+
+    const canvasRef = useRef(null);
+    useEffect(() => {
+      if (!canvasRef.current || !window.THREE) return;
+      const THREE = window.THREE;
+      const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 4, 8); camera.lookAt(0, 0, 0);
+      scene.add(new THREE.AmbientLight(0x1e1b4b, 0.5));
+      const glow = new THREE.PointLight(0x6366f1, 2, 20); glow.position.set(0, 3, 2); scene.add(glow);
+      const W = 60, H = 60;
+      const geo = new THREE.PlaneGeometry(14, 14, W-1, H-1); geo.rotateX(-Math.PI/2);
+      const origPos = new Float32Array(geo.attributes.position.array);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x6366f1, wireframe: true, transparent: true, opacity: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat); scene.add(mesh);
+      let fId = 0;
+      const tick = (t = 0) => {
+        fId = requestAnimationFrame(tick);
+        const pos = geo.attributes.position.array;
+        for (let i = 0; i < W * H; i++) {
+          const x = origPos[i*3], z = origPos[i*3+2];
+          pos[i*3+1] = Math.sin(x * 0.8 + t * 0.0008) * 0.7 + Math.cos(z * 0.6 + t * 0.0006) * 0.5;
+        }
+        geo.attributes.position.needsUpdate = true; geo.computeVertexNormals(); renderer.render(scene, camera);
+      }; tick();
+      const onR = () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+      window.addEventListener('resize', onR);
+      return () => { cancelAnimationFrame(fId); window.removeEventListener('resize', onR); renderer.dispose(); };
+    }, []);
+
+  ── SCENE 5: "aurora-sphere" ──
+  Best for: wellness, luxury, lifestyle, VC funds, beauty brands. Wireframe sphere with animated vertex displacement.
+  Copy this inside the component function:
+
+    const canvasRef = useRef(null);
+    useEffect(() => {
+      if (!canvasRef.current || !window.THREE) return;
+      const THREE = window.THREE;
+      const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, alpha: true, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.z = 5;
+      const al = new THREE.AmbientLight(0x6366f1, 0.4); scene.add(al);
+      const pl1 = new THREE.PointLight(0x8b5cf6, 2.5, 15); pl1.position.set(3, 3, 3); scene.add(pl1);
+      const pl2 = new THREE.PointLight(0xec4899, 1.8, 15); pl2.position.set(-3, -2, 2); scene.add(pl2);
+      const geo = new THREE.SphereGeometry(2, 64, 64);
+      const origPos = new Float32Array(geo.attributes.position.array);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x8b5cf6, wireframe: true, transparent: true, opacity: 0.4 });
+      const sphere = new THREE.Mesh(geo, mat); scene.add(sphere);
+      let fId = 0;
+      const tick = (t = 0) => {
+        fId = requestAnimationFrame(tick);
+        const pos = geo.attributes.position.array;
+        for (let i = 0; i < origPos.length; i += 3) {
+          const nx = origPos[i], ny = origPos[i+1], nz = origPos[i+2];
+          const len = Math.sqrt(nx*nx+ny*ny+nz*nz);
+          const disp = 1 + 0.18 * Math.sin(nx*2.5 + t*0.001) * Math.cos(ny*2.5 + t*0.0008) * Math.sin(nz*1.5 + t*0.0012);
+          pos[i] = nx/len*2*disp; pos[i+1] = ny/len*2*disp; pos[i+2] = nz/len*2*disp;
+        }
+        geo.attributes.position.needsUpdate = true; geo.computeVertexNormals();
+        sphere.rotation.y += 0.002; sphere.rotation.x += 0.001; renderer.render(scene, camera);
+      }; tick();
+      const onR = () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); };
+      window.addEventListener('resize', onR);
+      return () => { cancelAnimationFrame(fId); window.removeEventListener('resize', onR); renderer.dispose(); };
     }, []);
 
   Place the canvas element FIRST inside the section, before aurora blobs and content:
@@ -957,17 +1092,17 @@ import { logger } from "../lib/logger";
 export function stripModuleStatements(code: string): string {
   return code
     // Multi-line or single-line:  import ... from '...';
-    .replace(/^import\b[\s\S]*?from\s*['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^\s*import\b[\s\S]*?from\s*['"][^'"]+['"]\s*;?\n?/gm, "")
     // Side-effect only:  import '...'
-    .replace(/^import\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^\s*import\s+['"][^'"]+['"]\s*;?\n?/gm, "")
     // export default function/class  →  function/class  (strip keywords, keep body)
     .replace(/^(\s*)export\s+default\s+(async\s+)?(function|class)\b/gm, "$1$2$3")
     // export default <expression>  →  drop entirely
-    .replace(/^export\s+default\s+[^\n]+\n?/gm, "")
+    .replace(/^\s*export\s+default\s+[^\n]+\n?/gm, "")
     // export function/const/let/var/class  →  strip 'export '
     .replace(/^(\s*)export\s+(async\s+)?(function|const|let|var|class)\b/gm, "$1$2$3")
     // export { ... } or export { ... } from '...'
-    .replace(/^export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s*\{[^}]*\}\s*(?:from\s*['"][^'"]+['"])?\s*;?\n?/gm, "")
     // TypeScript interface declarations (may be multi-line) — esbuild tsx handles these,
     // but stripping them here prevents any residual issues with the loader fallback path.
     // We do NOT strip them now since tsx loader handles them natively.
@@ -983,6 +1118,7 @@ export function stripModuleStatements(code: string): string {
  *     This sets window.React, window._sc_createRoot, window._sc_motion, etc.
  *  2. Transpile all JSX section functions → plain IIFE JS server-side with
  *     esbuild (catches syntax errors at generation time, no browser parsing).
+ *     This sets window.React, window._sc_createRoot, window._sc_motion, etc.
  *  3. The section IIFE references globals set by the runtime bundle.
  *  4. Three.js is still loaded from jsDelivr only when used (too large to inline).
  *
@@ -996,13 +1132,13 @@ export function stripModuleStatements(code: string): string {
  */
 function stripAllModuleExports(code: string): string {
   return code
-    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
-    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
-    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
-    .replace(/^export\s+default\s+/gm, "")
-    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .replace(/^\s*export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^\s*export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s+default\s+/gm, "")
+    .replace(/^\s*export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
     .replace(
-      /(^|[;\n])\s*\{\s*(?=[^}\n]*\sas\s)[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?)*\s*\}\s*;?/g,
+      /(^|[;\n])\s*\{\s*(?=[^}]*\sas\s)[A-Za-z_$\s][\w$\s,]*(?:\s+as\s+[A-Za-z_$][\w$]*)?(?:\s*,\s*[A-Za-z_$\s][\w$\s,]*(?:\s+as\s+[A-Za-z_$][\w$]*)?)*\s*\}\s*;?/g,
       "$1",
     )
     .replace(

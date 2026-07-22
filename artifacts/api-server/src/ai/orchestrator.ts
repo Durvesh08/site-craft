@@ -1253,28 +1253,57 @@ All via Framer Motion: whileInView, initial, animate, transition, whileHover, wh
 Return ONLY valid JSON (no markdown fences):
 { "globalEasing": string, "scrollReveal": { "technique": string, "defaultAnimation": string, "staggerMs": number }, "sections": [{ "sectionId": string, "entrance": string, "durationMs": number, "hoverInteractions": string[], "ambientAnimation": string, "reducedMotionFallback": string }], "microInteractions": string[], "performanceLimits": string[], "confidence": number }`,
 
-    "visual-effects-designer": `You are a Visual Effects Director and lightweight 3D Scene Planner for premium landing pages. Every section must have visual depth, and 3D must enhance the page without becoming a render dependency.
+    "visual-effects-designer": `You are a Visual Effects Director and 3D Scene Architect for ultra-premium landing pages. Every page must feel like it was designed by a world-class agency — combining depth, motion, and WebGL to create a jaw-dropping first impression.
 ${ctx}
 
-HERO BACKGROUND (pick ONE based on brand tone):
-- "animated-gradient-mesh": multiple radial-gradient CSS stops shifting via keyframes — clean SaaS, tech, modern
-- "aurora-waves": slow flowing gradient bands — wellness, creative, fintech
-- "cosmic-starfield": canvas particle system (150 dots drifting) — Web3, gaming, bold tech
-- "floating-blobs": blurred colored CSS shapes drifting slowly — startups, consumer apps
-- "grain-overlay": SVG noise texture over dark bg — editorial, luxury, dark premium
-- "grid-lines": subtle perspective grid lines — developer tools, data, technical
+HERO BACKGROUND (pick ONE based on brand tone — this sets the entire mood of the page):
+- "animated-gradient-mesh": multiple radial-gradient CSS stops shifting via keyframes — clean SaaS, B2B tech, modern productivity
+- "aurora-waves": slow flowing gradient bands with layered blurs — wellness, fintech, creative studios
+- "cosmic-starfield": canvas particle system (120–150 dots drifting + subtle nebula blobs) — Web3, gaming, bold tech, AI
+- "floating-blobs": large blurred morphing CSS shapes drifting slowly — startups, consumer apps, Gen Z brands
+- "grain-overlay": SVG noise texture over a dark gradient bg — editorial, luxury, dark premium, fashion
+- "grid-lines": subtle perspective grid lines animating toward viewer — developer tools, data dashboards, infra
 
-GLOBAL DECISIONS:
-- useGradientGlow: large blurred radial behind focal elements (recommended for most pages)
-- useGrainOverlay: SVG noise on sections for tactile premium feel
+3D SCENE SELECTION (pick ONE for the hero — choose based on brand personality):
+
+SCENE 1 — "floating-geometry": Slowly rotating 3D geometric primitives (icosahedron + torus + cube) floating in a dark space with glowing edges. Colors match brand primary/secondary. Best for: tech, SaaS, AI, developer tools, data platforms.
+
+SCENE 2 — "particle-galaxy": Dense particle field (800–1200 points) forming a swirling galaxy or DNA-helix shape. Particles drift and orbit slowly. Colors range from brand primary to white. Best for: Web3, gaming, futuristic brands, science/biotech.
+
+SCENE 3 — "product-stage": A clean white/dark circular platform (cylinder) that the brand's product UI or a 3D phone mockup sits on, with ambient point lights casting soft dramatic shadows. Best for: consumer apps, mobile products, SaaS with a defined product screenshot.
+
+SCENE 4 — "waveform-terrain": A flat sine-wave terrain mesh that undulates in real-time like a breathing landscape. Dark with glowing edges in brand accent color. Best for: music, audio, data visualization, creative tools, fintech.
+
+SCENE 5 — "aurora-sphere": A large sphere mesh with wireframe overlay and animated displacement shader using sin/cos distortion per vertex. Glows softly in brand gradient. Best for: wellness, beauty, premium lifestyle, VC/investment funds.
+
+3D DECISION RULES:
+- Always use 3D (use3D: true) for hero sections unless the brand is explicitly minimalist/editorial
+- Match scene to brand: tech → floating-geometry, Web3/gaming → particle-galaxy, consumer app → product-stage, audio/data → waveform-terrain, lifestyle/premium → aurora-sphere
+- Keep particle counts ≤ 1200 total; use BufferGeometry for all point clouds
+- All 3D is decorative — page MUST look premium even when window.THREE is undefined
+- Never block render on WebGL: wrap all Three.js code in \`if (!window.THREE) return;\` checks
+- Never load remote .glb, .gltf, or .hdr files — use Three.js primitives only
+
+GLOBAL VISUAL DECISIONS:
+- useGradientGlow: large blurred radial behind focal elements (recommended for almost all pages)
+- useGrainOverlay: SVG noise on sections for tactile premium feel (recommended for dark themes)
 - glassmorphismOn: list sections where cards should use backdrop-filter:blur + rgba + gradient border
 - usePulsingLiveIndicator: pulsing green dot on live metrics/activity sections
-- 3D/WebGL is optional decoration. The page must still look complete if window.THREE is unavailable.
-- Prefer one lightweight hero particle field or product-stage effect; keep particle counts under 160.
-- Avoid blocking render with external assets, remote model files, or required image URLs.
+- tiltCardsOn: sections where cards should tilt toward the mouse cursor (use react-parallax-tilt or CSS 3D transforms)
+- parallaxOn: sections with subtle scroll-based vertical offset (background moves slower than foreground)
+
+PREMIUM EFFECT CHECKLIST — every page must include at least 4 of these:
+1. Hero 3D canvas (one of the 5 scenes above)
+2. Glassmorphism cards with gradient border glow
+3. Gradient text on headline or section titles
+4. Animated background aurora blobs
+5. Particle system or floating ambient elements
+6. Scroll-triggered counter animations
+7. Gradient grain overlay on at least one section
+8. Animated gradient button with glow + ripple
 
 Return ONLY valid JSON (no markdown fences):
-{ "recommendedIntensity": "subtle"|"bold", "heroBackgroundEffect": string, "use3D": boolean, "hero3DScene": string, "fallbackIfNoWebGL": string, "useGrainOverlay": boolean, "useGradientGlow": boolean, "tiltCardsOn": string[], "parallaxOn": string[], "glassmorphismOn": string[], "usePulsingLiveIndicator": boolean, "performanceBudget": string, "reasoning": string, "confidence": number }`,
+{ "recommendedIntensity": "subtle"|"bold", "heroBackgroundEffect": string, "use3D": boolean, "hero3DScene": "floating-geometry"|"particle-galaxy"|"product-stage"|"waveform-terrain"|"aurora-sphere", "hero3DSceneRationale": string, "fallbackIfNoWebGL": string, "useGrainOverlay": boolean, "useGradientGlow": boolean, "tiltCardsOn": string[], "parallaxOn": string[], "glassmorphismOn": string[], "usePulsingLiveIndicator": boolean, "premiumEffectsChecklist": string[], "performanceBudget": string, "reasoning": string, "confidence": number }`,
 
     "content-personalizer": `You are a Content Personalization expert. Adapt the copywriting tone and messaging to resonate with the specific target audience identified by the audience-strategist.
 ${ctx}
@@ -1545,17 +1574,17 @@ Return ONLY valid JSON (no markdown fences):
 function stripAllExports(code: string): string {
   return code
     // export * from '...' and export * as ns from '...'
-    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^\s*export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
     // export { ... } and export { ... } from '...'
-    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     // export type { ... }
-    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     // export default <value> — strip keyword, keep body
-    .replace(/^export\s+default\s+/gm, "")
+    .replace(/^\s*export\s+default\s+/gm, "")
     // export function/class/const/let/var — strip keyword, keep declaration
-    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
+    .replace(/^\s*export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1")
     .replace(
-      /(^|[;\n])\s*\{\s*(?=[^}\n]*\sas\s)[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?(?:\s*,\s*[A-Za-z_$][\w$]*(?:\s+as\s+[A-Za-z_$][\w$])?)*\s*\}\s*;?/g,
+      /(^|[;\n])\s*\{\s*(?=[^}]*\sas\s)[A-Za-z_$\s][\w$\s,]*(?:\s+as\s+[A-Za-z_$][\w$]*)?(?:\s*,\s*[A-Za-z_$\s][\w$\s,]*(?:\s+as\s+[A-Za-z_$][\w$]*)?)*\s*\}\s*;?/g,
       "$1",
     )
     .replace(
@@ -1575,7 +1604,7 @@ function cleanComponentCode(raw: string, componentName: string): string {
     .trim();
 
   // Remove import statements (single-line and multi-line)
-  code = code.replace(/^import\s[\s\S]*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, "");
+  code = code.replace(/^\s*import\s[\s\S]*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, "");
 
   // Remove ALL ESM export forms properly.
   //
@@ -1595,15 +1624,15 @@ function cleanComponentCode(raw: string, componentName: string): string {
   // "export function/const/…" pattern so the latter never sees `export {`.
   code = code
     // export * from '...'  /  export * as ns from '...'
-    .replace(/^export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
+    .replace(/^\s*export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
     // export { X }  /  export { X, Y }  /  export { X } from '...'  (single- AND multi-line)
-    .replace(/^export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s*\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     // export type { ... }  (TypeScript type-only re-exports)
-    .replace(/^export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
+    .replace(/^\s*export\s+type\s+\{[^}]*\}\s*(?:from\s+['"][^'"]+['"])?\s*;?\n?/gm, "")
     // export default <value/expr>  →  keep the body, drop the keyword
-    .replace(/^export\s+default\s+/gm, "")
+    .replace(/^\s*export\s+default\s+/gm, "")
     // export function / class / const / let / var  →  drop only the `export` keyword
-    .replace(/^export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1");
+    .replace(/^\s*export\s+((?:async\s+)?function|class|const|let|var)\b/gm, "$1");
   code = code.trim();
 
   // Guard: if nothing useful came back, use the safe fallback
