@@ -112,6 +112,25 @@ function joinRemotePath(base: string, fileName: string): string {
   return `${normalizeRemotePath(base).replace(/\/$/, "")}/${fileName}`;
 }
 
+function deriveLiveUrl(host: string, remotePath: string): string {
+  const path = remotePath.replace(/\\/g, "/").replace(/\/+/g, "/");
+  const domainInPathMatch = /\/([a-zA-Z0-9-]+\.[a-zA-Z]{2,6})\/public_html(\/.*)?/i.exec(path);
+  if (domainInPathMatch) {
+    const domain = domainInPathMatch[1];
+    const subpath = (domainInPathMatch[2] || "").replace(/\/$/, "");
+    return `https://${domain}${subpath}`;
+  }
+  const publicHtmlMatch = /\/public_html(\/.*)?/i.exec(path);
+  if (publicHtmlMatch) {
+    const subpath = (publicHtmlMatch[1] || "").replace(/\/$/, "");
+    const cleanHost = host.replace(/^(ftp|sftp|ftps)\./i, "");
+    if (!/^[0-9.]+$/.test(cleanHost)) {
+      return `https://${cleanHost}${subpath}`;
+    }
+  }
+  return `https://${host.replace(/^(ftp|sftp|ftps)\./i, "")}`;
+}
+
 function stripGeneratedScriptExports(js: string): string {
   return js
     .replace(/^\s*export\s+\*(?:\s+as\s+\w+)?\s+from\s+['"][^'"]+['"]\s*;?\n?/gm, "")
@@ -306,7 +325,7 @@ async function uploadViaFtp(opts: UploadOptions): Promise<string> {
     await client.ensureDir(creds.remotePath);
     await client.cd(creds.remotePath);
 
-    const liveUrl = opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
+    const liveUrl = opts.siteUrl || deriveLiveUrl(creds.host, creds.remotePath);
     const files = buildDeployFiles(html, liveUrl);
 
     for (let i = 0; i < files.length; i++) {
@@ -372,7 +391,7 @@ async function uploadViaSftp(opts: UploadOptions): Promise<string> {
     // Ensure remote path exists
     try { await sftp.mkdir(creds.remotePath, true); } catch { /* already exists */ }
 
-    const liveUrl = opts.siteUrl || `https://${creds.host.replace(/^ftp\./i, "")}`;
+    const liveUrl = opts.siteUrl || deriveLiveUrl(creds.host, creds.remotePath);
     const files = buildDeployFiles(html, liveUrl);
 
     for (let i = 0; i < files.length; i++) {
