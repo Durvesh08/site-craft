@@ -198,6 +198,7 @@ Before writing code, silently decide:
   4. What mobile layout prevents crowding, clipping, and horizontal scroll?
 
 QUALITY REQUIREMENTS:
+  - NO EMOJIS (CRITICAL): Absolutely NEVER use raw emojis (e.g. ✈️, ⭐, 🚀, ✅, ✨) anywhere in text, buttons, tags, or headers. Emojis look amateurish and break design style. Instead, use clean custom inline SVGs (like a simple path for a checkmark, star, or arrow) or style empty CSS shapes.
   - Use real business-specific copy from the context. Avoid vague placeholders like "Powerful features".
   - Include one premium visual detail per non-footer section: metric card, timeline, product stage,
     comparison strip, safe CSS mockup, animated stat, texture, or tasteful 3D/particle accent.
@@ -429,7 +430,7 @@ function getSectionTypeRules(type: string): string {
     border:'1px solid var(--border)', background:'rgba(0,0,0,0.04)' (light) or 'rgba(255,255,255,0.08)' (dark)
     fontSize:13, fontWeight:600, color:'var(--primary)', marginBottom:24
     If logoUrl: include 22x22 circle-cropped logo (see HERO BADGE LOGO RULE above) + company name text
-    If no logo: just a sparkle ✨ emoji + short tagline text
+    If no logo: just a short tagline text badge (e.g. "NEW RELEASE")
 
 - Headline: fontSize:clamp(2.4rem,5.5vw,4.6rem), fontWeight:800, lineHeight:1.08, letterSpacing:'-0.03em'
     If context specifies gradient-text:
@@ -1310,8 +1311,14 @@ export async function assembleHTML(
     `function App() {`,
     `  return React.createElement(React.Fragment, null,`,
     componentNames.map((n, i) =>
-      `    React.createElement(_ScErrorBoundary, null, React.createElement(${n}, null))${i < componentNames.length - 1 ? "," : ""}`
+      `    React.createElement(_ScErrorBoundary, null, React.createElement(${n}, null)),`
     ).join("\n"),
+    `    React.createElement("div", { style: { display: "flex", justifyContent: "center", alignItems: "center", padding: "40px 16px 64px", background: "transparent", position: "relative", zIndex: 10 } },`,
+    `      React.createElement("a", { href: "#", onClick: function(e) { e.preventDefault(); }, style: { display: "flex", alignItems: "center", gap: "8px", textDecoration: "none", fontSize: "10px", fontWeight: "700", letterSpacing: "0.08em", color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.03)", padding: "6px 14px", borderRadius: "9999px", border: "1px solid rgba(255,255,255,0.05)", backdropFilter: "blur(8px)" } },`,
+    `        React.createElement("span", { style: { width: "5px", height: "5px", borderRadius: "50%", background: "var(--primary, #10b981)", boxShadow: "0 0 8px var(--primary, #10b981)" } }),`,
+    `        "CREATED BY SITECRAFT"`,
+    `      )`,
+    `    )`,
     `  );`,
     `}`,
   ].join("\n");
