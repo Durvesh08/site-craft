@@ -1313,11 +1313,12 @@ export async function assembleHTML(
     componentNames.map((n, i) =>
       `    React.createElement(_ScErrorBoundary, null, React.createElement(${n}, null)),`
     ).join("\n"),
-    `    React.createElement("div", { style: { display: "flex", justifyContent: "center", alignItems: "center", padding: "40px 16px 64px", background: "transparent", position: "relative", zIndex: 10 } },`,
+    `    React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", padding: "40px 16px 64px", background: "transparent", position: "relative", zIndex: 10 } },`,
     `      React.createElement("a", { href: "#", onClick: function(e) { e.preventDefault(); }, style: { display: "flex", alignItems: "center", gap: "8px", textDecoration: "none", fontSize: "10px", fontWeight: "700", letterSpacing: "0.08em", color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.03)", padding: "6px 14px", borderRadius: "9999px", border: "1px solid rgba(255,255,255,0.05)", backdropFilter: "blur(8px)" } },`,
     `        React.createElement("span", { style: { width: "5px", height: "5px", borderRadius: "50%", background: "var(--primary, #10b981)", boxShadow: "0 0 8px var(--primary, #10b981)" } }),`,
     `        "CREATED BY SITECRAFT"`,
-    `      )`,
+    `      ),`,
+    `      React.createElement("span", { style: { fontSize: "8px", fontWeight: "600", letterSpacing: "0.05em", color: "rgba(255,255,255,0.25)" } }, "(managed by ADSRAHU)")`,
     `    )`,
     `  );`,
     `}`,
