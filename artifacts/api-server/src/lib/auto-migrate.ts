@@ -55,6 +55,12 @@ export async function autoMigrate(): Promise<void> {
     `);
     await client.query(`
       DO $$ BEGIN
+        CREATE TYPE deployment_protocol AS ENUM ('ftp','ftps','sftp');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+    await client.query(`
+      DO $$ BEGIN
         CREATE TYPE prompt_model AS ENUM ('gemini-flash','gemini-pro');
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$;
@@ -211,16 +217,49 @@ export async function autoMigrate(): Promise<void> {
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         status deployment_status NOT NULL DEFAULT 'pending',
         environment deployment_environment NOT NULL DEFAULT 'production',
+        protocol deployment_protocol NOT NULL DEFAULT 'ftp',
         live_url TEXT,
         screenshot_url TEXT,
         ftp_host TEXT,
+        ftp_port INTEGER NOT NULL DEFAULT 21,
         lighthouse_score REAL,
         files_uploaded INTEGER,
+        upload_progress INTEGER NOT NULL DEFAULT 0,
+        deployment_log TEXT,
         error TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         completed_at TIMESTAMP
       );
     `);
+
+    // ── Column migrations: add new columns to existing tables without DROP ──
+    // These are safe to run repeatedly — they no-op if the column already exists.
+
+    const addColumnIfMissing = async (table: string, column: string, definition: string) => {
+      await client.query(`
+        DO $$ BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = '${table}' AND column_name = '${column}'
+          ) THEN
+            ALTER TABLE ${table} ADD COLUMN ${column} ${definition};
+          END IF;
+        END $$;
+      `);
+    };
+
+    // deployments table — columns added after initial release
+    // NOTE: For existing databases, we add protocol as TEXT (safer than trying
+    // to ALTER to the enum on a live DB). Drizzle is happy writing enum values
+    // to TEXT columns in Postgres (explicit cast happens at the driver level).
+    await addColumnIfMissing("deployments", "protocol",         "TEXT NOT NULL DEFAULT 'ftp'");
+    await addColumnIfMissing("deployments", "ftp_port",         "INTEGER NOT NULL DEFAULT 21");
+    await addColumnIfMissing("deployments", "upload_progress",  "INTEGER NOT NULL DEFAULT 0");
+    await addColumnIfMissing("deployments", "deployment_log",   "TEXT");
+
+    // projects table — logo_url added after initial release
+    await addColumnIfMissing("projects", "logo_url", "TEXT");
+
 
     // 11. domains (depends on users, projects)
     await client.query(`

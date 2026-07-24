@@ -153,6 +153,10 @@ ${context.previousOutputs}
            useMotionValue, useSpring } from 'framer-motion'
   import * as THREE from 'three'
 
+━━━ PRE-DEFINED GLOBAL VARIABLES (already declared — do NOT redeclare or hard-code these) ━━━
+  companyName  — string: the business/brand name (e.g. "Acme Corp"). Use {companyName} in JSX.
+  logoUrl      — string: URL of the brand logo, or empty string if none. ALWAYS check truthiness before rendering: {logoUrl ? <img src={logoUrl} ...> : <InitialBadge>}
+
 ━━━ CSS CUSTOM PROPERTIES AVAILABLE via var() ━━━
   --primary  --primary-dark  --secondary  --background  --foreground
   --muted    --accent        --border     --card-bg      --radius
@@ -1155,6 +1159,8 @@ export async function assembleHTML(
     description: string;
     faviconUrl?: string;
     globalCSS: string;
+    companyName?: string;
+    logoUrl?: string;
   },
 ): Promise<string> {
   const { transform } = await import("esbuild");
@@ -1168,7 +1174,14 @@ export async function assembleHTML(
   // Preamble: map our pre-bundled globals to the names the AI-generated code uses.
   // The runtime bundle sets window.React, window._sc_hooks, window._sc_createRoot,
   // window._sc_motion so all the usual React hooks + Framer Motion APIs are in scope.
+  // ── Brand globals — injected so AI-generated code can reference
+  //    {companyName} and {logoUrl} as real runtime variables.
+  const safeCompanyName = (context.companyName ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const safeLogoUrl     = (context.logoUrl     ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
   const PREAMBLE = [
+    `var companyName  = '${safeCompanyName}';`,
+    `var logoUrl      = '${safeLogoUrl}';`,
     `var React        = window.React;`,
     `var ReactDOM     = window.ReactDOM || window.React;`,
     // ── React hooks: ALL 17, with safe fallback to React.* ──

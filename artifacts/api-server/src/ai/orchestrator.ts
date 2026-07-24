@@ -336,6 +336,12 @@ export async function runGeneration(
       .where(eq(projectsTable.id, projectId))
       .limit(1);
 
+    if (project?.name) {
+      branding["company_name"] = project.name;
+    } else if (!branding["company_name"]) {
+      branding["company_name"] = "Landing Page";
+    }
+
     const logoToUse = input.logoUrl || project?.logoUrl || undefined;
     if (logoToUse) {
       branding["logo_url"] = logoToUse;
@@ -449,6 +455,8 @@ export async function runGeneration(
             description,
             faviconUrl: branding["favicon_url"],
             globalCSS,
+            companyName: branding["company_name"],
+            logoUrl: branding["logo_url"],
           });
 
           agentOutputs["assembler"] = html;
@@ -696,6 +704,12 @@ export async function runSectionRegeneration(
       .where(eq(settingsTable.userId, userId));
     const branding: Record<string, string> = {};
     for (const r of brandingRows.filter(r => r.category === "branding")) branding[r.key] = r.value;
+
+    if (project?.name) {
+      branding["company_name"] = project.name;
+    } else if (!branding["company_name"]) {
+      branding["company_name"] = "Landing Page";
+    }
 
     if (project?.logoUrl) {
       branding["logo_url"] = project.logoUrl;
@@ -990,6 +1004,12 @@ export async function runChatEdit(
             for (const r of brandingRows.filter(r => r.category === "branding")) branding[r.key] = r.value;
 
             const [proj] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
+
+            if (proj?.name) {
+              branding["company_name"] = proj.name;
+            } else if (!branding["company_name"]) {
+              branding["company_name"] = "Landing Page";
+            }
             const sectionPlan = {
               id: componentName.replace(/Section$/, "").toLowerCase(),
               type: sectionType,
@@ -1122,6 +1142,8 @@ Return ONLY valid JSON (no markdown fences):
 
     "brand-strategist": `You are a Brand Strategist and Offer Architect. Generate a complete brand identity plus a clear offer architecture.
 ${ctx}
+
+CRITICAL — Company Name: The admin has already defined the company name as "${branding?.["company_name"] || ""}". You MUST use this exact name as the brandName — do NOT invent, modify, or replace it with any AI-generated name. If it is empty, use the business description to derive a short obvious name only as a last resort.
 
 Define a brand that feels specific to this business and an offer that a visitor can understand in 5 seconds. Include the promise, risk reducers, CTA hierarchy, and credibility angle.
 
