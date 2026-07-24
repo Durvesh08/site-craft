@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "wouter";
 import { useGetProject } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -21,32 +21,27 @@ type Viewport = "desktop" | "tablet" | "mobile";
 export default function ProjectEditor() {
   const { id } = useParams<{ id: string }>();
 
-  const { data: project, refetch } = useGetProject(id, {
+  const { data: project, refetch } = useGetProject(id ?? "", {
     query: { enabled: !!id, queryKey: [] as unknown[] },
   });
 
-  const [viewport, setViewport]   = useState<Viewport>("desktop");
-  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [viewport, setViewport] = useState<Viewport>("desktop");
 
-  // Build a blob URL from the generated HTML so the iframe is sandboxed
-  useEffect(() => {
-    if (project?.generatedHtml) {
-      import("@/lib/injectLinkGuard").then(({ injectLinkGuard }) => {
-        const guarded = injectLinkGuard(project.generatedHtml!);
-        const blob = new Blob([guarded], { type: "text/html" });
-        const url  = URL.createObjectURL(blob);
-        setIframeUrl(url);
-        return () => URL.revokeObjectURL(url);
-      });
-    }
-    return undefined;
-  }, [project?.generatedHtml]);
+  const iframeUrl = project?.id
+    ? `/api/projects/${project.id}/preview?t=${new Date(project.updatedAt).getTime()}`
+    : null;
 
   const triggerDownload = (url: string) => {
-    if (!project?.generatedHtml) { toast.error("No site generated yet."); return; }
+    if (!project?.generatedHtml) {
+      toast.error("No site generated yet.");
+      return;
+    }
     const a = document.createElement("a");
-    a.href = url; a.download = "";
-    document.body.appendChild(a); a.click(); a.remove();
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   const getViewportWidth = () => {
@@ -57,16 +52,13 @@ export default function ProjectEditor() {
 
   return (
     <div className="flex h-[calc(100vh-64px)] md:h-screen w-full bg-background overflow-hidden">
-
       {/* ── Preview canvas ──────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col relative bg-muted/30">
-
         {/* Toolbar */}
         <div className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0 shadow-sm z-10">
-
           {/* Viewport switcher */}
           <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1 border border-border/50">
-            {(["desktop", "tablet", "mobile"] as Viewport[]).map(v => {
+            {(["desktop", "tablet", "mobile"] as Viewport[]).map((v) => {
               const Icon = v === "desktop" ? Monitor : v === "tablet" ? Tablet : Smartphone;
               return (
                 <Button
@@ -92,7 +84,8 @@ export default function ProjectEditor() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="outline" size="sm"
+                  variant="outline"
+                  size="sm"
                   className="gap-1.5 h-8"
                   disabled={!project?.generatedHtml}
                 >
@@ -130,11 +123,13 @@ export default function ProjectEditor() {
 
         {/* Iframe */}
         <div className="flex-1 overflow-auto flex items-center justify-center p-4 lg:p-8 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:16px_16px]">
-          <div className={cn(
-            "transition-all duration-500 ease-in-out bg-white border border-border rounded-lg shadow-2xl overflow-hidden relative flex flex-col",
-            getViewportWidth(),
-            viewport !== "desktop" ? "h-[800px] max-h-full" : "h-full",
-          )}>
+          <div
+            className={cn(
+              "transition-all duration-500 ease-in-out bg-white border border-border rounded-lg shadow-2xl overflow-hidden relative flex flex-col",
+              getViewportWidth(),
+              viewport !== "desktop" ? "h-[800px] max-h-full" : "h-full",
+            )}
+          >
             {viewport !== "desktop" && (
               <div className="h-6 bg-muted/80 border-b border-border flex items-center justify-center shrink-0">
                 <div className="w-12 h-1.5 bg-border rounded-full" />
@@ -143,7 +138,7 @@ export default function ProjectEditor() {
             {iframeUrl ? (
               <iframe
                 src={iframeUrl}
-                className="w-full h-full bg-white"
+                className="w-full h-full bg-white animate-fade-in"
                 sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation"
                 title="Editor Preview"
               />

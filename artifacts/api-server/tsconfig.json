@@ -5,7 +5,7 @@
     "tsBuildInfoFile": ".tsbuildinfo",
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "types": ["node", "ssh2-sftp-client"]
   },
   "include": ["src"],
   "references": [

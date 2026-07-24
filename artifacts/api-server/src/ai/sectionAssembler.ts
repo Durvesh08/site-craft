@@ -1445,8 +1445,6 @@ ${context.globalCSS}
   <script>
     // Error overlay handlers
     window.addEventListener('error', function(e) {
-      // Ignore resource loading errors (like CDN script failures in sandboxed iframes).
-      // Actual JS runtime errors have an e.message.
       if (!e.message && e.target && e.target !== window) {
         return;
       }
@@ -1454,7 +1452,7 @@ ${context.globalCSS}
       var msg = document.getElementById('_sc-error-msg');
       if (el) el.classList.add('show');
       if (msg) msg.textContent = (e.message || 'Unknown error') + (e.filename ? '\\n' + e.filename + ':' + e.lineno : '');
-    }, true); // Use capture phase to catch resource errors if we wanted, but we ignore them.
+    }, true);
     window.addEventListener('unhandledrejection', function(e) {
       var el = document.getElementById('_sc-error');
       var msg = document.getElementById('_sc-error-msg');
@@ -1470,13 +1468,29 @@ ${context.globalCSS}
         if (msg) msg.textContent = 'Page did not start rendering within 15 seconds.';
       }
     }, 15000);
-  <\/script>
+
+    // Link click interceptor (prevent iframe navigation and handle fragments/external links)
+    document.addEventListener('click', function(e){
+      var el = e.target && e.target.closest ? e.target.closest('a') : null;
+      if (!el) return;
+      var href = el.getAttribute('href') || '';
+      if (!href || href === '#' || /^blob:/i.test(href) || /^#/.test(href)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (/^https?:\/\//i.test(href)) {
+        e.preventDefault();
+        window.open(href, '_blank', 'noopener,noreferrer');
+      }
+    }, true);
+  </script>
 
   <!-- React 18 + framer-motion runtime (pre-bundled, no CDN) -->
-  <script>${runtimeScript}<\/script>
+  <script>${runtimeScript}</script>
 
   <!-- Generated landing page -->
-  <script>${pageScript}<\/script>
+  <script>${pageScript}</script>
 </body>
 </html>`;
 }

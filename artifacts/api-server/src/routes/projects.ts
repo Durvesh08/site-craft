@@ -185,6 +185,40 @@ router.get("/projects/:id", async (req: Request, res: Response) => {
   }
 });
 
+// GET /projects/:id/preview  — serve HTML inline for iframe/fullscreen preview
+router.get("/projects/:id/preview", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const params = GetProjectParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+    if (!project.generatedHtml) {
+      res.status(409).json({ error: "NotReady", message: "No generated site yet" });
+      return;
+    }
+
+    // Serve as inline HTML (not download) — for iframe src or fullscreen preview
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.send(project.generatedHtml);
+  } catch (err) {
+    req.log.error({ err }, "Failed to serve project preview");
+    res.status(500).json({ error: "InternalError", message: "Failed to load preview" });
+  }
+});
+
 // GET /projects/:id/export  — single HTML file download
 router.get("/projects/:id/export", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
