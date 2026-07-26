@@ -551,6 +551,16 @@ ${html.slice(0, 60000)}`;
           continue;
         }
 
+        // ── Pre-computed Merged Steps Interceptor ──────────────────────────────
+        if (agentOutputs[step.agent]) {
+          const precomputed = agentOutputs[step.agent];
+          await db.update(aiJobStepsTable)
+            .set({ status: "completed", completedAt: new Date(), outputJson: JSON.stringify({ output: precomputed }) })
+            .where(eq(aiJobStepsTable.id, dbStep.id));
+          logger.info({ stepName: step.name }, "Step bypassed — using pre-computed merged agent output");
+          continue;
+        }
+
         // ── Standard planning steps ────────────────────────────────────────────
         const contextSummary = Object.entries(agentOutputs)
           .map(([k, v]) => {
@@ -586,7 +596,58 @@ ${html.slice(0, 60000)}`;
         } else {
           output = await callGemini(genai, resolved.model, resolved.prompt, 8192, resolved.systemInstruction, resolved.temperature);
         }
-        agentOutputs[step.agent] = output;
+
+        // Parse and spread outputs if this was a merged agent call
+        let parsingSucceeded = false;
+        const cleanedOutput = output.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+        if (step.agent === "business-analyzer") {
+          try {
+            const parsed = JSON.parse(cleanedOutput);
+            if (parsed.businessAnalysis && parsed.audienceProfiling && parsed.brandStrategy) {
+              agentOutputs["business-analyzer"] = JSON.stringify(parsed.businessAnalysis);
+              agentOutputs["audience-strategist"] = JSON.stringify(parsed.audienceProfiling);
+              agentOutputs["brand-strategist"] = JSON.stringify(parsed.brandStrategy);
+              output = agentOutputs["business-analyzer"];
+              parsingSucceeded = true;
+              logger.info("Successfully parsed and populated Business, Audience, and Brand strategy outputs");
+            }
+          } catch (err) {
+            logger.warn("Failed to parse merged business-analyzer output, falling back to sequential steps");
+          }
+        } else if (step.agent === "copywriter") {
+          try {
+            const parsed = JSON.parse(cleanedOutput);
+            if (parsed.copywriting && parsed.personalization && parsed.seo) {
+              agentOutputs["copywriter"] = JSON.stringify(parsed.copywriting);
+              agentOutputs["content-personalizer"] = JSON.stringify(parsed.personalization);
+              agentOutputs["seo-agent"] = JSON.stringify(parsed.seo);
+              output = agentOutputs["copywriter"];
+              parsingSucceeded = true;
+              logger.info("Successfully parsed and populated Copywriting, Personalization, and SEO outputs");
+            }
+          } catch (err) {
+            logger.warn("Failed to parse merged copywriter output, falling back to sequential steps");
+          }
+        } else if (step.agent === "motion-designer") {
+          try {
+            const parsed = JSON.parse(cleanedOutput);
+            if (parsed.motion && parsed.choreography && parsed.visualEffects) {
+              agentOutputs["motion-designer"] = JSON.stringify(parsed.motion);
+              agentOutputs["animation-choreographer"] = JSON.stringify(parsed.choreography);
+              agentOutputs["visual-effects-designer"] = JSON.stringify(parsed.visualEffects);
+              output = agentOutputs["motion-designer"];
+              parsingSucceeded = true;
+              logger.info("Successfully parsed and populated Motion, Choreography, and VFX outputs");
+            }
+          } catch (err) {
+            logger.warn("Failed to parse merged motion-designer output, falling back to sequential steps");
+          }
+        }
+
+        if (!parsingSucceeded) {
+          agentOutputs[step.agent] = output;
+        }
 
         await db.update(aiJobStepsTable)
           .set({ status: "completed", completedAt: new Date(), outputJson: JSON.stringify({ output }) })
@@ -1149,71 +1210,93 @@ ${input.previousOutputs ? `\nContext from previous agents:\n${input.previousOutp
 
   const prompts: Record<string, string> = {
 
-    "business-analyzer": `You are a Business Analyzer and Market Positioning Strategist. Analyse the business and extract the sharp strategic foundation every later design agent should follow.
+    "business-analyzer": `You are a Business Analyzer, conversion psychologist, and Brand Strategist. Analyze the business, build the customer persona, and outline the brand strategy.
 ${ctx}
 
-Do not stay generic. Identify the category, the buyer's current alternative, the core promise, the strongest differentiator, proof that can be shown honestly, and the messages/design cliches this landing page must avoid.
+CRITICAL — Company Name: The admin has already defined the company name as "${branding?.["company_name"] || ""}". You MUST use this exact name in the brandName parameter — do NOT invent, modify, or replace it.
 
-Return ONLY valid JSON (no markdown fences):
-{ "businessType": string, "category": string, "products": string[], "audience": string, "currentAlternatives": string[], "corePromise": string, "differentiators": string[], "messagesToAvoid": string[], "tone": string, "goals": string[], "trustSignals": string[], "confidence": number }`,
+Return ONLY valid JSON (no markdown fences) containing three keys:
+{
+  "businessAnalysis": {
+    "businessType": string,
+    "category": string,
+    "products": string[],
+    "audience": string,
+    "currentAlternatives": string[],
+    "corePromise": string,
+    "differentiators": string[],
+    "messagesToAvoid": string[],
+    "tone": string,
+    "goals": string[],
+    "trustSignals": string[],
+    "confidence": number
+  },
+  "audienceProfiling": {
+    "primaryPersona": { "name": string, "age": string, "context": string, "painPoints": string[], "motivations": string[], "objections": string[] },
+    "buyingTriggers": string[],
+    "trustNeeds": string[],
+    "copyToneRules": string[],
+    "visualComfortZone": string,
+    "confidence": number
+  },
+  "brandStrategy": {
+    "brandName": string,
+    "tagline": string,
+    "personality": string[],
+    "voiceTone": string,
+    "coreOffer": string,
+    "primaryOutcome": string,
+    "ctaHierarchy": { "primary": string, "secondary": string },
+    "riskReducers": string[],
+    "colorDirection": string,
+    "typographyStyle": string,
+    "confidence": number
+  }
+}`,
 
-    "audience-strategist": `You are an Audience Strategist and Conversion Psychologist. Create a detailed customer persona and translate it into persuasive landing-page decisions.
+    "audience-strategist": `Return the audience profiling JSON pre-computed in the business-analyzer step. If none exists, generate standard audience profiling.
 ${ctx}
-Return ONLY valid JSON (no markdown fences):
+Return ONLY valid JSON:
 { "primaryPersona": { "name": string, "age": string, "context": string, "painPoints": string[], "motivations": string[], "objections": string[] }, "buyingTriggers": string[], "trustNeeds": string[], "copyToneRules": string[], "visualComfortZone": string, "confidence": number }`,
 
-    "brand-strategist": `You are a Brand Strategist and Offer Architect. Generate a complete brand identity plus a clear offer architecture.
+    "brand-strategist": `Return the brand strategy JSON pre-computed in the business-analyzer step. If none exists, generate standard brand strategy.
 ${ctx}
-
-CRITICAL — Company Name: The admin has already defined the company name as "${branding?.["company_name"] || ""}". You MUST use this exact name as the brandName — do NOT invent, modify, or replace it with any AI-generated name. If it is empty, use the business description to derive a short obvious name only as a last resort.
-
-Define a brand that feels specific to this business and an offer that a visitor can understand in 5 seconds. Include the promise, risk reducers, CTA hierarchy, and credibility angle.
-
-Return ONLY valid JSON (no markdown fences):
+Return ONLY valid JSON:
 { "brandName": string, "tagline": string, "personality": string[], "voiceTone": string, "coreOffer": string, "primaryOutcome": string, "ctaHierarchy": { "primary": string, "secondary": string }, "riskReducers": string[], "colorDirection": string, "typographyStyle": string, "confidence": number }`,
 
-    "design-director": `You are a Design Director with deep training in color theory, typography, and visual systems. Your job is to design a COMPLETELY UNIQUE visual system for this landing page — not pick from a preset menu of styles.
-
-Think about what this specific business IS — its personality, values, and emotional register — and design everything from scratch: the color palette, the background system, the card treatment, the button design, the border philosophy, the shadow approach, the motion philosophy, and the decorative elements.
-
+    "design-director": `You are an elite Design Director with deep training in color theory, typography, and visual systems. Design a COMPLETELY UNIQUE, jaw-dropping visual system for this landing page.
 ${ctx}
 
-CRITICAL: Every page you design must look genuinely different from any other. Do NOT default to glassmorphism, aurora gradients, glow orbs, or any "standard premium" look. If the business is a rustic artisan bakery, design something earthy and textured — not a dark glassmorphic dashboard. If it's a punk music label, design something raw and aggressive — not a soft pastel wellness page. Let the business dictate the entire visual language.
-
-COLOR DERIVATION METHOD:
-1. Read the business description carefully and identify its EMOTIONAL REGISTER. Pull these words directly from how the business describes itself (e.g. "artisan, handcrafted, earthy" → warm neutrals + clay/terracotta; "cutting-edge, technical, precise" → stark whites + electric blue/cyan; "luxurious, exclusive, rare" → black/charcoal + gold/champagne; "playful, bold, youthful" → vivid saturated primaries; "calm, restorative, clean" → pale sage + forest green; "trustworthy, established, serious" → deep navy/slate + warm white + amber accent).
-2. AVOID category clichés — if every business in this space uses the same color, this one should stand apart.
-3. Apply the 60/30/10 rule: dominant neutral/background (~60%), secondary brand color (~30%), one high-contrast accent (~10%) for CTAs.
-4. DARK vs LIGHT: Choose dark background only when tone is bold, premium, tech, Web3, gaming, or night-life. Choose light background for wellness, editorial, professional services, clean SaaS.
-
-DESIGN SYSTEM — describe each aspect in detail with SPECIFIC CSS values (not vague adjectives). This spec will be passed directly to section builders who must follow it exactly. Be concrete — give actual hex colors, pixel values, CSS property values.
+CRITICAL: Expand background depth and card styles to prevent repetitive design layouts.
+- Choose backgrounds with rich gradients, SVG grid structures, and glowing aurora mesh overlays.
+- Define a beautiful 60/30/10 color rule with high-contrast accent buttons.
+- Select premium modern fonts (like Outfit, Syne, Space Grotesk, or DM Sans) matching the brand.
+- Design cards with frosted glassmorphism borders and custom radius choices.
 
 Return ONLY valid JSON (no markdown fences):
 {
   "primaryColor": string (hex),
-  "primaryDark": string (hex — darker variant of primary),
+  "primaryDark": string (hex),
   "backgroundColor": string (hex),
   "foregroundColor": string (hex),
   "accentColor": string (hex),
-  "mutedColor": string (hex — subtle surface/card bg),
-  "cardColor": string (with rgba for transparency),
-  "borderColor": string (with rgba for subtle borders),
-  "fontFamily": string (pick ONE name from this approved list, then we auto-load it:
-    Syne | Outfit | DM Sans | Manrope | Space Grotesk | Raleway | Nunito | Plus Jakarta Sans | Inter
-    Match the font to the brand personality. Return the font name only, e.g. "Manrope"),
-  "monoFont": string (e.g. "JetBrains Mono" — used for code/stats/technical labels),
-  "borderRadius": string (choose based on design language: 0px for brutalist, 4px for corporate, 16px for friendly, 9999px for playful),
-  "headlineGradient": string | null (e.g. "135deg, #FFD700, #FFFFFF" — only when brand has energy/boldness),
+  "mutedColor": string (hex),
+  "cardColor": string,
+  "borderColor": string,
+  "fontFamily": string,
+  "monoFont": string,
+  "borderRadius": string,
+  "headlineGradient": string | null,
   "isDark": boolean,
   "colorRationale": string,
   "designSystem": {
-    "backgroundApproach": string (describe in detail how section backgrounds should look — give specific CSS: e.g. "solid #faf7f2 with a subtle paper texture via SVG noise at opacity 0.04" or "radial-gradient(circle at 20% 30%, rgba(99,102,241,0.15), transparent 50%) on #0a0a0f" — NOT "make it look nice"),
-    "cardStyle": string (describe card treatment with CSS values — e.g. "white bg, 1px solid #e5e5e5, box-shadow: 0 2px 8px rgba(0,0,0,0.06), border-radius: 8px" — NOT "glass cards"),
-    "buttonStyle": string (describe button design with CSS — shape, fill, border, shadow, hover effect. e.g. "solid #1a1a1a bg, white text, border-radius: 0, padding: 14px 28px, hover: translateY(-2px) + box-shadow: 0 8px 24px rgba(0,0,0,0.15)"),
-    "borderPhilosophy": string (e.g. "1px solid #e5e5e5 everywhere, no rounded corners" or "no borders, use shadow for separation"),
-    "shadowPhilosophy": string (e.g. "soft and diffuse: 0 4px 20px rgba(0,0,0,0.08)" or "no shadows, flat design" or "dramatic: 0 20px 60px rgba(0,0,0,0.3)"),
-    "motionPhilosophy": string (e.g. "subtle fade-up on scroll, 400ms ease-out" or "springy scale-in with bounce" or "minimal motion, only hover states"),
-    "decorativeElements": string (describe 2-3 unique decorative elements this design uses — e.g. "hand-drawn SVG underlines beneath headings" or "large oversized typography as background decoration" or "geometric grid lines as section dividers")
+    "backgroundApproach": string (detailed CSS for animated background gradient or mesh overlay),
+    "cardStyle": string (detailed glassmorphism CSS including border-radius, shadows, backdrop-filter),
+    "buttonStyle": string (detailed primary and secondary button layout, hover translateY and glows),
+    "borderPhilosophy": string,
+    "shadowPhilosophy": string,
+    "motionPhilosophy": string,
+    "decorativeElements": string
   },
   "confidence": number
 }`,
@@ -1246,167 +1329,120 @@ RULES:
 Return ONLY valid JSON (no markdown fences):
 { "sections": [{ "name": string, "type": string, "purpose": string, "conversionJob": string, "mobilePriority": string, "order": number }], "heroType": string, "layoutRationale": string, "aboveFoldCta": string, "navLabels": string[], "confidence": number }`,
 
-    "copywriter": `You are a world-class Copywriter for premium SaaS and consumer brands. Write bold, specific, conversion-optimised copy that makes people say "this is exactly what I need."
+    "copywriter": `You are a world-class Copywriter, Audience Personalizer, and SEO specialist. Write bold, outcome-focused, conversion-optimized copy, metadata, and audience-targeted adjustments.
 ${ctx}
 
-COPY PHILOSOPHY:
-- Headlines: specific outcomes, not vague promises. Never "revolutionize", "transform", "seamless", "effortless"
-- Subheadlines: expand on the headline with a concrete benefit or mechanism
-- Testimonials: specific results with numbers ("saved 4 hours a week", "cut churn by 30%")
-- FAQ: answer real objections, not softballs
-- Stats: plausible, specific numbers that a real business at this stage would have
-- Announcement badge: short, punchy text for the pill above the hero headline
+Return ONLY valid JSON (no markdown fences) containing three keys:
+{
+  "copywriting": {
+    "headline": string,
+    "subheadline": string,
+    "heroDescription": string,
+    "announcementBadge": string,
+    "benefits": [{ "title": string, "description": string, "icon": string }],
+    "cta": string,
+    "ctaSecondary": string,
+    "stats": [{ "value": string, "label": string }],
+    "testimonials": [{ "quote": string, "author": string, "role": string, "company": string }],
+    "faq": [{ "q": string, "a": string }],
+    "trustLine": string,
+    "confidence": number
+  },
+  "personalization": {
+    "tone": string,
+    "toneRationale": string,
+    "headlineVariants": string[],
+    "keyBenefits": string[],
+    "vocabularyAdjustments": string,
+    "socialProofSuggestions": string[],
+    "confidence": number
+  },
+  "seo": {
+    "title": string,
+    "description": string,
+    "keywords": string[],
+    "h1": string,
+    "schemaType": string,
+    "confidence": number
+  }
+}`,
 
-Return ONLY valid JSON (no markdown fences):
-{ "headline": string, "subheadline": string, "heroDescription": string, "announcementBadge": string, "benefits": [{ "title": string, "description": string, "icon": string }], "cta": string, "ctaSecondary": string, "stats": [{ "value": string, "label": string }], "testimonials": [{ "quote": string, "author": string, "role": string, "company": string }], "faq": [{ "q": string, "a": string }], "trustLine": string, "confidence": number }`,
-
-    "seo-agent": `You are an SEO Strategist. Generate metadata optimised for this business.
+    "content-personalizer": `Return the content personalization JSON pre-computed in the copywriter step. If none exists, generate standard content personalization.
 ${ctx}
-Return ONLY valid JSON (no markdown fences):
+Return ONLY valid JSON:
+{ "tone": string, "toneRationale": string, "headlineVariants": string[], "keyBenefits": string[], "vocabularyAdjustments": string, "socialProofSuggestions": string[], "confidence": number }`,
+
+    "seo-agent": `Return the SEO strategy JSON pre-computed in the copywriter step. If none exists, generate standard SEO strategy.
+${ctx}
+Return ONLY valid JSON:
 { "title": string, "description": string, "keywords": string[], "h1": string, "schemaType": string, "confidence": number }`,
 
-    "component-planner": `You are a Component Planner, Responsive Systems Designer, and Creative Director mapping a layout to premium React sections. Each section will be built independently so your brief must be highly specific.
+    "component-planner": `You are a Component Planner mapping the layout to premium React sections.
 ${ctx}
-
 For each section specify:
 - id: short kebab-case identifier
 - type: exact component type from the UX layout plan
 - order: numeric order (0 = first)
-- brief: 2-3 sentence design + content brief that specifies:
-  · The visual technique (glassmorphism, mesh gradient, bento asymmetric grid, etc.)
-  · What specific data/content to show (which metrics, which features, which copy angle)
-  · What makes THIS section look premium and unique vs a generic template
-  · Mobile behavior and overflow risks to avoid
-  · What visual proof, motion, or 3D accent belongs in this section
+- brief: 2-3 sentence brief detailing unique visual layout techniques (asymmetric grid, timeline, comparison) to prevent duplicate look and feel.
+Return ONLY valid JSON:
+{ "sectionPlan": [{ "id": string, "type": string, "order": number, "brief": string, "mobileBehavior": string, "visualAccent": string }], "headlineStyle": "gradient-text"|"solid-text"|"split-color-text", "gradientColors": string|null, "heroType": string, "responsiveRules": string[], "confidence": number }`,
 
-HEADLINE STYLE (choose to match brand):
-- "gradient-text": gradient clipped to text — tech, SaaS, bold brands
-- "solid-text": high-contrast solid — minimal, clean, professional
-- "split-color-text": part gradient, part solid — balanced, modern
+    "motion-designer": `You are a Motion Designer, Animation Choreographer, and 3D Visual Effects specialist. Plan the entire animation, camera flows, particle systems, and micro-interactions.
+${ctx}
 
-Return ONLY valid JSON (no markdown fences):
+CRITICAL: Expand motion capabilities.
+- Define scroll-triggered animations using Framer Motion (whileInView, once:true, staggers, and springs).
+- Design a stunning 3D scene (floating-geometry, particle-galaxy, product-stage, waveform-terrain, or aurora-sphere) using Three.js primitives.
+- Coordinate the animation sequence and color flows down the page.
+
+Return ONLY valid JSON (no markdown fences) containing three keys:
 {
-  "sectionPlan": [{ "id": string, "type": string, "order": number, "brief": string, "mobileBehavior": string, "visualAccent": string }],
-  "headlineStyle": "gradient-text" | "solid-text" | "split-color-text",
-  "gradientColors": string | null,
-  "heroType": string,
-  "responsiveRules": string[],
-  "confidence": number
+  "motion": {
+    "globalEasing": string,
+    "scrollReveal": { "technique": string, "defaultAnimation": string, "staggerMs": number },
+    "sections": [{ "sectionId": string, "entrance": string, "durationMs": number, "hoverInteractions": string[], "ambientAnimation": string, "reducedMotionFallback": string }],
+    "microInteractions": string[],
+    "performanceLimits": string[],
+    "confidence": number
+  },
+  "choreography": {
+    "scrollProgression": string,
+    "coordinatedTiming": { "staggerPattern": string, "maxConcurrentAnimations": number },
+    "colorFlow": string,
+    "motion3DCoordination": string,
+    "fallbackRules": string[],
+    "antiConflictRules": string[],
+    "confidence": number
+  },
+  "visualEffects": {
+    "recommendedIntensity": "subtle"|"bold",
+    "heroBackgroundEffect": "animated-gradient-mesh"|"aurora-waves"|"cosmic-starfield"|"floating-blobs"|"grain-overlay"|"grid-lines",
+    "use3D": boolean,
+    "hero3DScene": "floating-geometry"|"particle-galaxy"|"product-stage"|"waveform-terrain"|"aurora-sphere",
+    "hero3DSceneRationale": string,
+    "fallbackIfNoWebGL": string,
+    "useGrainOverlay": boolean,
+    "useGradientGlow": boolean,
+    "tiltCardsOn": string[],
+    "parallaxOn": string[],
+    "glassmorphismOn": string[],
+    "usePulsingLiveIndicator": boolean,
+    "premiumEffectsChecklist": string[],
+    "performanceBudget": string,
+    "reasoning": string,
+    "confidence": number
+  }
 }`,
 
-    "motion-designer": `You are a Motion Designer and Interaction Designer for premium landing pages (Stripe/Linear/Framer-tier motion). Every element must have purposeful motion, but the page must remain fast and readable.
+    "animation-choreographer": `Return the animation choreography JSON pre-computed in the motion-designer step. If none exists, generate standard animation choreography.
 ${ctx}
+Return ONLY valid JSON:
+{ "scrollProgression": string, "coordinatedTiming": { "staggerPattern": string, "maxConcurrentAnimations": number }, "colorFlow": string, "motion3DCoordination": string, "fallbackRules": string[], "confidence": number }`,
 
-MOTION PHILOSOPHY:
-- Entrance: whileInView staggered children, once:true (does not re-trigger on scroll up)
-- Hover: every card lifts (y:-4 to -8), every button reacts (scale:1.04), links have indicators
-- Ambient: floating elements drift, glows pulse, hero background shifts slowly
-- Counter: numbers count up when scrolled into view (useInView + setInterval)
-- Max duration: 0.7s for entrance animations, 0.2s for hover interactions
-- Respect reduced-motion users: animations should degrade to opacity/none if needed
-- Heavy ambient effects must be limited to hero or one visual section
-
-All via Framer Motion: whileInView, initial, animate, transition, whileHover, whileTap, useInView
-
-Return ONLY valid JSON (no markdown fences):
-{ "globalEasing": string, "scrollReveal": { "technique": string, "defaultAnimation": string, "staggerMs": number }, "sections": [{ "sectionId": string, "entrance": string, "durationMs": number, "hoverInteractions": string[], "ambientAnimation": string, "reducedMotionFallback": string }], "microInteractions": string[], "performanceLimits": string[], "confidence": number }`,
-
-    "visual-effects-designer": `You are a Visual Effects Director and 3D Scene Architect for ultra-premium landing pages. Every page must feel like it was designed by a world-class agency — combining depth, motion, and WebGL to create a jaw-dropping first impression.
+    "visual-effects-designer": `Return the visual effects JSON pre-computed in the motion-designer step. If none exists, generate standard visual effects.
 ${ctx}
-
-HERO BACKGROUND (pick ONE based on brand tone — this sets the entire mood of the page):
-- "animated-gradient-mesh": multiple radial-gradient CSS stops shifting via keyframes — clean SaaS, B2B tech, modern productivity
-- "aurora-waves": slow flowing gradient bands with layered blurs — wellness, fintech, creative studios
-- "cosmic-starfield": canvas particle system (120–150 dots drifting + subtle nebula blobs) — Web3, gaming, bold tech, AI
-- "floating-blobs": large blurred morphing CSS shapes drifting slowly — startups, consumer apps, Gen Z brands
-- "grain-overlay": SVG noise texture over a dark gradient bg — editorial, luxury, dark premium, fashion
-- "grid-lines": subtle perspective grid lines animating toward viewer — developer tools, data dashboards, infra
-
-3D SCENE SELECTION (pick ONE for the hero — choose based on brand personality):
-
-SCENE 1 — "floating-geometry": Slowly rotating 3D geometric primitives (icosahedron + torus + cube) floating in a dark space with glowing edges. Colors match brand primary/secondary. Best for: tech, SaaS, AI, developer tools, data platforms.
-
-SCENE 2 — "particle-galaxy": Dense particle field (800–1200 points) forming a swirling galaxy or DNA-helix shape. Particles drift and orbit slowly. Colors range from brand primary to white. Best for: Web3, gaming, futuristic brands, science/biotech.
-
-SCENE 3 — "product-stage": A clean white/dark circular platform (cylinder) that the brand's product UI or a 3D phone mockup sits on, with ambient point lights casting soft dramatic shadows. Best for: consumer apps, mobile products, SaaS with a defined product screenshot.
-
-SCENE 4 — "waveform-terrain": A flat sine-wave terrain mesh that undulates in real-time like a breathing landscape. Dark with glowing edges in brand accent color. Best for: music, audio, data visualization, creative tools, fintech.
-
-SCENE 5 — "aurora-sphere": A large sphere mesh with wireframe overlay and animated displacement shader using sin/cos distortion per vertex. Glows softly in brand gradient. Best for: wellness, beauty, premium lifestyle, VC/investment funds.
-
-3D DECISION RULES:
-- Always use 3D (use3D: true) for hero sections unless the brand is explicitly minimalist/editorial
-- Match scene to brand: tech → floating-geometry, Web3/gaming → particle-galaxy, consumer app → product-stage, audio/data → waveform-terrain, lifestyle/premium → aurora-sphere
-- Keep particle counts ≤ 1200 total; use BufferGeometry for all point clouds
-- All 3D is decorative — page MUST look premium even when window.THREE is undefined
-- Never block render on WebGL: wrap all Three.js code in \`if (!window.THREE) return;\` checks
-- Never load remote .glb, .gltf, or .hdr files — use Three.js primitives only
-
-GLOBAL VISUAL DECISIONS:
-- useGradientGlow: large blurred radial behind focal elements (recommended for almost all pages)
-- useGrainOverlay: SVG noise on sections for tactile premium feel (recommended for dark themes)
-- glassmorphismOn: list sections where cards should use backdrop-filter:blur + rgba + gradient border
-- usePulsingLiveIndicator: pulsing green dot on live metrics/activity sections
-- tiltCardsOn: sections where cards should tilt toward the mouse cursor (use react-parallax-tilt or CSS 3D transforms)
-- parallaxOn: sections with subtle scroll-based vertical offset (background moves slower than foreground)
-
-PREMIUM EFFECT CHECKLIST — every page must include at least 4 of these:
-1. Hero 3D canvas (one of the 5 scenes above)
-2. Glassmorphism cards with gradient border glow
-3. Gradient text on headline or section titles
-4. Animated background aurora blobs
-5. Particle system or floating ambient elements
-6. Scroll-triggered counter animations
-7. Gradient grain overlay on at least one section
-8. Animated gradient button with glow + ripple
-
-Return ONLY valid JSON (no markdown fences):
-{ "recommendedIntensity": "subtle"|"bold", "heroBackgroundEffect": string, "use3D": boolean, "hero3DScene": "floating-geometry"|"particle-galaxy"|"product-stage"|"waveform-terrain"|"aurora-sphere", "hero3DSceneRationale": string, "fallbackIfNoWebGL": string, "useGrainOverlay": boolean, "useGradientGlow": boolean, "tiltCardsOn": string[], "parallaxOn": string[], "glassmorphismOn": string[], "usePulsingLiveIndicator": boolean, "premiumEffectsChecklist": string[], "performanceBudget": string, "reasoning": string, "confidence": number }`,
-
-    "content-personalizer": `You are a Content Personalization expert. Adapt the copywriting tone and messaging to resonate with the specific target audience identified by the audience-strategist.
-${ctx}
-
-Analyze the audience persona and business analysis, then personalize the messaging:
-- Adjust tone (formal/casual/technical/friendly) to match audience expectations
-- Highlight benefits that matter most to this specific audience
-- Adjust vocabulary and reading level to match the audience
-- Suggest personalized headline variants that speak directly to the persona
-- Recommend social proof elements that build trust with this audience
-
-Return ONLY valid JSON (no markdown fences):
-{ "tone": string, "toneRationale": string, "headlineVariants": string[], "keyBenefits": string[], "vocabularyAdjustments": string, "socialProofSuggestions": string[], "confidence": number }`,
-
-    "image-director": `You are an Image Direction specialist and Asset Curator for premium landing pages. Plan the visual imagery strategy — hero images, supporting visuals, icons, and Open Graph images — using assets that will not break render.
-${ctx}
-
-Based on the brand identity and business type, specify:
-- Hero visual concept (what the main image/illustration should depict)
-- Supporting imagery for feature sections
-- Icon style (line/solid/duotone/3D)
-- Image treatment (photo/illustration/3D render/abstract)
-- Color grading direction for all imagery
-- OG image concept for social sharing
-- Safe fallback visuals if no reliable product image exists
-- Broken asset avoidance: no fake logo clouds, no made-up Unsplash URLs, no external model files
-
-Return ONLY valid JSON (no markdown fences):
-{ "heroVisual": { "concept": string, "style": string, "treatment": string, "safeFallback": string }, "supportingVisuals": [{ "section": string, "concept": string, "style": string, "fallback": string }], "iconStyle": string, "imageTreatment": string, "colorGrading": string, "ogImageConcept": string, "assetRules": string[], "confidence": number }`,
-
-    "animation-choreographer": `You are an Animation Choreographer and Render Resilience Reviewer for premium landing pages. Coordinate all motion across sections so the page feels cohesive, cinematic, and robust — not a collection of random animations.
-${ctx}
-
-Based on the motion-designer and visual-effects-designer outputs, create a unified animation timeline:
-- Define scroll-driven motion progression (what animates as user scrolls down)
-- Ensure entrance animations stagger naturally between sections
-- Coordinate color/glow shifts to flow down the page
-- Plan 3D camera/element movements that connect sections visually
-- Avoid motion conflicts (two heavy animations at the same scroll position)
-- Define transition styles between sections (fade/slide/morph)
-- Define graceful fallback behavior for failed WebGL, blocked CDN resources, and reduced-motion preferences
-- Avoid animations that keep the root empty, rely on remote assets, or hide content until a library loads
-
-Return ONLY valid JSON (no markdown fences):
-{ "scrollProgression": string, "sectionTransitions": [{ "from": string, "to": string, "transition": string }], "coordinatedTiming": { "staggerPattern": string, "maxConcurrentAnimations": number }, "colorFlow": string, "motion3DCoordination": string, "fallbackRules": string[], "antiConflictRules": string[], "confidence": number }`,
+Return ONLY valid JSON:
+{ "recommendedIntensity": "subtle"|"bold", "heroBackgroundEffect": string, "use3D": boolean, "hero3DScene": string, "hero3DSceneRationale": string, "fallbackIfNoWebGL": string, "useGrainOverlay": boolean, "useGradientGlow": boolean, "tiltCardsOn": string[], "parallaxOn": string[], "glassmorphismOn": string[], "usePulsingLiveIndicator": boolean, "premiumEffectsChecklist": string[], "performanceBudget": string, "reasoning": string, "confidence": number }`,
 
     "qa-reviewer": `You are a QA Reviewer for premium landing pages. Evaluate against these exact standards:
 
