@@ -17,7 +17,7 @@ import { ImageUploader } from "@/components/ImageUploader";
 
 const formSchema = z.object({
   name: z.string().min(2, "Project name must be at least 2 characters."),
-  businessDescription: z.string().min(10, "Description must be at least 10 characters.").max(1000, "Description is too long."),
+  businessDescription: z.string().min(10, "Description must be at least 10 characters.").max(3000, "Description is too long."),
 });
 
 type QuickStart = {
@@ -193,7 +193,7 @@ export default function NewProject() {
                     </FormControl>
                     <FormDescription className="flex justify-between">
                       <span>Describe your tone, materials, audience, and what makes you different — the AI builds from your words.</span>
-                      <span className="font-mono text-xs">{field.value.length}/1000</span>
+                      <span className={`font-mono text-xs ${field.value.length > 2700 ? 'text-orange-400' : ''}`}>{field.value.length}/3000</span>
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

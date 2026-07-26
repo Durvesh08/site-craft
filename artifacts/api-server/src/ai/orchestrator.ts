@@ -373,12 +373,30 @@ export async function runGeneration(
           const sectionPlan = parseSectionPlan(agentOutputs["component-planner"] ?? "");
           logger.info({ sectionCount: sectionPlan.length }, "Starting parallel section generation");
 
-          // Full planning context for every section prompt
+          // Full planning context for every section prompt.
+          // Per-agent character budgets — keep enough content to include real
+          // stats/copy but stay well within the 32k output token ceiling.
+          const AGENT_CONTEXT_BUDGET: Record<string, number> = {
+            "copywriter":             8000, // real stats, CTAs, section copy — must be full
+            "content-personalizer":   4000, // specific audience messaging
+            "design-director":        4000, // color palette, typography, design system
+            "ux-strategist":          3000, // layout decisions
+            "component-planner":      3000, // section plan
+            "motion-designer":        2000,
+            "animation-choreographer":2000,
+            "visual-effects-designer":2000,
+            "image-director":         1500,
+            "seo-agent":              1000,
+          };
           const planningContext = [
             "design-director", "ux-strategist", "copywriter", "content-personalizer",
             "seo-agent", "image-director", "component-planner", "motion-designer", "animation-choreographer", "visual-effects-designer",
           ]
-            .map(agent => agentOutputs[agent] ? `[${agent}]\n${agentOutputs[agent].slice(0, 800)}` : "")
+            .map(agent => {
+              if (!agentOutputs[agent]) return "";
+              const limit = AGENT_CONTEXT_BUDGET[agent] ?? 2000;
+              return `[${agent}]\n${agentOutputs[agent].slice(0, limit)}`;
+            })
             .filter(Boolean)
             .join("\n\n");
 
@@ -535,8 +553,12 @@ ${html.slice(0, 60000)}`;
 
         // ── Standard planning steps ────────────────────────────────────────────
         const contextSummary = Object.entries(agentOutputs)
-          .map(([k, v]) => `${k}: ${v.slice(0, 400)}`)
-          .join("\n");
+          .map(([k, v]) => {
+            // Keep critical copy/planning details fully, truncate light elements less aggressively
+            const limit = k === "copywriter" ? 6000 : k === "design-director" ? 4000 : k === "ux-strategist" ? 3000 : 2000;
+            return `${k}:\n${v.slice(0, limit)}`;
+          })
+          .join("\n\n");
 
         const defaultPrompt = buildAgentPrompt(step.agent, { ...input, previousOutputs: contextSummary }, branding);
 
