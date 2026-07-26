@@ -161,12 +161,62 @@ export default function GenerateProject() {
                 </p>
               </div>
               
-              <div className="space-y-2 text-sm font-mono opacity-80 h-24 overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent z-10" />
-                <p className="text-emerald-500">[{new Date().toISOString().substring(11, 19)}] SYS: Initiating context...</p>
-                <p className="text-blue-500">[{new Date().toISOString().substring(11, 19)}] DESIGNER: Received requirements.</p>
-                <p className="text-blue-500">[{new Date().toISOString().substring(11, 19)}] DESIGNER: Generating layout matrix...</p>
-                <p className="text-amber-500">[{new Date().toISOString().substring(11, 19)}] COPYWRITER: Awaiting brand tone...</p>
+              <div className="space-y-1.5 text-xs font-mono bg-zinc-950/95 text-zinc-300 p-4 rounded-xl border border-zinc-800/80 h-52 overflow-y-auto relative text-left shadow-inner select-text">
+                <div className="text-zinc-500 text-[10px] uppercase tracking-wider mb-2 border-b border-zinc-800 pb-1.5 flex justify-between">
+                  <span>Agent Execution Console</span>
+                  <span className="animate-pulse text-emerald-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                    LIVE LOGS
+                  </span>
+                </div>
+                {(() => {
+                  const logLines: { time: string; type: "sys" | "info" | "success" | "err"; text: string }[] = [
+                    { time: job?.createdAt ? new Date(job.createdAt).toLocaleTimeString() : new Date().toLocaleTimeString(), type: "sys", text: "SYS: Pipeline connection established." }
+                  ];
+
+                  if (job?.steps) {
+                    const sortedSteps = [...job.steps].sort((a, b) => a.order - b.order);
+                    sortedSteps.forEach(step => {
+                      const timeStr = step.startedAt 
+                        ? new Date(step.startedAt).toLocaleTimeString() 
+                        : new Date().toLocaleTimeString();
+
+                      if (step.status === "running") {
+                        logLines.push({
+                          time: timeStr,
+                          type: "info",
+                          text: `AGENT: ${step.name.toUpperCase()} in progress — compiling schema parameters...`
+                        });
+                      } else if (step.status === "completed") {
+                        logLines.push({
+                          time: timeStr,
+                          type: "success",
+                          text: `✔ SUCCESS: ${step.name} completed successfully.`
+                        });
+                      } else if (step.status === "failed") {
+                        logLines.push({
+                          time: timeStr,
+                          type: "err",
+                          text: `✖ ERROR: ${step.name} failed. ${step.error || ""}`
+                        });
+                      }
+                    });
+                  }
+
+                  return logLines.map((log, idx) => (
+                    <div key={idx} className="flex gap-2 leading-relaxed">
+                      <span className="text-zinc-600 shrink-0 select-none">[{log.time}]</span>
+                      <span className={cn(
+                        log.type === "sys" ? "text-blue-400" :
+                        log.type === "success" ? "text-emerald-400" :
+                        log.type === "err" ? "text-red-400 font-semibold" :
+                        "text-amber-400 animate-pulse"
+                      )}>
+                        {log.text}
+                      </span>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           </div>
