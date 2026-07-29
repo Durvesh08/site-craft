@@ -303,7 +303,7 @@ async function uploadViaFtp(opts: UploadOptions): Promise<string> {
   await setProgress(deploymentId, 10);
 
   // Helper: attempt a single client.access(); throws on failure.
-  const tryAccess = async (secure: boolean) => {
+  const tryAccess = async (secure: boolean | "implicit") => {
     await client.access({
       host: creds.host,
       port: creds.port,
@@ -317,13 +317,27 @@ async function uploadViaFtp(opts: UploadOptions): Promise<string> {
   };
 
   try {
-    let usedSecure = creds.protocol === "ftps";
+    let usedSecure: boolean | "implicit" = creds.protocol === "ftps";
+    if (usedSecure && creds.port === 990) {
+      usedSecure = "implicit";
+    }
     await tryAccess(usedSecure);
     await appendLog(deploymentId, `Connected${usedSecure && creds.protocol !== "ftps" ? " (auto-upgraded to FTPS)" : ""}. Uploading to ${creds.remotePath}…`);
     await setProgress(deploymentId, 20);
 
-    await client.ensureDir(creds.remotePath);
-    await client.cd(creds.remotePath);
+    try {
+      await client.ensureDir(creds.remotePath);
+      await client.cd(creds.remotePath);
+    } catch (dirErr: any) {
+      await appendLog(deploymentId, `Warning: absolute path ensureDir failed (${dirErr.message}). Retrying relatively...`);
+      const relativePath = creds.remotePath.startsWith("/") ? creds.remotePath.slice(1) : creds.remotePath;
+      if (relativePath) {
+        await client.ensureDir(relativePath);
+        await client.cd(relativePath);
+      } else {
+        throw dirErr;
+      }
+    }
 
     const liveUrl = opts.siteUrl || deriveLiveUrl(creds.host, creds.remotePath);
     const files = buildDeployFiles(html, liveUrl);
@@ -389,7 +403,19 @@ async function uploadViaSftp(opts: UploadOptions): Promise<string> {
     await setProgress(deploymentId, 20);
 
     // Ensure remote path exists
-    try { await sftp.mkdir(creds.remotePath, true); } catch { /* already exists */ }
+    try {
+      await sftp.mkdir(creds.remotePath, true);
+    } catch (mkdirErr: any) {
+      await appendLog(deploymentId, `Warning: absolute SFTP mkdir failed (${mkdirErr.message}). Retrying relatively...`);
+      const relativePath = creds.remotePath.startsWith("/") ? creds.remotePath.slice(1) : creds.remotePath;
+      if (relativePath) {
+        try {
+          await sftp.mkdir(relativePath, true);
+        } catch (relMkdirErr: any) {
+          // Ignore, we will try upload anyway
+        }
+      }
+    }
 
     const liveUrl = opts.siteUrl || deriveLiveUrl(creds.host, creds.remotePath);
     const files = buildDeployFiles(html, liveUrl);

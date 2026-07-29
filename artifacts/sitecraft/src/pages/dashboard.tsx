@@ -1,17 +1,62 @@
-import { useListProjects, useGetDashboardAnalytics } from "@workspace/api-client-react";
+import { useListProjects, useGetDashboardAnalytics, useUpdateProject } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Globe, Activity, Clock, AlertTriangle, ArrowRight } from "lucide-react";
+import { PlusCircle, Globe, Activity, Clock, AlertTriangle, ArrowRight, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 export default function Dashboard() {
-  const { data: projectsData, isLoading: isLoadingProjects } = useListProjects();
+  const { data: projectsData, isLoading: isLoadingProjects, refetch: refetchProjects } = useListProjects();
   const { data: analytics, isLoading: isLoadingAnalytics } = useGetDashboardAnalytics();
 
   const projects = projectsData?.projects || [];
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [projName, setProjName] = useState("");
+  const [projDesc, setProjDesc] = useState("");
+  const [projPixel, setProjPixel] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const updateProjectMutation = useUpdateProject();
+
+  const openSettings = (project: any) => {
+    setSelectedProject(project);
+    setProjName(project.name || "");
+    setProjDesc(project.description || "");
+    setProjPixel(project.pixelCode || "");
+    setIsSettingsOpen(true);
+  };
+
+  const handleSaveSettings = async () => {
+    if (!selectedProject) return;
+    setIsSaving(true);
+    try {
+      await updateProjectMutation.mutateAsync({
+        id: selectedProject.id,
+        data: {
+          name: projName,
+          description: projDesc,
+          pixelCode: projPixel || "",
+        },
+      });
+      toast.success("Project settings updated successfully!");
+      setIsSettingsOpen(false);
+      refetchProjects();
+    } catch (err) {
+      toast.error("Failed to update project settings.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -145,7 +190,21 @@ export default function Dashboard() {
                     <CardTitle className="text-lg truncate pr-2" title={project.name}>
                       {project.name}
                     </CardTitle>
-                    {getStatusBadge(project.status)}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {getStatusBadge(project.status)}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openSettings(project);
+                        }}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <CardDescription className="flex items-center gap-1.5 text-xs font-mono">
                     <Clock className="h-3 w-3" />
@@ -198,6 +257,71 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Project Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="sm:max-w-[550px] bg-card border border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-primary" />
+              Project Settings
+            </DialogTitle>
+            <DialogDescription>
+              Update name, details, and inject tracking codes for this landing page.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Project Name</Label>
+              <Input
+                id="name"
+                value={projName}
+                onChange={(e) => setProjName(e.target.value)}
+                placeholder="Project name"
+                className="bg-background/50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Short Description / Subtitle</Label>
+              <Input
+                id="description"
+                value={projDesc}
+                onChange={(e) => setProjDesc(e.target.value)}
+                placeholder="A short description for your records"
+                className="bg-background/50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-sm text-primary">&lt;/&gt;</span>
+                <Label htmlFor="pixelCode">Pixel Code / Custom Header Script</Label>
+              </div>
+              <Textarea
+                id="pixelCode"
+                value={projPixel}
+                onChange={(e) => setProjPixel(e.target.value)}
+                placeholder="<!-- Meta Pixel Code -->&#10;<script>&#10;  !fbc(f,b,e,v,n,t,s)...&#10;</script>"
+                className="font-mono text-xs min-h-[140px] bg-background/50 leading-relaxed"
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste Meta Pixel, Google Analytics, or other custom header codes. They will be injected exactly as-is into the index.html &lt;head&gt; element.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveSettings} disabled={isSaving || !projName}>
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -26,6 +26,7 @@ export interface Project {
   visualScore?: number | null;
   activeJobId?: string | null;
   logoUrl?: string | null;
+  pixelCode?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

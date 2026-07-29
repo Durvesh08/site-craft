@@ -475,6 +475,8 @@ export async function runGeneration(
             globalCSS,
             companyName: branding["company_name"],
             logoUrl: branding["logo_url"],
+            pixelCode: project?.pixelCode ?? undefined,
+            copywriterOutput: agentOutputs["copywriter"],
           });
 
           agentOutputs["assembler"] = html;

@@ -947,6 +947,9 @@ components:
         logoUrl:
           type: string
           nullable: true
+        pixelCode:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -987,6 +990,8 @@ components:
           type: string
         businessDescription:
           type: string
+        pixelCode:
+          type: string
       required:
         - name
 
@@ -996,6 +1001,8 @@ components:
         name:
           type: string
         description:
+          type: string
+        pixelCode:
           type: string
 
     AIJob:

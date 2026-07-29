@@ -18,6 +18,7 @@ import { ImageUploader } from "@/components/ImageUploader";
 const formSchema = z.object({
   name: z.string().min(2, "Project name must be at least 2 characters."),
   businessDescription: z.string().min(10, "Description must be at least 10 characters.").max(3000, "Description is too long."),
+  pixelCode: z.string().optional(),
 });
 
 type QuickStart = {
@@ -74,6 +75,7 @@ export default function NewProject() {
     defaultValues: {
       name: "",
       businessDescription: "",
+      pixelCode: "",
     },
   });
 
@@ -89,6 +91,7 @@ export default function NewProject() {
         data: {
           name: values.name,
           businessDescription: values.businessDescription,
+          pixelCode: values.pixelCode || undefined,
         },
       });
 
@@ -202,7 +205,7 @@ export default function NewProject() {
             </CardContent>
           </Card>
 
-          {/* Advanced Directives — logo upload only */}
+          {/* Advanced Settings — Logo & Tracking Pixel */}
           <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
             <Card className="glass-panel">
               <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-0">
@@ -210,7 +213,7 @@ export default function NewProject() {
                   <Button variant="ghost" className="w-full justify-between -ml-4 hover:bg-transparent hover:text-primary">
                     <div className="flex items-center gap-2">
                       <Settings2 className="h-5 w-5" />
-                      <span className="font-semibold">Brand Assets</span>
+                      <span className="font-semibold">Advanced Settings</span>
                       <span className="text-xs text-muted-foreground font-normal">(optional)</span>
                     </div>
                     <span className="text-xs text-muted-foreground font-mono">
@@ -220,7 +223,8 @@ export default function NewProject() {
                 </CollapsibleTrigger>
               </CardHeader>
               <CollapsibleContent>
-                <CardContent className="space-y-4 pt-6">
+                <CardContent className="space-y-6 pt-6">
+                  {/* Brand Logo */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <ImageIcon className="h-4 w-4 text-muted-foreground" />
@@ -236,6 +240,33 @@ export default function NewProject() {
                       The AI will place your logo in the generated site's header and footer.
                     </p>
                   </div>
+
+                  <hr className="border-border/50" />
+
+                  {/* Pixel / Tracking Code */}
+                  <FormField
+                    control={form.control}
+                    name="pixelCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono text-sm text-primary">&lt;/&gt;</span>
+                          <FormLabel className="text-sm font-medium">Pixel Code / Custom Header Script</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Textarea
+                            placeholder="<!-- Meta Pixel Code -->&#10;<script>&#10;  !fbc(f,b,e,v,n,t,s)...&#10;</script>&#10;<!-- End Meta Pixel Code -->"
+                            className="font-mono text-xs min-h-[140px] bg-background/50 leading-relaxed"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Paste Meta Pixel, Google Analytics, or other custom tracking scripts exactly as provided. They will be injected directly into the HTML &lt;head&gt; element.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </CardContent>
               </CollapsibleContent>
             </Card>

@@ -157,6 +157,172 @@ ${context.previousOutputs}
   companyName  — string: the business/brand name (e.g. "Acme Corp"). Use {companyName} in JSX.
   logoUrl      — string: URL of the brand logo, or empty string if none. ALWAYS check truthiness before rendering: {logoUrl ? <img src={logoUrl} ...> : <InitialBadge>}
 
+━━━ ANIMATE-UI MOTION BUILDING BLOCKS (use these inline — already available, no import needed) ━━━
+These are copy-paste patterns you MUST use to create premium, animated UI elements.
+All use the Framer Motion APIs already in scope (motion, AnimatePresence, useMotionValue, useSpring, useInView, useEffect, useRef, useState).
+Use them for stats sections, hero text, FAQ accordions, and feature highlights.
+
+① COUNTING NUMBER — animated stat counter (counts up from 0 when scrolled into view)
+  Pattern (inline — do NOT extract to a separate component file):
+  function CountingNum({ target, suffix = '', prefix = '', duration = 1.2 }) {
+    const ref = useRef(null);
+    const isInView = useInView(ref, { once: true, margin: '0px' });
+    const val = useMotionValue(0);
+    const spring = useSpring(val, { stiffness: 80, damping: 40 });
+    const [display, setDisplay] = useState('0');
+    useEffect(() => {
+      if (isInView) val.set(target);
+      return spring.on('change', (v) => setDisplay(Math.round(v).toLocaleString()));
+    }, [isInView]);
+    return <span ref={ref}>{prefix}{display}{suffix}</span>;
+  }
+  // Usage: <CountingNum target={15000} prefix="$" suffix="+" />
+  // USE THIS instead of plain static numbers in stats/metrics sections.
+
+② SPLITTING TEXT — each word/char flies in staggered on scroll (premium hero headlines)
+  Pattern:
+  function SplitReveal({ text, stagger = 0.06, y = 24, delay = 0 }) {
+    const ref = useRef(null);
+    const isInView = useInView(ref, { once: true, margin: '-40px' });
+    const words = text.split(' ');
+    return (
+      <span ref={ref} style={{ display: 'inline' }}>
+        {words.map((w, i) => (
+          <motion.span key={i}
+            style={{ display: 'inline-block', marginRight: '0.25em' }}
+            initial={{ opacity: 0, y }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.55, ease: 'easeOut', delay: delay + i * stagger }}>
+            {w}
+          </motion.span>
+        ))}
+      </span>
+    );
+  }
+  // Usage: <h1><SplitReveal text="Transform Your Business Today" /></h1>
+  // USE THIS for hero headline h1 and section title h2 text.
+
+③ SHIMMERING TEXT — characters shimmer sequentially (great for taglines and badges)
+  Pattern:
+  function ShimmerText({ text, color = 'var(--primary)', shimColor = 'var(--foreground)' }) {
+    const chars = text.split('');
+    return (
+      <span style={{ display: 'inline-block' }}>
+        {chars.map((c, i) => (
+          <motion.span key={i}
+            style={{ display: 'inline-block', whiteSpace: 'pre' }}
+            animate={{ color: [color, shimColor, color] }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: chars.length * 0.04,
+              delay: (i * 2) / chars.length, ease: 'easeInOut' }}>
+            {c}
+          </motion.span>
+        ))}
+      </span>
+    );
+  }
+  // Usage: <ShimmerText text="Premium Results" color="rgba(255,255,255,0.35)" shimColor="#fff" />
+  // USE THIS for badges, taglines, and hero sub-labels.
+
+④ TYPING TEXT — typewriter effect (for hero subtitles and rotating value props)
+  Pattern:
+  function TypeWriter({ phrases, speed = 60, hold = 1800, erase = 40 }) {
+    const [text, setText] = useState('');
+    const [idx, setIdx] = useState(0);
+    useEffect(() => {
+      let t;
+      const phrase = phrases[idx % phrases.length];
+      let i = 0;
+      function type() {
+        if (i <= phrase.length) { setText(phrase.slice(0, i++)); t = setTimeout(type, speed); }
+        else t = setTimeout(erase_, hold);
+      }
+      function erase_() {
+        if (i > 0) { setText(phrase.slice(0, --i)); t = setTimeout(erase_, erase); }
+        else { setIdx(p => p + 1); }
+      }
+      type();
+      return () => clearTimeout(t);
+    }, [idx]);
+    return <span>{text}<motion.span animate={{ opacity: [1,0] }} transition={{ duration: 0.6, repeat: Infinity }} style={{ display:'inline-block', width:2, height:'1em', background:'currentColor', marginLeft:2, verticalAlign:'middle' }} /></span>;
+  }
+  // Usage: <TypeWriter phrases={['Grow Faster', 'Save Time', 'Close More Deals']} />
+  // USE THIS in hero sections for rotating value propositions.
+
+⑤ ANIMATED ACCORDION / FAQ — smooth height animate with AnimatePresence
+  Pattern:
+  function AnimFAQ({ items }) {
+    const [open, setOpen] = useState(null);
+    return (
+      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        {items.map((item, i) => (
+          <div key={i} style={{ borderRadius: 'var(--radius)', border:'1px solid var(--border)', overflow:'hidden', background:'var(--card-bg)' }}>
+            <button onClick={() => setOpen(open === i ? null : i)}
+              style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center',
+                padding:'18px 20px', background:'transparent', color:'var(--foreground)', fontSize:16, fontWeight:500, textAlign:'left' }}>
+              {item.question}
+              <motion.span animate={{ rotate: open === i ? 180 : 0 }} transition={{ duration: 0.25 }}
+                style={{ display:'inline-block', opacity:0.5, fontSize:18 }}>▾</motion.span>
+            </button>
+            <AnimatePresence>
+              {open === i && (
+                <motion.div key="ans" initial={{ height:0, opacity:0 }} animate={{ height:'auto', opacity:1 }}
+                  exit={{ height:0, opacity:0 }} transition={{ duration: 0.3, ease:'easeInOut' }}
+                  style={{ overflow:'hidden', paddingInline:20, color:'var(--muted)' }}>
+                  <p style={{ paddingBottom:18, lineHeight:1.65, fontSize:15 }}>{item.answer}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  // Usage: <AnimFAQ items={_scFAQ} />
+  // USE THIS for all FAQ sections — never use a plain static list.
+
+⑥ TILT CARD — 3D perspective tilt on mouse hover (premium card interaction)
+  Pattern:
+  function TiltCard({ children, style = {} }) {
+    const ref = useRef(null);
+    const x = useMotionValue(0), y = useMotionValue(0);
+    const rx = useSpring(y, { stiffness: 200, damping: 30 });
+    const ry = useSpring(x, { stiffness: 200, damping: 30 });
+    function onMove(e) {
+      const r = ref.current?.getBoundingClientRect();
+      if (!r) return;
+      x.set(((e.clientX - r.left) / r.width - 0.5) * 18);
+      y.set(((e.clientY - r.top) / r.height - 0.5) * -14);
+    }
+    return (
+      <motion.div ref={ref} onMouseMove={onMove} onMouseLeave={() => { x.set(0); y.set(0); }}
+        style={{ rotateX: rx, rotateY: ry, transformStyle:'preserve-3d', transformPerspective:800, ...style }}>
+        {children}
+      </motion.div>
+    );
+  }
+  // Usage: <TiltCard style={{ borderRadius: 'var(--radius)', padding:32, background:'var(--card-bg)' }}> … </TiltCard>
+  // USE THIS for feature cards, pricing cards, and testimonial cards.
+
+⑦ BENTO GRID — CSS utility for unequal premium card grids (copy the <style> exactly)
+  Pattern:
+  const bentoCSS = \`.sc-bento{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .sc-b-wide{grid-column:span 8} .sc-b-narrow{grid-column:span 4}
+    .sc-b-half{grid-column:span 6} .sc-b-tall{grid-row:span 2}
+    @media(max-width:768px){.sc-bento>*{grid-column:span 12!important}}\`;
+  // Usage: inject <style>{bentoCSS}</style> and use className="sc-bento" on the grid container.
+  // Classes: sc-b-wide (2/3), sc-b-narrow (1/3), sc-b-half (1/2), sc-b-tall (double height).
+  // USE THIS for features and highlights sections instead of equal-width card grids.
+
+━━━ MOTION QUALITY RULES (from animate-ui best practices) ━━━
+- ALWAYS use spring transitions (stiffness 80–200, damping 25–50) for interactive elements (hover, click, tilt).
+- ALWAYS use easeOut or easeInOut for entrance animations — NEVER linear.
+- Stagger sibling elements: 0.06–0.12s apart. Never all-at-once.
+- whileHover should scale UP (1.03–1.06) and add boxShadow — NEVER scale down.
+- whileTap should scale to 0.97 for button press feedback.
+- Use useInView with once:true for all scroll-triggered animations so they don't re-fire.
+- AnimatePresence is REQUIRED for any element that conditionally mounts/unmounts (FAQ, modal, dropdown).
+- For stat counters, ALWAYS use CountingNum pattern above — never static numbers.
+
 ━━━ CSS CUSTOM PROPERTIES AVAILABLE via var() ━━━
   --primary  --primary-dark  --secondary  --background  --foreground
   --muted    --accent        --border     --card-bg      --radius
@@ -1068,6 +1234,85 @@ button, a { transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.1
   padding: 10px;
   color: #fff;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* ── animate-ui: CSS shimmer sweep (for text highlights and skeleton loaders) ── */
+@keyframes _shimmer-sweep {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.shimmer-text {
+  background: linear-gradient(90deg, var(--foreground) 40%, var(--primary) 50%, var(--foreground) 60%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: _shimmer-sweep 3s linear infinite;
+}
+
+/* ── animate-ui: stagger fade-up (CSS-only, for when JS motion is overkill) ── */
+@keyframes _stagger-fade {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.stagger-child { opacity: 0; animation: _stagger-fade 0.55s ease-out forwards; }
+.stagger-child:nth-child(1) { animation-delay: 0.05s; }
+.stagger-child:nth-child(2) { animation-delay: 0.14s; }
+.stagger-child:nth-child(3) { animation-delay: 0.22s; }
+.stagger-child:nth-child(4) { animation-delay: 0.30s; }
+.stagger-child:nth-child(5) { animation-delay: 0.38s; }
+.stagger-child:nth-child(6) { animation-delay: 0.46s; }
+
+/* ── animate-ui: slide-reveal (used for section entrance masks) ─────────── */
+@keyframes _slide-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+.slide-reveal { animation: _slide-reveal 0.7s cubic-bezier(0.77,0,0.175,1) forwards; }
+
+/* ── animate-ui: bento card hover glow ─────────────────────────────────── */
+.bento-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.22s ease;
+}
+.bento-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 32px color-mix(in srgb, var(--primary) 20%, transparent);
+  transform: translateY(-3px);
+}
+
+/* ── animate-ui: magnetic button area (CSS part — JS does the movement) ── */
+.magnetic-btn {
+  transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  cursor: pointer;
+}
+
+/* ── animate-ui: gradient border (for premium cards and badges) ─────────── */
+.gradient-border {
+  position: relative;
+  border-radius: var(--radius);
+  background: var(--card-bg);
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: calc(var(--radius) + 1px);
+  background: linear-gradient(135deg, var(--primary), var(--accent), var(--secondary));
+  z-index: -1;
+  opacity: 0.6;
+}
+
+/* ── animate-ui: scroll progress bar ───────────────────────────────────── */
+.scroll-progress-bar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  z-index: 9999;
+  transform-origin: left;
 }`;
 }
 
@@ -1162,6 +1407,8 @@ export async function assembleHTML(
     globalCSS: string;
     companyName?: string;
     logoUrl?: string;
+    copywriterOutput?: string;
+    pixelCode?: string;
   },
 ): Promise<string> {
   const { transform } = await import("esbuild");
@@ -1180,9 +1427,25 @@ export async function assembleHTML(
   const safeCompanyName = (context.companyName ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
   const safeLogoUrl     = (context.logoUrl     ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
+  // Parse copywriter output to extract testimonials, FAQs, stats for runtime injection
+  let copyData = { testimonials: [] as any[], faq: [] as any[], stats: [] as any[] };
+  try {
+    const raw = (context.copywriterOutput ?? "{}")
+      .replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+    const parsed = JSON.parse(raw);
+    copyData.testimonials = Array.isArray(parsed.testimonials) ? parsed.testimonials : [];
+    copyData.faq = Array.isArray(parsed.faq) ? parsed.faq : [];
+    copyData.stats = Array.isArray(parsed.stats) ? parsed.stats : [];
+  } catch { /* keep defaults */ }
+  const safeCopyData = JSON.stringify(copyData).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/<\/script/gi, "<\\/script");
+
   const PREAMBLE = [
     `var companyName  = '${safeCompanyName}';`,
     `var logoUrl      = '${safeLogoUrl}';`,
+    `var _scCopyData  = JSON.parse('${safeCopyData}');`,
+    `var _scTestimonials = _scCopyData.testimonials || [];`,
+    `var _scFAQ       = _scCopyData.faq || [];`,
+    `var _scStats     = _scCopyData.stats || [];`,
     `var React        = window.React;`,
     `var ReactDOM     = window.ReactDOM || window.React;`,
     // ── React hooks: ALL 17, with safe fallback to React.* ──
@@ -1270,13 +1533,22 @@ export async function assembleHTML(
         throw new Error(`Syntax check failed for ${componentName}: ${syntaxErr?.message}`);
       }
 
-      // Wrap in a scoping IIFE
-      const indented = jsCode.split("\n").map(l => "  " + l).join("\n");
+      // Wrap in a scoping IIFE with runtime error catching
+      const indented = jsCode.split("\n").map(l => "    " + l).join("\n");
       const wrappedSection =
         `// ── ${s.plan.type} (${componentName})\n` +
         `var ${componentName} = (function () {\n` +
+        `  try {\n` +
         `${indented}\n` +
-        `  return ${componentName};\n` +
+        `    return ${componentName};\n` +
+        `  } catch (_secErr) {\n` +
+        `    console.error('Section runtime init error [${componentName}]:', _secErr);\n` +
+        `    return function ${componentName}() {\n` +
+        `      return React.createElement("div", { style: { padding: "40px 24px", textAlign: "center", background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "12px", margin: "16px auto", maxWidth: "600px" } },\n` +
+        `        React.createElement("p", { style: { color: "#f87171", fontSize: "13px" } }, "[${s.plan.type}] Section could not initialize: " + String(_secErr))\n` +
+        `      );\n` +
+        `    };\n` +
+        `  }\n` +
         `}());`;
 
       // Syntax check #2: the WRAPPED version (catches bad component names,
@@ -1329,12 +1601,15 @@ export async function assembleHTML(
   // one broken section doesn't blank the whole page.
   const errorBoundaryCode = [
     `class _ScErrorBoundary extends React.Component {`,
-    `  constructor(props) { super(props); this.state = { hasError: false }; }`,
-    `  static getDerivedStateFromError() { return { hasError: true }; }`,
+    `  constructor(props) { super(props); this.state = { hasError: false, errorMsg: '' }; }`,
+    `  static getDerivedStateFromError(err) { return { hasError: true, errorMsg: String(err) }; }`,
     `  componentDidCatch(error, info) { console.error('Section error:', error, info); }`,
     `  render() {`,
     `    if (this.state.hasError) {`,
-    `      return React.createElement("div", { style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" } }, "This section could not be displayed.");`,
+    `      return React.createElement("div", { style: { padding: "40px 24px", textAlign: "center", background: "rgba(239,68,68,0.06)", border: "1px dashed rgba(239,68,68,0.3)", borderRadius: "12px", margin: "16px auto", maxWidth: "700px" } },`,
+    `        React.createElement("p", { style: { color: "#f87171", fontSize: "13px", fontWeight: 600 } }, "Section render error"),`,
+    `        React.createElement("p", { style: { color: "#94a3b8", fontSize: "11px", marginTop: "4px", wordBreak: "break-word" } }, this.state.errorMsg)`,
+    `      );`,
     `    }`,
     `    return this.props.children;`,
     `  }`,
@@ -1432,6 +1707,7 @@ export async function assembleHTML(
 
   const runtimeScript = safeInlineScript(REACT_RUNTIME_JS);
   const pageScript = safeInlineScript(transpiledJS);
+  const pixelScript = context.pixelCode ? `\n  ${context.pixelCode}` : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1454,7 +1730,7 @@ ${context.globalCSS}
     #_sc-error p{color:#94a3b8;font-size:.9rem;max-width:520px;line-height:1.6}
     #_sc-error pre{margin-top:1rem;background:#1e1e2e;border-radius:8px;padding:1rem;
       font-size:.75rem;color:#a78bfa;max-width:600px;overflow:auto;text-align:left;white-space:pre-wrap}
-  </style>
+  </style>${pixelScript}
 </head>
 <body>
   <div id="root"></div>

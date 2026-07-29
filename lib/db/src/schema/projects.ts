@@ -39,6 +39,7 @@ export const projectsTable = pgTable("projects", {
   visualScore: real("visual_score"),
   activeJobId: text("active_job_id"),
   logoUrl: text("logo_url"),
+  pixelCode: text("pixel_code"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

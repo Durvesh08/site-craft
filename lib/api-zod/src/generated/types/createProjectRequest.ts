@@ -9,4 +9,5 @@
 export interface CreateProjectRequest {
   name: string;
   businessDescription?: string;
+  pixelCode?: string;
 }

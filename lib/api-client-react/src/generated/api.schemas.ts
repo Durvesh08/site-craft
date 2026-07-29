@@ -60,6 +60,7 @@ export interface Project {
   visualScore?: number | null;
   activeJobId?: string | null;
   logoUrl?: string | null;
+  pixelCode?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,11 +75,13 @@ export interface ProjectListResponse {
 export interface CreateProjectRequest {
   name: string;
   businessDescription?: string;
+  pixelCode?: string;
 }
 
 export interface UpdateProjectRequest {
   name?: string;
   description?: string;
+  pixelCode?: string;
 }
 
 export type AIJobType = typeof AIJobType[keyof typeof AIJobType];

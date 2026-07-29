@@ -87,6 +87,7 @@ function toProjectResponse(p: typeof projectsTable.$inferSelect) {
     visualScore: p.visualScore ?? null,
     activeJobId: p.activeJobId ?? null,
     logoUrl: p.logoUrl ?? null,
+    pixelCode: p.pixelCode ?? null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
@@ -147,6 +148,7 @@ router.post("/projects", async (req: Request, res: Response) => {
         userId: req.user!.id,
         name: body.data.name,
         businessDescription: body.data.businessDescription,
+        pixelCode: body.data.pixelCode,
         status: "draft",
       })
       .returning();
@@ -445,6 +447,7 @@ router.patch("/projects/:id", async (req: Request, res: Response) => {
     };
     if (body.data.name !== undefined) updates.name = body.data.name;
     if (body.data.description !== undefined) updates.description = body.data.description;
+    if (body.data.pixelCode !== undefined) updates.pixelCode = body.data.pixelCode;
 
     const [updated] = await db
       .update(projectsTable)

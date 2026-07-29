@@ -198,6 +198,7 @@ export const ListProjectsResponse = zod.object({
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "pixelCode": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })),
@@ -212,7 +213,8 @@ export const ListProjectsResponse = zod.object({
  */
 export const CreateProjectBody = zod.object({
   "name": zod.string(),
-  "businessDescription": zod.string().optional()
+  "businessDescription": zod.string().optional(),
+  "pixelCode": zod.string().optional()
 })
 
 export const CreateProjectResponse = zod.object({
@@ -234,6 +236,7 @@ export const CreateProjectResponse = zod.object({
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "pixelCode": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -265,6 +268,7 @@ export const GetProjectResponse = zod.object({
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "pixelCode": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -279,7 +283,8 @@ export const UpdateProjectParams = zod.object({
 
 export const UpdateProjectBody = zod.object({
   "name": zod.string().optional(),
-  "description": zod.string().optional()
+  "description": zod.string().optional(),
+  "pixelCode": zod.string().optional()
 })
 
 export const UpdateProjectResponse = zod.object({
@@ -301,6 +306,7 @@ export const UpdateProjectResponse = zod.object({
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "pixelCode": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -919,6 +925,7 @@ export const RestoreProjectVersionResponse = zod.object({
   "visualScore": zod.number().nullish(),
   "activeJobId": zod.string().nullish(),
   "logoUrl": zod.string().nullish(),
+  "pixelCode": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
