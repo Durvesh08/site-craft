@@ -68,6 +68,25 @@ function patchHtml(html: string | null): string | null {
 }
 
 function toProjectResponse(p: typeof projectsTable.$inferSelect) {
+  let parsedTokens = null;
+  if (p.designTokensJson) {
+    try {
+      parsedTokens = JSON.parse(p.designTokensJson);
+    } catch (e) {
+      // Ignored: fallback to null
+    }
+  }
+
+  const formatSafeDate = (d: any) => {
+    if (!d) return new Date().toISOString();
+    if (d instanceof Date) return d.toISOString();
+    try {
+      return new Date(d).toISOString();
+    } catch {
+      return new Date().toISOString();
+    }
+  };
+
   return {
     id: p.id,
     userId: p.userId,
@@ -80,7 +99,7 @@ function toProjectResponse(p: typeof projectsTable.$inferSelect) {
     previewUrl: p.previewUrl ?? null,
     liveUrl: p.liveUrl ?? null,
     generatedHtml: patchHtml(p.generatedHtml ?? null),
-    designTokens: p.designTokensJson ? JSON.parse(p.designTokensJson) : null,
+    designTokens: parsedTokens,
     seoScore: p.seoScore ?? null,
     accessibilityScore: p.accessibilityScore ?? null,
     performanceScore: p.performanceScore ?? null,
@@ -88,8 +107,8 @@ function toProjectResponse(p: typeof projectsTable.$inferSelect) {
     activeJobId: p.activeJobId ?? null,
     logoUrl: p.logoUrl ?? null,
     pixelCode: p.pixelCode ?? null,
-    createdAt: p.createdAt.toISOString(),
-    updatedAt: p.updatedAt.toISOString(),
+    createdAt: formatSafeDate(p.createdAt),
+    updatedAt: formatSafeDate(p.updatedAt),
   };
 }
 
