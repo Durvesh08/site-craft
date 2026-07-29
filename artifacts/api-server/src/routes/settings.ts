@@ -294,4 +294,101 @@ router.post("/settings/deployment/test", async (req: Request, res: Response) => 
   }
 });
 
+// GET /settings/deployment/debug-ftp - troubleshoot directory structures
+router.get("/settings/deployment/debug-ftp", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const rows = await db
+      .select()
+      .from(settingsTable)
+      .where(and(eq(settingsTable.userId, req.user!.id), eq(settingsTable.category, "deployment")));
+
+    const saved: Record<string, string> = {};
+    for (const r of rows) saved[r.key] = r.value;
+
+    const rawHost = saved["ftp_host"] || "";
+    const endpoint = parseDeploymentEndpoint(rawHost);
+    const host = endpoint.host;
+    const username = saved["ftp_username"] || "";
+    const path = saved["ftp_path"] || "/public_html/";
+
+    let password = "";
+    const savedPwd = saved["ftp_password"];
+    if (savedPwd) {
+      try { password = decrypt(savedPwd); } catch { password = ""; }
+    }
+
+    const protocol = (saved["ftp_protocol"] || "ftp") as "ftp" | "ftps" | "sftp";
+    const port = endpoint.port || (protocol === "sftp" ? 22 : 21);
+
+    if (!host || !username || !password) {
+      res.json({ error: "Missing saved credentials in database" });
+      return;
+    }
+
+    const debugInfo: any = {
+      host,
+      port,
+      username,
+      protocol,
+      configuredPath: path,
+      results: {},
+    };
+
+    if (protocol === "sftp") {
+      const SftpClient = (await import("ssh2-sftp-client")).default;
+      const sftp = new SftpClient();
+      try {
+        await sftp.connect({ host, port, username, password, readyTimeout: 15000 });
+        debugInfo.results["pwd"] = await sftp.realPath(".");
+        debugInfo.results["root_listing"] = (await sftp.list(".")).map((f: any) => ({ name: f.name, type: f.type, size: f.size }));
+        try {
+          debugInfo.results["path_listing"] = (await sftp.list(path)).map((f: any) => ({ name: f.name, type: f.type, size: f.size }));
+        } catch (e: any) {
+          debugInfo.results["path_listing_error"] = e.message;
+        }
+        await sftp.end();
+      } catch (err: any) {
+        debugInfo.results["error"] = err.message;
+      }
+    } else {
+      const client = new ftp.Client();
+      client.ftp.verbose = true;
+      try {
+        await client.access({
+          host,
+          port,
+          user: username,
+          password,
+          secure: protocol === "ftps",
+          secureOptions: { rejectUnauthorized: false },
+        });
+        
+        debugInfo.results["pwd"] = await client.pwd();
+        debugInfo.results["root_listing"] = (await client.list()).map((f: any) => ({ name: f.name, type: f.type === 1 ? "-" : "d", size: f.size }));
+        
+        try {
+          debugInfo.results["path_listing"] = (await client.list(path)).map((f: any) => ({ name: f.name, type: f.type === 1 ? "-" : "d", size: f.size }));
+        } catch (e: any) {
+          debugInfo.results["path_listing_error"] = e.message;
+        }
+        
+        // Also try listing other common places
+        try {
+          debugInfo.results["domains_listing"] = (await client.list("/domains")).map((f: any) => ({ name: f.name, type: f.type === 1 ? "-" : "d", size: f.size }));
+        } catch {}
+        
+        client.close();
+      } catch (err: any) {
+        client.close();
+        debugInfo.results["error"] = err.message;
+      }
+    }
+
+    res.json(debugInfo);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
