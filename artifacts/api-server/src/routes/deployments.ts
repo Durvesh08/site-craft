@@ -322,15 +322,45 @@ async function uploadViaFtp(opts: UploadOptions): Promise<string> {
       usedSecure = "implicit";
     }
     await tryAccess(usedSecure);
-    await appendLog(deploymentId, `Connected${usedSecure && creds.protocol !== "ftps" ? " (auto-upgraded to FTPS)" : ""}. Uploading to ${creds.remotePath}…`);
+    await setProgress(deploymentId, 15);
+
+    // ── Auto-detect if FTP root is already inside public_html ──────────────
+    // When the user creates a sub-FTP account in Hostinger (or cPanel) the
+    // account root is set to public_html, so the FTP "/" IS already
+    // public_html on disk.  If we then navigate to /public_html/ we get
+    // the infamous double-nested public_html/public_html/<project> layout.
+    //
+    // Fix: list the FTP root; if there is NO "public_html" subfolder there
+    // it means we are already inside public_html, so strip that prefix.
+    let effectivePath = creds.remotePath;
+    try {
+      const rootListing = await client.list("/");
+      const hasPubHtmlDir = rootListing.some(
+        (f) => f.name.toLowerCase() === "public_html" && f.type === 2,
+      );
+      if (!hasPubHtmlDir && /^\/public_html(\/|$)/i.test(effectivePath)) {
+        const stripped = effectivePath.replace(/^\/public_html/i, "") || "/";
+        effectivePath = stripped.startsWith("/") ? stripped : `/${stripped}`;
+        await appendLog(
+          deploymentId,
+          `Detected sub-FTP account (root is already public_html) — ` +
+            `adjusting upload path from ${creds.remotePath} to ${effectivePath}`,
+        );
+      }
+    } catch {
+      // If listing fails keep the original path — better to try than fail silently.
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
+    await appendLog(deploymentId, `Connected${usedSecure && creds.protocol !== "ftps" ? " (auto-upgraded to FTPS)" : ""}. Uploading to ${effectivePath}…`);
     await setProgress(deploymentId, 20);
 
     try {
-      await client.ensureDir(creds.remotePath);
-      await client.cd(creds.remotePath);
+      await client.ensureDir(effectivePath);
+      await client.cd(effectivePath);
     } catch (dirErr: any) {
       await appendLog(deploymentId, `Warning: absolute path ensureDir failed (${dirErr.message}). Retrying relatively...`);
-      const relativePath = creds.remotePath.startsWith("/") ? creds.remotePath.slice(1) : creds.remotePath;
+      const relativePath = effectivePath.startsWith("/") ? effectivePath.slice(1) : effectivePath;
       if (relativePath) {
         await client.ensureDir(relativePath);
         await client.cd(relativePath);
@@ -339,7 +369,7 @@ async function uploadViaFtp(opts: UploadOptions): Promise<string> {
       }
     }
 
-    const liveUrl = opts.siteUrl || deriveLiveUrl(creds.host, creds.remotePath);
+    const liveUrl = opts.siteUrl || deriveLiveUrl(creds.host, effectivePath);
     const files = buildDeployFiles(html, liveUrl);
 
     for (let i = 0; i < files.length; i++) {
@@ -402,12 +432,33 @@ async function uploadViaSftp(opts: UploadOptions): Promise<string> {
     await appendLog(deploymentId, `SFTP connected. Uploading to ${creds.remotePath}…`);
     await setProgress(deploymentId, 20);
 
+    // ── Auto-detect if SFTP root is already inside public_html ────────────
+    let effectiveSftpPath = creds.remotePath;
+    try {
+      const rootList = await sftp.list("/");
+      const hasPubHtmlDir = rootList.some(
+        (f: any) => f.name.toLowerCase() === "public_html" && f.type === "d",
+      );
+      if (!hasPubHtmlDir && /^\/public_html(\/|$)/i.test(effectiveSftpPath)) {
+        const stripped = effectiveSftpPath.replace(/^\/public_html/i, "") || "/";
+        effectiveSftpPath = stripped.startsWith("/") ? stripped : `/${stripped}`;
+        await appendLog(
+          deploymentId,
+          `Detected sub-SFTP account (root is already public_html) — ` +
+            `adjusting path from ${creds.remotePath} to ${effectiveSftpPath}`,
+        );
+      }
+    } catch {
+      // Keep original path if listing fails
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
     // Ensure remote path exists
     try {
-      await sftp.mkdir(creds.remotePath, true);
+      await sftp.mkdir(effectiveSftpPath, true);
     } catch (mkdirErr: any) {
       await appendLog(deploymentId, `Warning: absolute SFTP mkdir failed (${mkdirErr.message}). Retrying relatively...`);
-      const relativePath = creds.remotePath.startsWith("/") ? creds.remotePath.slice(1) : creds.remotePath;
+      const relativePath = effectiveSftpPath.startsWith("/") ? effectiveSftpPath.slice(1) : effectiveSftpPath;
       if (relativePath) {
         try {
           await sftp.mkdir(relativePath, true);
@@ -417,12 +468,12 @@ async function uploadViaSftp(opts: UploadOptions): Promise<string> {
       }
     }
 
-    const liveUrl = opts.siteUrl || deriveLiveUrl(creds.host, creds.remotePath);
+    const liveUrl = opts.siteUrl || deriveLiveUrl(creds.host, effectiveSftpPath);
     const files = buildDeployFiles(html, liveUrl);
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const remotePath = joinRemotePath(creds.remotePath, file.name);
+      const remotePath = joinRemotePath(effectiveSftpPath, file.name);
 
       if (!overwriteExisting) {
         const exists = await sftp.exists(remotePath);
