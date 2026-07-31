@@ -496,16 +496,71 @@ router.delete("/projects/:id", async (req: Request, res: Response) => {
       .from(projectsTable)
       .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
 
-    if (!existing) {
-      res.status(404).json({ error: "NotFound", message: "Project not found" });
-      return;
-    }
-
     await db.delete(projectsTable).where(eq(projectsTable.id, params.data.id));
     res.json({ message: "Project deleted" });
   } catch (err) {
     req.log.error({ err }, "Failed to delete project");
     res.status(500).json({ error: "InternalError", message: "Failed to delete project" });
+  }
+});
+
+// POST /projects/:id/theme — Instant zero-latency theme/palette swapper
+router.post("/projects/:id/theme", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const { preset } = req.body as { preset?: string };
+
+    const [project] = await db.select().from(projectsTable)
+      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project || !project.generatedHtml) {
+      res.status(404).json({ error: "NotFound", message: "Project or generated HTML not found" });
+      return;
+    }
+
+    let html = project.generatedHtml;
+
+    // Theme preset CSS variable mappings
+    const presets: Record<string, string> = {
+      dark: `--background: #090d16; --foreground: #f8fafc; --card-bg: #131b2e; --border: rgba(255,255,255,0.1); --muted: #94a3b8;`,
+      light: `--background: #ffffff; --foreground: #0f172a; --card-bg: #f8fafc; --border: #e2e8f0; --muted: #64748b;`,
+      emerald: `--primary: #10b981; --primary-dark: #047857; --secondary: #059669; --accent: #34d399;`,
+      cyberpunk: `--primary: #f43f5e; --primary-dark: #be123c; --secondary: #8b5cf6; --accent: #06b6d4;`,
+      ocean: `--primary: #0284c7; --primary-dark: #0369a1; --secondary: #3b82f6; --accent: #38bdf8;`,
+      sunset: `--primary: #f97316; --primary-dark: #c2410c; --secondary: #ef4444; --accent: #fbbf24;`,
+    };
+
+    const varsToApply = presets[preset || ""] || presets["dark"];
+
+    // Replace :root { ... } variables or inject custom style
+    if (html.includes(":root {")) {
+      html = html.replace(/:root\s*\{([^}]+)\}/, (match, inner) => {
+        let updated = inner;
+        const pairs = varsToApply.split(";").map(s => s.trim()).filter(Boolean);
+        for (const pair of pairs) {
+          const [key, val] = pair.split(":").map(s => s.trim());
+          if (key && val) {
+            const reg = new RegExp(`${key.replace('-', '\\-')}\\s*:\\s*[^;]+;`, 'g');
+            if (reg.test(updated)) {
+              updated = updated.replace(reg, `${key}: ${val};`);
+            } else {
+              updated += `\n    ${key}: ${val};`;
+            }
+          }
+        }
+        return `:root {\n${updated}\n  }`;
+      });
+    }
+
+    await db.update(projectsTable)
+      .set({ generatedHtml: html, theme: preset, updatedAt: new Date() })
+      .where(eq(projectsTable.id, projectId));
+
+    res.json({ success: true, theme: preset });
+  } catch (err: any) {
+    req.log.error({ err }, "Failed to update project theme");
+    res.status(500).json({ error: "InternalError", message: "Failed to swap theme" });
   }
 });
 

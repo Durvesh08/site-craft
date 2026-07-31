@@ -215,4 +215,62 @@ router.post("/projects/:id/regenerate-section", async (req: Request, res: Respon
   }
 });
 
+// Alias for POST /projects/:id/chat
+router.post("/projects/:id/chat", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const message = req.body?.message || req.body?.instruction || "Update page design";
+
+    const [project] = await db.select().from(projectsTable)
+      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    const { job, steps } = await createJob(projectId, req.user!.id, "chat-edit", CHAT_EDIT_STEPS);
+    await db.update(projectsTable).set({ activeJobId: job.id, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
+
+    runChatEdit(job.id, projectId, req.user!.id, {
+      message,
+      currentHtml: project.generatedHtml ?? undefined,
+    }).catch((err) => logger.error({ err, jobId: job.id }, "Chat edit failed"));
+
+    res.status(202).json(toJobResponse(job, steps));
+  } catch (err) {
+    res.status(500).json({ error: "InternalError", message: "Failed to start chat edit" });
+  }
+});
+
+// Alias for POST /projects/:id/sections/regenerate-all
+router.post("/projects/:id/sections/regenerate-all", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const instruction = req.body?.instruction || req.body?.message || "Regenerate page sections";
+
+    const [project] = await db.select().from(projectsTable)
+      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    const { job, steps } = await createJob(projectId, req.user!.id, "chat-edit", CHAT_EDIT_STEPS);
+    await db.update(projectsTable).set({ activeJobId: job.id, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
+
+    runChatEdit(job.id, projectId, req.user!.id, {
+      message: instruction,
+      currentHtml: project.generatedHtml ?? undefined,
+    }).catch((err) => logger.error({ err, jobId: job.id }, "Section regeneration failed"));
+
+    res.status(202).json(toJobResponse(job, steps));
+  } catch (err) {
+    res.status(500).json({ error: "InternalError", message: "Failed to start section regeneration" });
+  }
+});
+
 export default router;
