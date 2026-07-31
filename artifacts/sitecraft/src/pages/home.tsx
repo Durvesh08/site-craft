@@ -81,7 +81,7 @@ export default function Home() {
         </div>
 
         {/* Feature grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 max-w-5xl mx-auto text-left w-full pb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 max-w-5xl mx-auto text-left w-full">
           <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4">
             <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
               <Zap className="h-6 w-6" />
@@ -109,6 +109,90 @@ export default function Home() {
               Tweak the result using our AI chat editor. Chat with the agents to regenerate sections or modify the theme instantly.
             </p>
           </div>
+        </div>
+
+        {/* Pricing */}
+        <div className="mt-24 max-w-4xl mx-auto w-full pb-24">
+          <div className="text-center mb-10">
+            <p className="text-sm font-mono text-primary mb-2 tracking-wider">SIMPLE PRICING</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
+              Your site. Your way. No monthly traps.
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Pick a plan. Get your landing page built by AI, hosted, and live. No hidden costs, no upsells.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Starter plan */}
+            <div className="glass-panel rounded-2xl p-8 flex flex-col gap-6 border border-border relative">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Starter</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold">₹249</span>
+                  <span className="text-muted-foreground text-sm">/ 3 months</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">Best for trying out, seasonal businesses, or events</p>
+              </div>
+              <ul className="space-y-3 flex-1">
+                {[
+                  "1 AI-generated landing page",
+                  "2 AI-powered edits included",
+                  "Hosting for 3 months",
+                  "FTP · Netlify · GitHub Pages deploy",
+                  "Export HTML / ZIP",
+                  "Custom tracking pixel support",
+                ].map((f) => (
+                  <li key={f} className="flex items-center gap-2.5 text-sm">
+                    <span className="h-5 w-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 text-xs">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Button size="lg" variant="outline" className="w-full" onClick={goToLogin} data-testid="button-plan-starter">
+                Get Started
+              </Button>
+            </div>
+
+            {/* Pro plan */}
+            <div className="glass-panel rounded-2xl p-8 flex flex-col gap-6 border-2 border-primary relative overflow-hidden">
+              <div className="absolute top-4 right-4 text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-semibold tracking-wide">
+                BEST VALUE
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Pro</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold">₹499</span>
+                  <span className="text-muted-foreground text-sm">/ lifetime</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">Best for new businesses, agencies, and permanent online presence</p>
+              </div>
+              <ul className="space-y-3 flex-1">
+                {[
+                  "1 AI-generated landing page",
+                  "2 AI-powered edits included",
+                  "Lifetime hosting — pay once, never again",
+                  "FTP · Netlify · GitHub Pages deploy",
+                  "Export HTML / ZIP",
+                  "Custom tracking pixel support",
+                  "Priority support",
+                ].map((f) => (
+                  <li key={f} className="flex items-center gap-2.5 text-sm">
+                    <span className="h-5 w-5 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0 text-xs">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Button size="lg" className="w-full shadow-lg shadow-primary/20" onClick={goToLogin} data-testid="button-plan-pro">
+                Get Lifetime Access
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            All plans include a 1-time AI generation. B2B agencies can create multiple projects — contact us for agency pricing.
+          </p>
         </div>
       </main>
     </div>

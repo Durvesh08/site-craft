@@ -916,4 +916,282 @@ router.delete("/domains/:id", async (req: Request, res: Response) => {
   }
 });
 
+// ── POST /projects/:id/deploy/netlify ──────────────────────────────────────────
+// Deploy the generated HTML to Netlify via their REST API.
+// User must supply their Netlify Personal Access Token.
+
+router.post("/projects/:id/deploy/netlify", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const { netlifyToken } = req.body as { netlifyToken?: string };
+
+    if (!netlifyToken) {
+      res.status(400).json({ error: "BadRequest", message: "Netlify Personal Access Token is required." });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    if (!project.generatedHtml) {
+      res.status(400).json({ error: "BadRequest", message: "Generate the site first before deploying." });
+      return;
+    }
+
+    const siteName = (project.name || "sitecraft-site")
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 50);
+
+    // 1. Create site on Netlify
+    const createRes = await fetch("https://api.netlify.com/api/v1/sites", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${netlifyToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: `${siteName}-${Date.now()}` }),
+    });
+
+    if (!createRes.ok) {
+      const errBody = await createRes.text();
+      throw new Error(`Netlify site creation failed: ${errBody}`);
+    }
+
+    const site = await createRes.json() as { id: string; subdomain: string };
+
+    // 2. Build minimal ZIP in memory (using Node's built-in zlib + tar approach)
+    //    We use a simple approach: create a FormData-style ZIP using archiver-compatible Buffer
+    //    Since we can't import archiver here, we use a base64-encoded minimal ZIP structure.
+    //    The simplest reliable approach: use Netlify's "file digest" deploy API instead.
+    //    We upload individual files by hash.
+
+    const htmlContent = patchHtmlForDeployment(project.generatedHtml);
+    const encoder = new TextEncoder();
+    const htmlBytes = encoder.encode(htmlContent);
+    const htmlBase64 = Buffer.from(htmlBytes).toString("base64");
+
+    // Use Netlify's files API (simpler than ZIP)
+    const deployRes = await fetch(`https://api.netlify.com/api/v1/sites/${site.id}/deploys`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${netlifyToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        files: { "/index.html": htmlBase64 },
+        async: false,
+      }),
+    });
+
+    if (!deployRes.ok) {
+      const errText = await deployRes.text();
+      throw new Error(`Netlify deploy failed: ${errText}`);
+    }
+
+    const deploy = await deployRes.json() as { deploy_url?: string; id: string };
+    const liveUrl = deploy.deploy_url || `https://${site.subdomain}.netlify.app`;
+
+    // Update project liveUrl
+    await db.update(projectsTable)
+      .set({ status: "deployed", liveUrl, updatedAt: new Date() })
+      .where(eq(projectsTable.id, projectId));
+
+    res.json({ success: true, liveUrl, provider: "netlify", siteId: site.id });
+  } catch (err: any) {
+    req.log.error({ err }, "Netlify deploy failed");
+    res.status(500).json({ error: "InternalError", message: err?.message || "Netlify deployment failed" });
+  }
+});
+
+// ── POST /projects/:id/deploy/github-pages ─────────────────────────────────────
+// Deploy to GitHub Pages by creating a public repo and pushing index.html.
+// User must supply their GitHub Personal Access Token.
+
+router.post("/projects/:id/deploy/github-pages", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const { githubToken } = req.body as { githubToken?: string };
+
+    if (!githubToken) {
+      res.status(400).json({ error: "BadRequest", message: "GitHub Personal Access Token is required." });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    if (!project.generatedHtml) {
+      res.status(400).json({ error: "BadRequest", message: "Generate the site first before deploying." });
+      return;
+    }
+
+    const ghHeaders = {
+      Authorization: `token ${githubToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/vnd.github.v3+json",
+    };
+
+    // 1. Get GitHub username
+    const meRes = await fetch("https://api.github.com/user", { headers: ghHeaders });
+    if (!meRes.ok) throw new Error("Invalid GitHub token — could not authenticate.");
+    const me = await meRes.json() as { login: string };
+    const username = me.login;
+
+    const repoName = `sitecraft-${(project.name || "site")
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .slice(0, 40)}-${Date.now().toString().slice(-5)}`;
+
+    // 2. Create repo
+    const createRepoRes = await fetch("https://api.github.com/user/repos", {
+      method: "POST",
+      headers: ghHeaders,
+      body: JSON.stringify({
+        name: repoName,
+        description: `Landing page generated by SiteCraft for ${project.name}`,
+        private: false,
+        auto_init: true,
+      }),
+    });
+
+    if (!createRepoRes.ok) {
+      const err = await createRepoRes.json() as { message?: string };
+      throw new Error(`GitHub repo creation failed: ${err?.message}`);
+    }
+
+    // Small wait for repo to be ready
+    await new Promise((r) => setTimeout(r, 1500));
+
+    // 3. Get the current SHA of README.md (auto-init creates it)
+    const readmeRes = await fetch(
+      `https://api.github.com/repos/${username}/${repoName}/contents/README.md`,
+      { headers: ghHeaders },
+    );
+    const readmeData = await readmeRes.json() as { sha?: string };
+    const readmeSha = readmeData?.sha;
+
+    // 4. Push index.html
+    const htmlContent = patchHtmlForDeployment(project.generatedHtml);
+    const htmlBase64 = Buffer.from(htmlContent).toString("base64");
+
+    const pushRes = await fetch(
+      `https://api.github.com/repos/${username}/${repoName}/contents/index.html`,
+      {
+        method: "PUT",
+        headers: ghHeaders,
+        body: JSON.stringify({
+          message: "Deploy via SiteCraft",
+          content: htmlBase64,
+        }),
+      },
+    );
+
+    if (!pushRes.ok) {
+      const err = await pushRes.json() as { message?: string };
+      throw new Error(`GitHub file push failed: ${err?.message}`);
+    }
+
+    // 5. Enable GitHub Pages (source: main branch, root path)
+    await fetch(`https://api.github.com/repos/${username}/${repoName}/pages`, {
+      method: "POST",
+      headers: ghHeaders,
+      body: JSON.stringify({ source: { branch: "main", path: "/" } }),
+    });
+    // Note: Pages takes ~1-2 min to go live after this call
+
+    const liveUrl = `https://${username}.github.io/${repoName}`;
+
+    // Update project liveUrl
+    await db.update(projectsTable)
+      .set({ status: "deployed", liveUrl, updatedAt: new Date() })
+      .where(eq(projectsTable.id, projectId));
+
+    res.json({
+      success: true,
+      liveUrl,
+      provider: "github-pages",
+      repoUrl: `https://github.com/${username}/${repoName}`,
+      note: "GitHub Pages may take 1-2 minutes to go live.",
+    });
+  } catch (err: any) {
+    req.log.error({ err }, "GitHub Pages deploy failed");
+    res.status(500).json({ error: "InternalError", message: err?.message || "GitHub Pages deployment failed" });
+  }
+});
+
+// ── DELETE /projects/:id ────────────────────────────────────────────────────────
+// Delete a project and all its deployments.
+
+router.delete("/projects/:id", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    // Delete deployments first (FK constraint)
+    await db.delete(deploymentsTable).where(eq(deploymentsTable.projectId, projectId));
+    // Delete the project
+    await db.delete(projectsTable).where(eq(projectsTable.id, projectId));
+
+    res.json({ success: true, message: "Project deleted" });
+  } catch (err: any) {
+    req.log.error({ err }, "Failed to delete project");
+    res.status(500).json({ error: "InternalError", message: "Failed to delete project" });
+  }
+});
+
+// ── DELETE /deployments/:id ────────────────────────────────────────────────────
+// Delete a single deployment record.
+
+router.delete("/deployments/:id", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const deployId = String(req.params.id);
+
+    const [dep] = await db
+      .select()
+      .from(deploymentsTable)
+      .where(and(eq(deploymentsTable.id, deployId), eq(deploymentsTable.userId, req.user!.id)));
+
+    if (!dep) {
+      res.status(404).json({ error: "NotFound", message: "Deployment not found" });
+      return;
+    }
+
+    await db.delete(deploymentsTable).where(eq(deploymentsTable.id, deployId));
+    res.json({ success: true, message: "Deployment deleted" });
+  } catch (err: any) {
+    req.log.error({ err }, "Failed to delete deployment");
+    res.status(500).json({ error: "InternalError", message: "Failed to delete deployment" });
+  }
+});
+
 export default router;

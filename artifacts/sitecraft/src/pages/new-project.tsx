@@ -1,300 +1,578 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 import { useCreateProject, useGenerateProject } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Sparkles, Wand2, Settings2, ArrowRight, LayoutTemplate, ImageIcon } from "lucide-react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
+import {
+  Wand2, ArrowRight, ArrowLeft, Check,
+  Rocket, ShoppingBag, Palette, UtensilsCrossed,
+  User, Stethoscope, Home, Calendar, Building2,
+  ChevronRight, Sparkles,
+} from "lucide-react";
 import { ImageUploader } from "@/components/ImageUploader";
+import { cn } from "@/lib/utils";
 
-const formSchema = z.object({
-  name: z.string().min(2, "Project name must be at least 2 characters."),
-  businessDescription: z.string().min(10, "Description must be at least 10 characters.").max(3000, "Description is too long."),
-  pixelCode: z.string().optional(),
-});
-
-type QuickStart = {
-  id: string;
-  label: string;
-  name: string;
-  businessDescription: string;
-};
-
-const QUICK_STARTS: QuickStart[] = [
+// ── Page type definitions ──────────────────────────────────────────────────────
+const PAGE_TYPES = [
   {
     id: "saas",
     label: "SaaS / Tech",
-    name: "Flowstate",
-    businessDescription: "We are a project management SaaS for remote teams, offering real-time collaboration boards, automated status reports, and integrations with Slack and GitHub. Our personality is clean, confident, and engineering-forward. We want a landing page that highlights our free trial and builds trust with engineering leads.",
+    description: "Software, apps, platforms",
+    icon: Rocket,
+    color: "text-violet-500",
+    bg: "bg-violet-500/10 hover:bg-violet-500/20 border-violet-500/20 hover:border-violet-500/50",
+    activeStyle: "bg-violet-500/20 border-violet-500 shadow-violet-500/10",
   },
   {
     id: "ecommerce",
     label: "E-Commerce",
-    name: "Northfield Goods",
-    businessDescription: "We sell handcrafted leather goods — wallets, bags, and belts — made in small batches from full-grain leather. Our brand is rugged, warm, and artisanal. We want a visually rich storefront landing page that showcases the craftsmanship, highlights free shipping and a lifetime warranty, and lets the materials speak for themselves.",
+    description: "Products, online store",
+    icon: ShoppingBag,
+    color: "text-orange-500",
+    bg: "bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20 hover:border-orange-500/50",
+    activeStyle: "bg-orange-500/20 border-orange-500 shadow-orange-500/10",
   },
   {
     id: "agency",
-    label: "Agency",
-    name: "Halo Studio",
-    businessDescription: "We are a boutique branding and web design agency working with early-stage startups. Our aesthetic is refined, editorial, and minimal — we let the work speak. We want an elegant portfolio-driven landing page that showcases case studies and makes it easy for founders to book a discovery call.",
+    label: "Agency / Studio",
+    description: "Creative, branding, design",
+    icon: Palette,
+    color: "text-pink-500",
+    bg: "bg-pink-500/10 hover:bg-pink-500/20 border-pink-500/20 hover:border-pink-500/50",
+    activeStyle: "bg-pink-500/20 border-pink-500 shadow-pink-500/10",
   },
   {
     id: "restaurant",
-    label: "Restaurant",
-    name: "Ember & Oak",
-    businessDescription: "We are a wood-fired neighborhood restaurant known for seasonal small plates and natural wine. Our atmosphere is warm, candlelit, and unhurried. We want a landing page that feels as inviting as the dining room — featuring our menu, story, and an easy way for guests to book a table.",
+    label: "Restaurant / Cafe",
+    description: "Food, dining, hospitality",
+    icon: UtensilsCrossed,
+    color: "text-amber-500",
+    bg: "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 hover:border-amber-500/50",
+    activeStyle: "bg-amber-500/20 border-amber-500 shadow-amber-500/10",
   },
   {
     id: "portfolio",
     label: "Portfolio",
-    name: "Jordan Kim — Design",
-    businessDescription: "I'm a freelance product designer specializing in fintech and B2B dashboards. My work is precise, systematic, and human-centered. I want a sharp personal portfolio site showing selected case studies, my design process, and a way for clients to get in touch — developer-credible, not decorative.",
+    description: "Personal, freelancer, creator",
+    icon: User,
+    color: "text-cyan-500",
+    bg: "bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20 hover:border-cyan-500/50",
+    activeStyle: "bg-cyan-500/20 border-cyan-500 shadow-cyan-500/10",
   },
-];
+  {
+    id: "professional",
+    label: "Professional Services",
+    description: "Law, finance, consulting",
+    icon: Stethoscope,
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 hover:border-emerald-500/50",
+    activeStyle: "bg-emerald-500/20 border-emerald-500 shadow-emerald-500/10",
+  },
+  {
+    id: "realestate",
+    label: "Real Estate",
+    description: "Property, listings, agents",
+    icon: Home,
+    color: "text-blue-500",
+    bg: "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 hover:border-blue-500/50",
+    activeStyle: "bg-blue-500/20 border-blue-500 shadow-blue-500/10",
+  },
+  {
+    id: "event",
+    label: "Event / Wedding",
+    description: "Events, venues, celebrations",
+    icon: Calendar,
+    color: "text-rose-500",
+    bg: "bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20 hover:border-rose-500/50",
+    activeStyle: "bg-rose-500/20 border-rose-500 shadow-rose-500/10",
+  },
+] as const;
 
+type PageTypeId = typeof PAGE_TYPES[number]["id"];
+
+const TONE_OPTIONS = ["Minimal", "Bold", "Warm", "Playful", "Luxury", "Corporate"] as const;
+type ToneOption = typeof TONE_OPTIONS[number];
+
+const AUDIENCE_OPTIONS = [
+  "General public",
+  "Young professionals",
+  "Businesses (B2B)",
+  "Luxury buyers",
+  "Local community",
+  "Students / creators",
+] as const;
+
+const FONT_OPTIONS = [
+  { value: "", label: "Let AI decide (recommended)" },
+  { value: "Inter", label: "Modern Sans — Inter" },
+  { value: "Playfair Display", label: "Elegant Serif — Playfair Display" },
+  { value: "JetBrains Mono", label: "Mono / Tech — JetBrains Mono" },
+  { value: "Nunito", label: "Friendly Rounded — Nunito" },
+] as const;
+
+// ── Step indicator ─────────────────────────────────────────────────────────────
+function StepIndicator({ step, total }: { step: number; total: number }) {
+  const labels = ["Page Type", "Your Brief", "Brand (optional)"];
+  return (
+    <div className="flex items-center gap-2 mb-8">
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <div
+            className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300",
+              i + 1 < step
+                ? "bg-primary border-primary text-primary-foreground"
+                : i + 1 === step
+                  ? "border-primary text-primary bg-primary/10"
+                  : "border-border text-muted-foreground bg-transparent",
+            )}
+          >
+            {i + 1 < step ? <Check className="h-4 w-4" /> : i + 1}
+          </div>
+          {i < total - 1 && (
+            <div
+              className={cn(
+                "h-0.5 w-8 transition-all duration-500",
+                i + 1 < step ? "bg-primary" : "bg-border",
+              )}
+            />
+          )}
+        </div>
+      ))}
+      <span className="ml-2 text-sm text-muted-foreground font-medium">
+        {labels[step - 1]}
+      </span>
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
 export default function NewProject() {
   const [, setLocation] = useLocation();
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-  const [logoUrl, setLogoUrl] = useState("");
-  const [activeQuickStart, setActiveQuickStart] = useState<string | null>(null);
-
   const createProject = useCreateProject();
   const generateProject = useGenerateProject();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      businessDescription: "",
-      pixelCode: "",
-    },
-  });
+  // Step state
+  const [step, setStep] = useState(1);
 
-  function applyQuickStart(qs: QuickStart) {
-    setActiveQuickStart(qs.id);
-    form.setValue("name", qs.name, { shouldValidate: true });
-    form.setValue("businessDescription", qs.businessDescription, { shouldValidate: true });
+  // Step 1
+  const [pageType, setPageType] = useState<PageTypeId | "">("");
+  const [isClientProject, setIsClientProject] = useState(false);
+
+  // Step 2
+  const [businessName, setBusinessName] = useState("");
+  const [whatYouDo, setWhatYouDo] = useState("");
+  const [audience, setAudience] = useState("");
+  const [targetAction, setTargetAction] = useState("");
+  const [differentiator, setDifferentiator] = useState("");
+  const [tone, setTone] = useState<ToneOption | "">("");
+
+  // Step 3 (all blank = AI decides)
+  const [primaryColor, setPrimaryColor] = useState("");
+  const [fontStyle, setFontStyle] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [pixelCode, setPixelCode] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ── Compose structured prompt ──────────────────────────────────────────────
+  function composePrompt(): string {
+    const selectedType = PAGE_TYPES.find((t) => t.id === pageType);
+    const lines: string[] = [
+      `PAGE TYPE: ${selectedType?.label ?? pageType}`,
+      `BUSINESS NAME: ${businessName}`,
+      `WHAT WE DO: ${whatYouDo}`,
+    ];
+    if (audience) lines.push(`TARGET AUDIENCE: ${audience}`);
+    if (targetAction) lines.push(`PRIMARY CTA / VISITOR ACTION: ${targetAction}`);
+    if (differentiator) lines.push(`OUR DIFFERENTIATOR: ${differentiator}`);
+    if (tone) lines.push(`DESIGN TONE: ${tone}`);
+    if (primaryColor) lines.push(`PRIMARY BRAND COLOR: ${primaryColor}`);
+    if (fontStyle) lines.push(`PREFERRED TYPOGRAPHY: ${fontStyle}`);
+    if (isClientProject) lines.push(`NOTE: This is an agency project built for a client.`);
+    return lines.join("\n");
   }
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const canProceedStep1 = !!pageType;
+  const canProceedStep2 = businessName.trim().length >= 2 && whatYouDo.trim().length >= 10;
+
+  async function handleSubmit() {
+    setIsSubmitting(true);
     try {
+      const composedDesc = composePrompt();
       const project = await createProject.mutateAsync({
         data: {
-          name: values.name,
-          businessDescription: values.businessDescription,
-          pixelCode: values.pixelCode || undefined,
+          name: businessName,
+          businessDescription: composedDesc,
+          pixelCode: pixelCode || undefined,
         },
       });
 
       const job = await generateProject.mutateAsync({
         id: project.id,
         data: {
-          businessDescription: values.businessDescription,
+          businessDescription: composedDesc,
           logoUrl: logoUrl || undefined,
         },
       });
 
-      toast.success("Project created and generation started!");
+      toast.success("Generation started!");
       setLocation(`/projects/${project.id}/generate?jobId=${job.id}`);
     } catch {
       toast.error("Failed to create project. Please try again.");
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-8 animate-fade-in pb-24">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">New Project</h1>
-        <p className="text-muted-foreground mt-1">
-          Describe your business — the AI reads your words, not a category label, and builds from there.
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-3xl mx-auto px-6 py-10 pb-24 animate-fade-in">
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">New Project</h1>
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Answer 3 quick steps — the AI builds a completely unique site from your brief.
+          </p>
+        </div>
 
-          {/* Quick Starts */}
-          <Card className="glass-panel">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <LayoutTemplate className="h-4 w-4 text-primary" />
-                Quick Start
-              </CardTitle>
-              <CardDescription>
-                Pre-written examples to get started fast — or skip and write your own description below.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {QUICK_STARTS.map((qs) => (
-                  <Button
-                    key={qs.id}
+        <StepIndicator step={step} total={3} />
+
+        {/* ── STEP 1: Page Type ── */}
+        {step === 1 && (
+          <div className="space-y-6 animate-fade-in">
+            <div>
+              <h2 className="text-lg font-semibold mb-1">What kind of page are you building?</h2>
+              <p className="text-sm text-muted-foreground">
+                This gives the AI domain context — every result is still unique to your brief and business.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {PAGE_TYPES.map((type) => {
+                const Icon = type.icon;
+                const active = pageType === type.id;
+                return (
+                  <button
+                    key={type.id}
                     type="button"
-                    variant="outline"
-                    size="sm"
+                    onClick={() => setPageType(type.id)}
                     className={cn(
-                      "h-9 rounded-full",
-                      activeQuickStart === qs.id && "border-primary bg-primary/10 text-primary"
+                      "relative flex flex-col items-start gap-2 p-4 rounded-xl border-2 transition-all duration-200 text-left",
+                      active
+                        ? `${type.activeStyle} shadow-lg`
+                        : `${type.bg} border`,
                     )}
-                    onClick={() => applyQuickStart(qs)}
-                    data-testid={`button-quickstart-${qs.id}`}
+                    data-testid={`button-pagetype-${type.id}`}
                   >
-                    {qs.label}
-                  </Button>
+                    {active && (
+                      <span className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="h-3 w-3 text-primary-foreground" />
+                      </span>
+                    )}
+                    <div className={cn(
+                      "h-9 w-9 rounded-lg flex items-center justify-center",
+                      active ? "bg-background/50" : "bg-background/30",
+                    )}>
+                      <Icon className={cn("h-5 w-5", type.color)} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold leading-tight">{type.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* B2B toggle */}
+            <div className="flex items-center gap-3 p-4 rounded-xl border border-border bg-muted/30">
+              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Building for a client?</p>
+                <p className="text-xs text-muted-foreground">Toggle on if you're an agency creating this for a client's business</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsClientProject(!isClientProject)}
+                className={cn(
+                  "w-10 h-6 rounded-full transition-colors duration-200 relative shrink-0",
+                  isClientProject ? "bg-primary" : "bg-muted-foreground/30",
+                )}
+              >
+                <span className={cn(
+                  "absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200",
+                  isClientProject ? "translate-x-4" : "translate-x-0",
+                )} />
+              </button>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={() => setStep(2)}
+                disabled={!canProceedStep1}
+                size="lg"
+                className="gap-2 px-8"
+                data-testid="button-step1-next"
+              >
+                Continue <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 2: Brief ── */}
+        {step === 2 && (
+          <div className="space-y-6 animate-fade-in">
+            <div>
+              <h2 className="text-lg font-semibold mb-1">Tell us about your business</h2>
+              <p className="text-sm text-muted-foreground">
+                The more specific you are, the more unique and on-brand your design will be.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                {isClientProject ? "Client's business name" : "Business name"}
+                <span className="text-destructive ml-1">*</span>
+              </label>
+              <Input
+                placeholder={isClientProject ? "e.g. Ember & Oak Restaurant" : "e.g. Acme Corp"}
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                className="bg-background/50"
+                data-testid="input-business-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                What do you do? <span className="text-destructive">*</span>
+              </label>
+              <Textarea
+                placeholder="Describe your product or service in 2-3 sentences. Be specific — what you offer, how it works, who it's for."
+                value={whatYouDo}
+                onChange={(e) => setWhatYouDo(e.target.value.slice(0, 1000))}
+                className="min-h-[100px] bg-background/50 resize-y"
+                data-testid="textarea-what-you-do"
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                <span className={whatYouDo.length > 900 ? "text-orange-400" : ""}>{whatYouDo.length}/1000</span>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Who is your target audience?</label>
+              <div className="flex flex-wrap gap-2">
+                {AUDIENCE_OPTIONS.map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => setAudience(audience === a ? "" : a)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-sm border transition-all duration-150",
+                      audience === a
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border bg-muted/30 hover:border-primary/50 hover:bg-primary/5",
+                    )}
+                  >
+                    {a}
+                  </button>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Main description card */}
-          <Card className="glass-panel border-primary/20 shadow-lg shadow-primary/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Describe Your Business
-              </CardTitle>
-              <CardDescription>
-                The more personality and specificity you give, the more distinctive the design will be. Mention your vibe, materials, audience, what sets you apart, and what you want visitors to feel.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Acme Corp Landing Page" {...field} className="bg-background/50" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">What action should visitors take?</label>
+              <Input
+                placeholder="e.g. Book a table, Start free trial, Get a quote, Shop now"
+                value={targetAction}
+                onChange={(e) => setTargetAction(e.target.value)}
+                className="bg-background/50"
               />
+            </div>
 
-              <FormField
-                control={form.control}
-                name="businessDescription"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Business Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="We are a boutique coffee roaster in San Francisco specializing in single-origin beans sourced directly from farmers in Ethiopia and Colombia. Our brand is warm, earthy, and community-driven — we host weekly cuppings and want our site to feel like an invitation, not a sales pitch. Highlight our subscription service and the stories behind each origin."
-                        className="min-h-[180px] text-base resize-y bg-background/50 leading-relaxed"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription className="flex justify-between">
-                      <span>Describe your tone, materials, audience, and what makes you different — the AI builds from your words.</span>
-                      <span className={`font-mono text-xs ${field.value.length > 2700 ? 'text-orange-400' : ''}`}>{field.value.length}/3000</span>
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">What makes you different?</label>
+              <Textarea
+                placeholder="Your unique angle — awards, pricing, experience, location, ingredients, or anything special."
+                value={differentiator}
+                onChange={(e) => setDifferentiator(e.target.value.slice(0, 500))}
+                className="min-h-[80px] bg-background/50 resize-y"
               />
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Advanced Settings — Logo & Tracking Pixel */}
-          <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
-            <Card className="glass-panel">
-              <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-0">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-between -ml-4 hover:bg-transparent hover:text-primary">
-                    <div className="flex items-center gap-2">
-                      <Settings2 className="h-5 w-5" />
-                      <span className="font-semibold">Advanced Settings</span>
-                      <span className="text-xs text-muted-foreground font-normal">(optional)</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground font-mono">
-                      {isAdvancedOpen ? "HIDE" : "SHOW"}
-                    </span>
-                  </Button>
-                </CollapsibleTrigger>
-              </CardHeader>
-              <CollapsibleContent>
-                <CardContent className="space-y-6 pt-6">
-                  {/* Brand Logo */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Brand Logo</span>
-                    </div>
-                    <ImageUploader
-                      value={logoUrl}
-                      onChange={setLogoUrl}
-                      label="Logo"
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      The AI will place your logo in the generated site's header and footer.
-                    </p>
-                  </div>
-
-                  <hr className="border-border/50" />
-
-                  {/* Pixel / Tracking Code */}
-                  <FormField
-                    control={form.control}
-                    name="pixelCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-sm text-primary">&lt;/&gt;</span>
-                          <FormLabel className="text-sm font-medium">Pixel Code / Custom Header Script</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Textarea
-                            placeholder="<!-- Meta Pixel Code -->&#10;<script>&#10;  !fbc(f,b,e,v,n,t,s)...&#10;</script>&#10;<!-- End Meta Pixel Code -->"
-                            className="font-mono text-xs min-h-[140px] bg-background/50 leading-relaxed"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Paste Meta Pixel, Google Analytics, or other custom tracking scripts exactly as provided. They will be injected directly into the HTML &lt;head&gt; element.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tone / Vibe</label>
+              <div className="flex flex-wrap gap-2">
+                {TONE_OPTIONS.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTone(tone === t ? "" : t)}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm border font-medium transition-all duration-150",
+                      tone === t
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "border-border bg-muted/30 hover:border-primary/50 hover:bg-primary/5",
                     )}
-                  />
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          <div className="flex justify-end pt-4">
-            <Button
-              type="submit"
-              size="lg"
-              className="gap-2 px-8 h-12 text-lg shadow-lg shadow-primary/20"
-              disabled={createProject.isPending || generateProject.isPending}
-            >
-              {createProject.isPending || generateProject.isPending ? (
-                <>
-                  <Wand2 className="h-5 w-5 animate-spin" />
-                  Initializing Agents...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="h-5 w-5" />
-                  Generate Site
-                  <ArrowRight className="h-5 w-5 ml-2" />
-                </>
-              )}
-            </Button>
+            <div className="flex justify-between pt-2">
+              <Button variant="ghost" onClick={() => setStep(1)} className="gap-2">
+                <ArrowLeft className="h-4 w-4" /> Back
+              </Button>
+              <Button
+                onClick={() => setStep(3)}
+                disabled={!canProceedStep2}
+                size="lg"
+                className="gap-2 px-8"
+                data-testid="button-step2-next"
+              >
+                Continue <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </form>
-      </Form>
+        )}
+
+        {/* ── STEP 3: Brand Settings ── */}
+        {step === 3 && (
+          <div className="space-y-6 animate-fade-in">
+            <div>
+              <h2 className="text-lg font-semibold mb-1">
+                Brand settings <span className="text-muted-foreground font-normal text-sm">(optional — all blank = AI decides)</span>
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Leave everything blank — the AI will craft a perfect color palette and typography from your brief. Only fill in if you have an existing brand to match.
+              </p>
+            </div>
+
+            {/* Color picker */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Primary brand color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={primaryColor || "#3b82f6"}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="w-10 h-10 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
+                />
+                <Input
+                  placeholder="Leave blank = AI chooses"
+                  value={primaryColor}
+                  onChange={(e) => setPrimaryColor(e.target.value)}
+                  className="bg-background/50 font-mono text-sm max-w-[200px]"
+                />
+                {primaryColor && (
+                  <button
+                    type="button"
+                    onClick={() => setPrimaryColor("")}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Font */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Font style</label>
+              <select
+                value={fontStyle}
+                onChange={(e) => setFontStyle(e.target.value)}
+                className="w-full h-10 px-3 rounded-md border border-input bg-background/50 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                {FONT_OPTIONS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Logo */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Brand logo <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <ImageUploader
+                value={logoUrl}
+                onChange={setLogoUrl}
+                label="Logo"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              />
+              <p className="text-xs text-muted-foreground">
+                The AI will place your logo in the header and footer if provided.
+              </p>
+            </div>
+
+            {/* Tracking pixel */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                <span className="font-mono text-primary text-sm">&lt;/&gt;</span>
+                {" "}Tracking pixel / custom script <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <Textarea
+                placeholder={"<!-- Meta Pixel Code -->\n<script>!function(f,b,e,v,n,t,s)...</script>"}
+                value={pixelCode}
+                onChange={(e) => setPixelCode(e.target.value)}
+                className="font-mono text-xs min-h-[100px] bg-background/50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste Meta Pixel, Google Analytics, or other scripts — injected into HTML &lt;head&gt;.
+              </p>
+            </div>
+
+            {/* Summary */}
+            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Your brief summary</p>
+              <div className="space-y-1 text-sm">
+                {[
+                  { key: "Page type", val: PAGE_TYPES.find(t => t.id === pageType)?.label },
+                  { key: "Business", val: businessName },
+                  tone ? { key: "Tone", val: tone } : null,
+                  targetAction ? { key: "CTA goal", val: targetAction } : null,
+                  primaryColor ? { key: "Brand color", val: primaryColor } : null,
+                ]
+                  .filter((item): item is { key: string; val: string } => Boolean(item && item.val))
+                  .map(({ key, val }) => (
+                    <div key={key} className="flex gap-2">
+                      <span className="text-muted-foreground w-28 shrink-0">{key}:</span>
+                      <span className="font-medium">{val}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-2">
+              <Button variant="ghost" onClick={() => setStep(2)} className="gap-2">
+                <ArrowLeft className="h-4 w-4" /> Back
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !businessName || !whatYouDo}
+                size="lg"
+                className="gap-2 px-8 h-12 text-lg shadow-lg shadow-primary/20"
+                data-testid="button-generate-site"
+              >
+                {isSubmitting ? (
+                  <><Wand2 className="h-5 w-5 animate-spin" /> Starting Agents…</>
+                ) : (
+                  <><Wand2 className="h-5 w-5" /> Generate Site <ChevronRight className="h-5 w-5" /></>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

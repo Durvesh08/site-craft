@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Rocket, Globe, Server, CheckCircle, XCircle, Clock,
   ExternalLink, Link2, RefreshCw, ChevronDown, ChevronUp,
-  Terminal, AlertTriangle,
+  Terminal, AlertTriangle, Trash2, Code2, Cloud,
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -32,7 +32,7 @@ import { toast } from "sonner";
 
 // ── Deployment log viewer ────────────────────────────────────────────────────
 
-function DeploymentLogRow({ deployment }: { deployment: any }) {
+function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const isActive = deployment.status === "pending" || deployment.status === "uploading";
 
@@ -77,7 +77,7 @@ function DeploymentLogRow({ deployment }: { deployment: any }) {
           {deployment.createdAt ? format(new Date(deployment.createdAt), "MMM d, yyyy HH:mm") : "—"}
         </TableCell>
         <TableCell className="text-right">
-          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+          <div className="flex items-center justify-end gap-1 flex-wrap">
             {/* Log toggle */}
             {log && (
               <Button
@@ -101,9 +101,19 @@ function DeploymentLogRow({ deployment }: { deployment: any }) {
                 </a>
               </Button>
             )}
+            {/* Delete button */}
+            <Button
+              variant="ghost" size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={() => onDelete(deployment.id)}
+              title="Delete deployment record"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </TableCell>
       </TableRow>
+
       {/* Expanded log */}
       {expanded && log && (
         <TableRow className="hover:bg-transparent bg-[#0d1117]">
@@ -386,6 +396,21 @@ export default function Deployments() {
     );
   };
 
+  const handleDeleteDeployment = async (deployId: string) => {
+    if (!confirm("Are you sure you want to delete this deployment log?")) return;
+    try {
+      const res = await fetch(`/api/deployments/${deployId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete deployment");
+      toast.success("Deployment record removed.");
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete deployment");
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
       {/* Header */}
@@ -396,7 +421,7 @@ export default function Deployments() {
             Deployments
           </h1>
           <p className="text-muted-foreground mt-1">
-            Upload to FTP, FTPS, or SFTP — track progress and retry failures.
+            Upload to FTP, FTPS, SFTP, Netlify, or GitHub Pages — track progress and manage deployments.
           </p>
         </div>
 
@@ -638,7 +663,7 @@ export default function Deployments() {
                 </TableRow>
               ) : (
                 deployments.map(deployment => (
-                  <DeploymentLogRow key={deployment.id} deployment={deployment} />
+                  <DeploymentLogRow key={deployment.id} deployment={deployment} onDelete={handleDeleteDeployment} />
                 ))
               )}
             </TableBody>

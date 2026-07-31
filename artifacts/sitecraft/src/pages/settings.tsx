@@ -22,13 +22,15 @@ export default function SettingsPage() {
   const [profileImageUrl, setProfileImageUrl] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
-  // FTP State
+  // FTP & Free Hosting State
   const [ftpHost, setFtpHost] = useState("");
   const [ftpPort, setFtpPort] = useState("21");
   const [ftpUsername, setFtpUsername] = useState("");
   const [ftpPassword, setFtpPassword] = useState("");
   const [ftpPath, setFtpPath] = useState("/");
   const [ftpProtocol, setFtpProtocol] = useState<"ftp" | "ftps" | "sftp">("ftp");
+  const [netlifyToken, setNetlifyToken] = useState("");
+  const [githubToken, setGithubToken] = useState("");
   const [isSavingFtp, setIsSavingFtp] = useState(false);
   const [isTestingFtp, setIsTestingFtp] = useState(false);
   const [ftpTestStatus, setFtpTestStatus] = useState<"none" | "success" | "failed">("none");
@@ -66,13 +68,15 @@ export default function SettingsPage() {
         const data = await res.json();
         const settings = data.settings || {};
 
-        // Deployment (FTP)
+        // Deployment (FTP & Free Hosting)
         if (settings.deployment) {
           setFtpHost(settings.deployment.ftp_host || "");
           setFtpPort(settings.deployment.ftp_port || "21");
           setFtpUsername(settings.deployment.ftp_username || "");
           setFtpPassword(settings.deployment.ftp_password || "");
           setFtpPath(settings.deployment.ftp_path || "/");
+          setNetlifyToken(settings.deployment.netlify_token || "");
+          setGithubToken(settings.deployment.github_token || "");
           const proto = settings.deployment.ftp_protocol;
           if (proto === "sftp" || proto === "ftps" || proto === "ftp") setFtpProtocol(proto);
           else if (settings.deployment.ftp_secure === "true") setFtpProtocol("ftps");
@@ -125,7 +129,7 @@ export default function SettingsPage() {
     }
   };
 
-  // Save FTP Changes
+  // Save FTP & Free Hosting Changes
   const handleSaveFtp = async () => {
     setIsSavingFtp(true);
     try {
@@ -141,13 +145,15 @@ export default function SettingsPage() {
           ftp_path: ftpPath,
           ftp_protocol: ftpProtocol,
           ftp_secure: (ftpProtocol === "ftps").toString(),
+          netlify_token: netlifyToken,
+          github_token: githubToken,
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to update FTP credentials");
-      toast.success("FTP settings saved successfully");
+      if (!res.ok) throw new Error("Failed to update hosting credentials");
+      toast.success("Hosting settings saved successfully");
     } catch (err: any) {
-      toast.error(err.message || "Failed to save FTP configuration");
+      toast.error(err.message || "Failed to save hosting configuration");
     } finally {
       setIsSavingFtp(false);
     }
@@ -463,6 +469,49 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
+                {/* Free Hosting Tokens */}
+                <div className="pt-4 border-t border-border/50 space-y-4">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-primary" />
+                      Free Hosting Integrations (Netlify & GitHub Pages)
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Deploy your generated sites for free without buying hosting.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="netlify-token" className="text-xs">Netlify Personal Access Token</Label>
+                    <Input
+                      id="netlify-token"
+                      type="password"
+                      value={netlifyToken}
+                      onChange={(e) => setNetlifyToken(e.target.value)}
+                      placeholder="nfp_..."
+                      className="bg-background/50 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Get one free at netlify.com → User Settings → Applications → Personal Access Tokens.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="github-token" className="text-xs">GitHub Personal Access Token</Label>
+                    <Input
+                      id="github-token"
+                      type="password"
+                      value={githubToken}
+                      onChange={(e) => setGithubToken(e.target.value)}
+                      placeholder="ghp_..."
+                      className="bg-background/50 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Get one free at github.com → Settings → Developer Settings → Tokens (classic). Needs <code className="bg-muted px-1 rounded">repo</code> scope.
+                    </p>
+                  </div>
+                </div>
+
                 {ftpTestStatus === "success" && (
                   <div className="flex items-center gap-2 text-sm text-emerald-500 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
                     <Check className="h-4 w-4 shrink-0" />
@@ -479,10 +528,10 @@ export default function SettingsPage() {
               </CardContent>
               <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30 flex gap-4">
                 <Button onClick={handleSaveFtp} disabled={isSavingFtp}>
-                  {isSavingFtp ? "Saving Credentials..." : "Save FTP Settings"}
+                  {isSavingFtp ? "Saving Credentials..." : "Save Hosting Settings"}
                 </Button>
                 <Button variant="outline" onClick={handleTestFtp} disabled={isTestingFtp || !ftpHost || !ftpUsername || !ftpPassword}>
-                  {isTestingFtp ? "Testing Connection..." : "Test Connection"}
+                  {isTestingFtp ? "Testing Connection..." : "Test FTP Connection"}
                 </Button>
               </CardFooter>
             </Card>

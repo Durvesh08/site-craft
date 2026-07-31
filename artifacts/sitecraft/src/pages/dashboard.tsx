@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Globe, Activity, Clock, AlertTriangle, ArrowRight, Settings } from "lucide-react";
+import { PlusCircle, Globe, Activity, Clock, AlertTriangle, ArrowRight, Settings, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -25,13 +25,14 @@ export default function Dashboard() {
   const [projDesc, setProjDesc] = useState("");
   const [projPixel, setProjPixel] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const updateProjectMutation = useUpdateProject();
 
   const openSettings = (project: any) => {
     setSelectedProject(project);
     setProjName(project.name || "");
-    setProjDesc(project.description || "");
+    setProjDesc(project.businessDescription || project.description || "");
     setProjPixel(project.pixelCode || "");
     setIsSettingsOpen(true);
   };
@@ -55,6 +56,27 @@ export default function Dashboard() {
       toast.error("Failed to update project settings.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string, projectName: string) => {
+    if (!confirm(`Are you sure you want to delete "${projectName}"? This action cannot be undone.`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to delete project");
+      toast.success(`Project "${projectName}" deleted.`);
+      setIsSettingsOpen(false);
+      refetchProjects();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete project");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -99,50 +121,54 @@ export default function Dashboard() {
             {isLoadingAnalytics ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold">{analytics?.totalProjects || projects.length}</div>
+              <div className="text-2xl font-bold">{analytics?.totalProjects ?? projects.length}</div>
             )}
+            <p className="text-xs text-muted-foreground mt-1">Active site properties</p>
           </CardContent>
         </Card>
         
         <Card className="glass-panel">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Deployed Sites</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
+            <Globe className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
             {isLoadingAnalytics ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold">{analytics?.totalDeployments ?? projects.filter(p => p.status === 'deployed').length}</div>
+              <div className="text-2xl font-bold text-emerald-600">{(analytics as any)?.deployedProjects ?? projects.filter(p => p.status === 'deployed').length}</div>
             )}
+            <p className="text-xs text-muted-foreground mt-1">Live on custom domain / web</p>
           </CardContent>
         </Card>
 
         <Card className="glass-panel">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. SEO Score</CardTitle>
-            <Activity className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium">Deployments</CardTitle>
+            <Clock className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             {isLoadingAnalytics ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold text-primary">{analytics?.successRate ? Math.round(analytics.successRate * 100) : 0}%</div>
+              <div className="text-2xl font-bold">{analytics?.totalDeployments ?? 0}</div>
             )}
+            <p className="text-xs text-muted-foreground mt-1">Total deployment actions</p>
           </CardContent>
         </Card>
 
         <Card className="glass-panel">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Jobs Run</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">AI Generation Jobs</CardTitle>
+            <Activity className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
             {isLoadingAnalytics ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold">{analytics?.totalGenerations ?? 0}</div>
+              <div className="text-2xl font-bold">{(analytics as any)?.totalAiJobs ?? (analytics as any)?.totalGenerations ?? 0}</div>
             )}
+            <p className="text-xs text-muted-foreground mt-1">Completed agent workflows</p>
           </CardContent>
         </Card>
       </div>
@@ -175,7 +201,7 @@ export default function Dashboard() {
             </div>
             <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
             <p className="text-muted-foreground max-w-sm mb-6">
-              Start your first AI-directed web project by typing a single sentence.
+              Start your first AI-directed web project in 3 simple steps.
             </p>
             <Button asChild>
               <Link href="/new">Create Project</Link>
@@ -190,7 +216,7 @@ export default function Dashboard() {
                     <CardTitle className="text-lg truncate pr-2" title={project.name}>
                       {project.name}
                     </CardTitle>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       {getStatusBadge(project.status)}
                       <Button
                         variant="ghost"
@@ -201,8 +227,22 @@ export default function Dashboard() {
                           e.stopPropagation();
                           openSettings(project);
                         }}
+                        title="Settings"
                       >
                         <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDeleteProject(project.id, project.name);
+                        }}
+                        title="Delete project"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -312,13 +352,25 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
-              Cancel
+          <DialogFooter className="flex items-center justify-between sm:justify-between">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-1.5"
+              disabled={isDeleting}
+              onClick={() => selectedProject && handleDeleteProject(selectedProject.id, selectedProject.name)}
+            >
+              <Trash2 className="h-4 w-4" />
+              {isDeleting ? "Deleting..." : "Delete Project"}
             </Button>
-            <Button onClick={handleSaveSettings} disabled={isSaving || !projName}>
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveSettings} disabled={isSaving || !projName}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

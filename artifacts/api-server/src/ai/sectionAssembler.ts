@@ -451,18 +451,19 @@ RESPONSIVE RULES per element type:
     Every visual effect must be decorative and safely skippable.
 
 ━━━ CRITICAL: IMAGES & MEDIA ━━━
-NEVER generate fake product/hero image URLs that will 404. Broken images look worse than no image.
-If you need to show a product image → use a reliable placeholder:
-  https://picsum.photos/seed/{descriptive-word}/400/500   (portrait)
-  https://picsum.photos/seed/{descriptive-word}/600/400   (landscape)
-  https://images.unsplash.com/photo-{ID}?w=600&q=80 — only if you know a real Unsplash photo ID
-OR use a CSS-only gradient card (preferred for products):
-  <div style={{width:280,height:340,borderRadius:20,background:'linear-gradient(145deg,var(--card-bg),var(--muted))',
-    border:'1px solid var(--border)',display:'flex',flexDirection:'column',alignItems:'center',
-    justifyContent:'center',gap:12,fontSize:48,boxShadow:'0 20px 60px rgba(0,0,0,0.25)'}}>
-    🧴 {/* product emoji */}
-    <span style={{fontSize:14,fontWeight:600,color:'var(--foreground)',opacity:0.7}}>Product Name</span>
-  </div>
+NEVER generate fake or random image URLs that 404.
+If you need high-quality photos, use these PERMANENT, RELIABLE Unsplash photo IDs keyed to the page category (append ?w=1200&q=80):
+  • SaaS / Tech       : https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&q=80 (team workspace)
+                        https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80 (analytics dashboard)
+  • Restaurant / Food : https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200&q=80 (fine dining)
+                        https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&q=80 (cozy restaurant interior)
+  • E-Commerce / Store: https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&q=80 (boutique shop)
+                        https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&q=80 (minimal product)
+  • Agency / Design   : https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80 (creative collaboration)
+  • Real Estate       : https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=80 (modern luxury villa)
+  • Portfolio         : https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80 (professional portrait)
+
+ALWAYS include a CSS background-color fallback container (e.g. style={{ backgroundColor: 'var(--muted)', backgroundImage: 'url(...)' }}) so if network is slow, the visual area looks clean immediately.
 
 HERO BADGE LOGO RULE: If showing logo in a badge/pill inside the hero:
   <div style={{width:22,height:22,borderRadius:'50%',overflow:'hidden',flexShrink:0,display:'inline-block'}}>
