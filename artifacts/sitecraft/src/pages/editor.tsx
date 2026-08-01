@@ -69,6 +69,7 @@ export default function ProjectEditor() {
   const [editInstruction, setEditInstruction] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [editCount, setEditCount] = useState(0);
+  const [iframeKey, setIframeKey] = useState(0);
   const MAX_EDITS = 2;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -101,7 +102,7 @@ export default function ProjectEditor() {
   }, [messages, isRegenerating]);
 
   const iframeUrl = project?.id
-    ? `/api/projects/${project.id}/preview?t=${new Date(project.updatedAt).getTime()}`
+    ? `/api/projects/${project.id}/preview?t=${new Date(project.updatedAt).getTime()}&k=${iframeKey}`
     : null;
 
   const triggerDownload = (url: string) => {
@@ -146,6 +147,58 @@ export default function ProjectEditor() {
     }
   };
 
+
+  const pollJob = async (jobId: string): Promise<"completed" | "failed"> => {
+    const MAX_POLLS = 60; // 3s * 60 = 3 minutes max
+    let polls = 0;
+    return new Promise((resolve) => {
+      const interval = setInterval(async () => {
+        polls++;
+        try {
+          const res = await fetch(`/api/jobs/${jobId}`, { credentials: "include" });
+          if (!res.ok) { clearInterval(interval); resolve("failed"); return; }
+          const job = await res.json();
+          // Show current step in chat as a progress message (only once per step change)
+          if (job.currentStep) {
+            setMessages((prev) => {
+              const lastMsg = prev[prev.length - 1];
+              if (lastMsg?.id === `step-${jobId}`) {
+                return prev.map((m) =>
+                  m.id === `step-${jobId}`
+                    ? { ...m, text: `⏳ Running: ${job.currentStep} (${job.progress}%)…` }
+                    : m
+                );
+              }
+              return [
+                ...prev,
+                {
+                  id: `step-${jobId}`,
+                  sender: "ai" as const,
+                  text: `⏳ Running: ${job.currentStep} (${job.progress}%)…`,
+                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                },
+              ];
+            });
+          }
+
+          if (job.status === "completed") {
+            clearInterval(interval);
+            resolve("completed");
+          } else if (job.status === "failed") {
+            clearInterval(interval);
+            resolve("failed");
+          } else if (polls >= MAX_POLLS) {
+            clearInterval(interval);
+            resolve("failed");
+          }
+        } catch {
+          clearInterval(interval);
+          resolve("failed");
+        }
+      }, 3000);
+    });
+  };
+
   const handleRegenerate = async () => {
     const messageText = editInstruction.trim();
     if (!messageText) {
@@ -179,28 +232,59 @@ export default function ProjectEditor() {
 
       if (!res.ok) throw new Error("Edit request failed");
 
+      const job = await res.json();
+      const jobId: string = job.id;
+
+      // Add "thinking" message
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `thinking-${jobId}`,
+          sender: "ai" as const,
+          text: `🤖 AI agents are analysing your request and editing the page…`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+
+      // Poll until the job finishes — this is the KEY fix
+      const finalStatus = await pollJob(jobId);
+
       const newCount = editCount + 1;
       setEditCount(newCount);
       localStorage.setItem(`sc_edits_${id}`, String(newCount));
 
-      // Add AI success response
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: "ai",
-          text: `✅ Applied your edit: "${messageText}". Updating preview…`,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
-      toast.success("Edit applied!");
-      setTimeout(() => refetch(), 2000);
+      if (finalStatus === "completed") {
+        setMessages((prev) => [
+          ...prev.filter((m) => m.id !== `step-${jobId}`),
+          {
+            id: (Date.now() + 1).toString(),
+            sender: "ai" as const,
+            text: `✅ Done! Applied your edit: "${messageText}". Preview is refreshing…`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+        toast.success("Edit applied! Refreshing preview…");
+        // Refetch project data to get updated HTML
+        await refetch();
+        setIframeKey((k) => k + 1);
+      } else {
+        setMessages((prev) => [
+          ...prev.filter((m) => m.id !== `step-${jobId}`),
+          {
+            id: (Date.now() + 1).toString(),
+            sender: "ai" as const,
+            text: "❌ The edit timed out or failed. Try rephrasing your request with more specific detail.",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+        toast.error("Edit failed. Please try again with a more specific request.");
+      }
     } catch {
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
-          sender: "ai",
+          sender: "ai" as const,
           text: "❌ Edit failed to apply. Please try describing your request with more detail.",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
@@ -210,6 +294,8 @@ export default function ProjectEditor() {
       setIsRegenerating(false);
     }
   };
+
+
 
   const handleCopyCode = () => {
     if (!project?.generatedHtml) return;
@@ -334,6 +420,7 @@ export default function ProjectEditor() {
             )}
             {iframeUrl ? (
               <iframe
+                key={iframeKey}
                 src={iframeUrl}
                 className="w-full h-full bg-white animate-fade-in"
                 sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation"
