@@ -364,6 +364,9 @@ Before writing code, silently decide:
   4. What mobile layout prevents crowding, clipping, and horizontal scroll?
 
 QUALITY REQUIREMENTS:
+  - DESIGN SYSTEM & COLOR HIERARCHY (60/30/10 RULE): Ensure 60% dominant background/neutral space, 30% structural surfaces (cards, borders, secondary elements), and 10% high-contrast accent details (primary CTA buttons, tags, active states). Never overuse the primary color.
+  - TYPOGRAPHY & SPACING SYSTEM: Spacing must strictly use consistent multipliers (4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px, 96px). Headings and body text must never use harsh absolute black (#000) on white or pure white (#fff) on dark background; use soft contrasts (e.g. zinc/slate/cool-gray shades or deep slate/charcoal) to feel elegant and premium.
+  - FINE CONTRAST & BORDERS: Use fine, semi-transparent borders (\`1px solid rgba(255,255,255,0.08)\` on dark mode or \`1px solid rgba(15,23,42,0.06)\` on light mode) matching the background brightness. Avoid heavy, high-contrast borders or dark borders on dark backgrounds.
   - NO EMOJIS (CRITICAL): Absolutely NEVER use raw emojis (e.g. ✈️, ⭐, 🚀, ✅, ✨) anywhere in text, buttons, tags, or headers. Emojis look amateurish and break design style. Instead, use clean custom inline SVGs (like a simple path for a checkmark, star, or arrow) or style empty CSS shapes.
   - Use real business-specific copy from the context. Avoid vague placeholders like "Powerful features".
   - Include one premium visual detail per non-footer section: metric card, timeline, product stage,

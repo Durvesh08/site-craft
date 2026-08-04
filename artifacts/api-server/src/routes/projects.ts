@@ -1,8 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import JSZip from "jszip";
 import { db } from "@workspace/db";
-import { projectsTable } from "@workspace/db";
-import { eq, desc, and, count } from "drizzle-orm";
+import { projectsTable, aiJobsTable, aiJobStepsTable } from "@workspace/db";
+import { eq, desc, and, count, asc } from "drizzle-orm";
 import {
   CreateProjectBody,
   UpdateProjectBody,
@@ -273,6 +273,38 @@ router.get("/projects/:id/export", async (req: Request, res: Response) => {
     res.status(500).json({ error: "InternalError", message: "Failed to export" });
   }
 });
+// GET /projects/:id/export/design-contract  — brand contract (DESIGN.md) download
+router.get("/projects/:id/export/design-contract", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const params = GetProjectParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
+      return;
+    }
+
+    const designMd = await buildDesignMd(params.data.id, req.user!.id);
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    const filenameSlug = toSlug(project.name);
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="DESIGN-${filenameSlug}.md"`);
+    res.send(designMd);
+  } catch (err) {
+    req.log.error({ err }, "Failed to export brand contract");
+    res.status(500).json({ error: "InternalError", message: "Failed to export brand contract" });
+  }
+});
+
+
 
 // GET /projects/:id/export/zip  — full deployment package
 router.get("/projects/:id/export/zip", async (req: Request, res: Response) => {
@@ -304,8 +336,10 @@ router.get("/projects/:id/export/zip", async (req: Request, res: Response) => {
     const now       = new Date().toISOString().split("T")[0];
 
     // ── Build zip ──────────────────────────────────────────────────────────
+    const designMd = await buildDesignMd(project.id, req.user!.id);
     const zip = new JSZip();
     zip.file("index.html",  patchHtml(project.generatedHtml) ?? project.generatedHtml);
+    zip.file("DESIGN.md",   designMd);
     zip.file(".htaccess",   buildHtaccess(siteUrl));
     zip.file("robots.txt",  buildRobots(siteUrl));
     zip.file("sitemap.xml", buildSitemap(siteUrl, now));
@@ -334,6 +368,9 @@ function toSlug(name: string): string {
 
 function buildHtaccess(siteUrl: string): string {
   const isHttps = siteUrl.startsWith("https://");
+  const httpsRedirect = isHttps
+    ? "<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTPS} off\n  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]\n</IfModule>"
+    : "# HTTPS redirect disabled (no HTTPS URL configured)";
   return `# ── Security headers ──────────────────────────────────────────────────
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
@@ -344,11 +381,7 @@ function buildHtaccess(siteUrl: string): string {
 </IfModule>
 
 # ── Redirect HTTP → HTTPS ────────────────────────────────────────────────
-${isHttps ? `<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteCond %{HTTPS} off
-  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-</IfModule>` : "# HTTPS redirect disabled (no HTTPS URL configured)"}
+${httpsRedirect}
 
 # ── Gzip compression ─────────────────────────────────────────────────────
 <IfModule mod_deflate.c>
@@ -381,6 +414,7 @@ AddDefaultCharset UTF-8
 </IfModule>
 `;
 }
+
 
 function buildRobots(siteUrl: string): string {
   return `User-agent: *
@@ -563,5 +597,331 @@ router.post("/projects/:id/theme", async (req: Request, res: Response) => {
     res.status(500).json({ error: "InternalError", message: "Failed to swap theme" });
   }
 });
+
+// GET /projects/:id/audit  — compile AI audit issues, suggestions & quality scores
+router.get("/projects/:id/audit", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const params = GetProjectParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    // Fetch last completed job for this project
+    const [latestJob] = await db
+      .select()
+      .from(aiJobsTable)
+      .where(and(eq(aiJobsTable.projectId, params.data.id), eq(aiJobsTable.status, "completed")))
+      .orderBy(desc(aiJobsTable.createdAt))
+      .limit(1);
+
+    if (!latestJob) {
+      res.json({
+        scores: {
+          visual: project.visualScore ?? 85,
+          seo: project.seoScore ?? 88,
+          accessibility: project.accessibilityScore ?? 84,
+          performance: project.performanceScore ?? 87,
+        },
+        issues: [],
+        suggestions: ["Generate your site first to get a full design critique."],
+      });
+      return;
+    }
+
+    const steps = await db
+      .select()
+      .from(aiJobStepsTable)
+      .where(eq(aiJobStepsTable.jobId, latestJob.id))
+      .orderBy(asc(aiJobStepsTable.order));
+
+    const issues: Array<{
+      category: string;
+      severity: string;
+      element: string;
+      description: string;
+      recommendation: string;
+    }> = [];
+    const suggestions: string[] = [];
+
+    for (const step of steps) {
+      if (!step.outputJson) continue;
+      try {
+        const parsed = JSON.parse(step.outputJson);
+        const rawText: string = parsed.output ?? "";
+        const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+        if (!cleaned) continue;
+        const stepData = JSON.parse(cleaned);
+
+        if (step.name === "Accessibility Audit") {
+          for (const iss of stepData.issues ?? []) {
+            issues.push({
+              category: "accessibility",
+              severity: iss.severity ?? "moderate",
+              element: iss.element ?? "",
+              description: iss.description ?? "",
+              recommendation: iss.recommendation ?? "",
+            });
+          }
+        } else if (step.name === "Performance Optimization") {
+          for (const iss of stepData.issues ?? []) {
+            issues.push({
+              category: "performance",
+              severity: iss.severity ?? "medium",
+              element: "",
+              description: iss.description ?? "",
+              recommendation: iss.recommendation ?? "",
+            });
+          }
+        } else if (step.name === "Quality Review") {
+          for (const desc of stepData.issues ?? []) {
+            if (typeof desc === "string") {
+              issues.push({
+                category: "design",
+                severity: "moderate",
+                element: "",
+                description: desc,
+                recommendation: "Review the section styling against the design system.",
+              });
+            }
+          }
+          for (const sug of stepData.suggestions ?? []) {
+            if (typeof sug === "string") suggestions.push(sug);
+          }
+        }
+      } catch {
+        // Silently skip unparseable steps
+      }
+    }
+
+    res.json({
+      scores: {
+        visual: project.visualScore ?? 85,
+        seo: project.seoScore ?? 88,
+        accessibility: project.accessibilityScore ?? 84,
+        performance: project.performanceScore ?? 87,
+      },
+      issues,
+      suggestions,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch project audit results");
+    res.status(500).json({ error: "InternalError", message: "Failed to fetch audit results" });
+  }
+});
+
+// ── Helper: Build DESIGN.md brand contract ────────────────────────────────────
+async function buildDesignMd(projectId: string, userId: string): Promise<string> {
+  const [project] = await db
+    .select()
+    .from(projectsTable)
+    .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, userId)));
+
+  if (!project) return "# Brand Contract\n\nProject not found.";
+
+  const [latestJob] = await db
+    .select()
+    .from(aiJobsTable)
+    .where(and(eq(aiJobsTable.projectId, projectId), eq(aiJobsTable.status, "completed")))
+    .orderBy(desc(aiJobsTable.createdAt))
+    .limit(1);
+
+  if (!latestJob) {
+    return "# DESIGN.md — Brand Contract: " + project.name + "\n\n> Generated by SiteCraft AI\n\nNo completed generation found. Run page generation to produce the full brand contract.\n";
+  }
+
+  const steps = await db
+    .select()
+    .from(aiJobStepsTable)
+    .where(eq(aiJobStepsTable.jobId, latestJob.id))
+    .orderBy(asc(aiJobStepsTable.order));
+
+  let businessAnalysis: Record<string, any> = {};
+  let brandStrategy: Record<string, any> = {};
+  let designDirector: Record<string, any> = {};
+  let componentPlanner: Record<string, any> = {};
+
+  for (const step of steps) {
+    if (!step.outputJson) continue;
+    try {
+      const parsed = JSON.parse(step.outputJson);
+      const rawText: string = parsed.output ?? "";
+      const cleaned = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      if (!cleaned) continue;
+      const stepData = JSON.parse(cleaned);
+
+      if (step.name === "Business Analysis") {
+        businessAnalysis = stepData.businessAnalysis ?? stepData;
+        if (stepData.brandStrategy) brandStrategy = stepData.brandStrategy;
+      } else if (step.name === "Brand Strategy") {
+        brandStrategy = { ...brandStrategy, ...stepData };
+      } else if (step.name === "Color & Typography") {
+        designDirector = stepData;
+      } else if (step.name === "Component Selection") {
+        componentPlanner = stepData;
+      }
+    } catch {
+      // Silently skip unparseable steps
+    }
+  }
+
+  // ── Build values ────────────────────────────────────────────────────────────
+  const brandName: string = (brandStrategy.brandName as string) || project.name;
+  const tagline: string = (brandStrategy.tagline as string) || "A premium digital experience";
+  const voiceTone: string = (brandStrategy.voiceTone as string) || "Professional and outcome-oriented";
+  const coreOffer: string = (brandStrategy.coreOffer as string) || "Professional services";
+  const primaryOutcome: string = (brandStrategy.primaryOutcome as string) || "Measurable business growth";
+  const audience: string = (businessAnalysis.audience as string) || "General Consumers";
+  const ctaHierarchyObj: Record<string, any> = (brandStrategy.ctaHierarchy as Record<string, any>) ?? {};
+  const primaryCta: string = (ctaHierarchyObj.primary as string) || "Get Started";
+  const secondaryCta: string = (ctaHierarchyObj.secondary as string) || "Learn More";
+  const personality: string[] = Array.isArray(brandStrategy.personality) ? brandStrategy.personality as string[] : ["Premium", "Outcome-focused"];
+  const differentiators: string[] = Array.isArray(businessAnalysis.differentiators) ? businessAnalysis.differentiators as string[] : [];
+  const riskReducers: string[] = Array.isArray(brandStrategy.riskReducers) ? brandStrategy.riskReducers as string[] : [];
+  const sectionPlan: any[] = Array.isArray(componentPlanner.sectionPlan) ? componentPlanner.sectionPlan as any[] : [];
+  const designSys: Record<string, any> = (designDirector.designSystem as Record<string, any>) ?? {};
+
+  const primaryColor: string = (designDirector.primaryColor as string) || "#6366f1";
+  const primaryDark: string = (designDirector.primaryDark as string) || "#4f46e5";
+  const accentColor: string = (designDirector.accentColor as string) || "#818cf8";
+  const backgroundColor: string = (designDirector.backgroundColor as string) || "#0a0a0f";
+  const cardColor: string = (designDirector.cardColor as string) || "rgba(255,255,255,0.03)";
+  const borderColor: string = (designDirector.borderColor as string) || "rgba(255,255,255,0.08)";
+  const fontFamily: string = (designDirector.fontFamily as string) || "Plus Jakarta Sans";
+  const monoFont: string = (designDirector.monoFont as string) || "JetBrains Mono";
+  const borderRadius: string = (designDirector.borderRadius as string) || "12px";
+  const bgApproach: string = (designSys.backgroundApproach as string) || "Layered radial glow effects with SVG grid overlay";
+  const cardStyle: string = (designSys.cardStyle as string) || "Frosted glass border with backdrop-filter: blur(12px)";
+  const buttonStyle: string = (designSys.buttonStyle as string) || "Gradient fill primary, glass secondary, subtle hover scale+shadow";
+  const decorativeElements: string = (designSys.decorativeElements as string) || "Ambient glow orbs, grid lines, floating geometry";
+
+  const today = new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
+
+  const lines: string[] = [
+    "# DESIGN.md — Brand Contract: " + brandName,
+    "",
+    "> Dynamically compiled by SiteCraft AI · " + today,
+    "",
+    "---",
+    "",
+    "## Brand Identity & Strategy",
+    "",
+    "**Tagline:** *" + tagline + "*",
+    "",
+    "### Voice & Tone",
+    "- **Personality:** " + personality.join(", "),
+    "- **Voice Tone:** " + voiceTone,
+    "",
+    "### Value Propositions",
+    "- **Core Offer:** " + coreOffer,
+    "- **Primary Outcome:** " + primaryOutcome,
+  ];
+
+  if (differentiators.length > 0) {
+    lines.push("", "### Differentiators");
+    for (const d of differentiators) lines.push("- " + d);
+  }
+
+  lines.push(
+    "",
+    "---",
+    "",
+    "## Design System",
+    "",
+    "### Color Palette (60/30/10 Rule Applied)",
+    "| Role | Value | Usage |",
+    "|---|---|---|",
+    "| Primary | `" + primaryColor + "` | 10% — CTAs, highlights, active states |",
+    "| Primary Dark | `" + primaryDark + "` | Hover states, gradients |",
+    "| Accent | `" + accentColor + "` | Badges, borders, glows |",
+    "| Background | `" + backgroundColor + "` | 60% — dominant space |",
+    "| Card/Surface | `" + cardColor + "` | 30% — structural surfaces |",
+    "| Border | `" + borderColor + "` | Subtle separators |",
+    "",
+    "### Typography",
+    "- **Headings Font:** " + fontFamily,
+    "- **Monospace / Code Font:** " + monoFont,
+    "- **Border Radius:** `" + borderRadius + "`",
+    "",
+    "### Craft Rules (Open Design Standards)",
+    "- Spacing multipliers: 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96 px",
+    "- Typography contrast: soft zinc/slate on light, off-white on dark (never pure #000 or #fff)",
+    "- Borders: 1px semi-transparent matching background brightness",
+    "- Color ratio: 60% background · 30% structural surfaces · 10% accent",
+    "",
+    "### Style Directives",
+    "- **Background Style:** " + bgApproach,
+    "- **Card Styling:** " + cardStyle,
+    "- **Button System:** " + buttonStyle,
+    "- **Decorative Elements:** " + decorativeElements,
+    "",
+    "---",
+    "",
+    "## Persuasive Architecture (UX Plan)",
+    "",
+    "### CTA Hierarchy",
+    "- **Primary:** *" + primaryCta + "*",
+    "- **Secondary:** *" + secondaryCta + "*",
+    "",
+    "### Page Structure",
+  );
+
+  if (sectionPlan.length > 0) {
+    for (let i = 0; i < sectionPlan.length; i++) {
+      const s: any = sectionPlan[i];
+      lines.push(
+        "#### " + (i + 1) + ". " + String(s.id).toUpperCase().replace(/-/g, " ") + " (" + String(s.type) + ")",
+        "- **Brief:** " + (String(s.brief || "Presents section content")),
+        "",
+      );
+    }
+  } else {
+    lines.push("Standard landing page structure: navbar → hero → features → testimonials → CTA → footer");
+  }
+
+  lines.push(
+    "",
+    "---",
+    "",
+    "## Target Audience & Persona",
+    "",
+    "- **Primary Target:** " + audience,
+  );
+
+  if (riskReducers.length > 0) {
+    lines.push("", "### Risk Reducers (Trust Signals)");
+    for (const r of riskReducers) lines.push("- " + r);
+  }
+
+  lines.push(
+    "",
+    "---",
+    "",
+    "## Quality Scores",
+    "| Metric | Score |",
+    "|---|---|",
+    "| Visual Quality | " + String(project.visualScore ?? 85) + "% |",
+    "| SEO & Social | " + String(project.seoScore ?? 88) + "% |",
+    "| Accessibility (WCAG 2.1 AA) | " + String(project.accessibilityScore ?? 84) + "% |",
+    "| Performance | " + String(project.performanceScore ?? 87) + "% |",
+    "",
+    "---",
+    "",
+    "*This brand contract was generated automatically by SiteCraft AI. Review and customize it as needed before sharing with your design team.*",
+  );
+
+  return lines.join("\n");
+}
 
 export default router;

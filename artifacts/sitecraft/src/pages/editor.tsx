@@ -7,7 +7,8 @@ import {
   RotateCcw, Download, FileCode2, FolderArchive, ChevronDown,
   Monitor, Tablet, Smartphone, Sparkles, Send, Zap,
   ExternalLink, Rocket, Loader2, Share2, Code, Moon, Sun,
-  Check, Copy, Eye, Sliders, MessageSquare,
+  Check, Copy, Eye, Sliders, MessageSquare, FileText, ShieldCheck,
+  BarChart3, AlertTriangle, CheckCircle2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,6 +58,20 @@ interface ChatMessage {
   timestamp: string;
 }
 
+interface AuditIssue {
+  category: string;
+  severity: string;
+  element: string;
+  description: string;
+  recommendation: string;
+}
+
+interface AuditData {
+  scores: { visual: number; seo: number; accessibility: number; performance: number };
+  issues: AuditIssue[];
+  suggestions: string[];
+}
+
 export default function ProjectEditor() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -79,6 +94,11 @@ export default function ProjectEditor() {
   const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
+  // Critique & Audit panel
+  const [rightTab, setRightTab] = useState<"chat" | "critique">("chat");
+  const [auditData, setAuditData] = useState<AuditData | null>(null);
+  const [isAuditLoading, setIsAuditLoading] = useState(false);
+
   // Chat message history
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -100,6 +120,22 @@ export default function ProjectEditor() {
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isRegenerating]);
+
+  // Fetch audit data when the Critique tab opens or project changes
+  useEffect(() => {
+    if (rightTab === "critique" && id && !auditData) {
+      setIsAuditLoading(true);
+      fetch(`/api/projects/${id}/audit`, { credentials: "include" })
+        .then((r) => r.json())
+        .then((data) => {
+          setAuditData(data);
+        })
+        .catch(() => {
+          // Silently fail; show empty state
+        })
+        .finally(() => setIsAuditLoading(false));
+    }
+  }, [rightTab, id, auditData]);
 
   const iframeUrl = project?.id
     ? `/api/projects/${project.id}/preview?t=${new Date(project.updatedAt).getTime()}&k=${iframeKey}`
@@ -371,7 +407,7 @@ export default function ProjectEditor() {
                   <Download className="h-3.5 w-3.5" /> Export <ChevronDown className="h-3 w-3 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem
                   onClick={() => triggerDownload(`/api/projects/${id}/export`)}
                   className="gap-2 cursor-pointer"
@@ -390,7 +426,18 @@ export default function ProjectEditor() {
                   <FolderArchive className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="font-medium text-sm">ZIP package</p>
-                    <p className="text-xs text-muted-foreground">+ .htaccess · robots.txt · sitemap</p>
+                    <p className="text-xs text-muted-foreground">+ DESIGN.md · .htaccess · sitemap</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => triggerDownload(`/api/projects/${id}/export/design-contract`)}
+                  className="gap-2 cursor-pointer"
+                >
+                  <FileText className="h-4 w-4 text-violet-500" />
+                  <div>
+                    <p className="font-medium text-sm text-violet-500">Brand Contract</p>
+                    <p className="text-xs text-muted-foreground">DESIGN.md · colors, tone, UX plan</p>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -438,121 +485,253 @@ export default function ProjectEditor() {
         </div>
       </div>
 
-      {/* ── Right panel: AI Chat Agent Feed ── */}
+      {/* ── Right panel: AI Chat + Critique tabs ── */}
       <div className="w-88 shrink-0 border-l border-border bg-card flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm">AI Agent Editor</h3>
-              <p className="text-[10px] text-muted-foreground">Direct your page edits in real-time</p>
-            </div>
-          </div>
-
-          <span className={cn(
-            "text-[10px] px-2 py-0.5 rounded-full font-mono font-medium border",
-            editsRemaining > 0 ? "bg-primary/10 text-primary border-primary/20" : "bg-destructive/10 text-destructive border-destructive/20"
-          )}>
-            {editCount}/{MAX_EDITS} edits
-          </span>
-        </div>
-
-        {/* Instant Palette Swapper */}
-        <div className="p-3 border-b border-border/60 bg-muted/20 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-            <Sliders className="h-3 w-3" /> Instant Theme Swapper (0 edits used)
-          </p>
-          <div className="grid grid-cols-3 gap-1.5">
-            {THEME_PRESETS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => handleSwapTheme(t.id)}
-                className={cn(
-                  "px-2 py-1.5 rounded-md text-[11px] font-medium flex items-center gap-1 truncate transition-transform hover:scale-105",
-                  t.bg,
-                )}
-                title={`Swap to ${t.label}`}
-              >
-                <t.icon className="h-3 w-3 shrink-0" />
-                <span className="truncate">{t.label.split(" ")[0]}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Chat message feed */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-muted/10">
-          {messages.map((m) => (
-            <div
-              key={m.id}
+        {/* Tab Header */}
+        <div className="border-b border-border bg-card">
+          <div className="flex">
+            <button
+              type="button"
+              onClick={() => setRightTab("chat")}
               className={cn(
-                "flex flex-col max-w-[90%] rounded-xl p-3 text-xs leading-relaxed",
-                m.sender === "user"
-                  ? "ml-auto bg-primary text-primary-foreground rounded-br-none shadow-sm"
-                  : "mr-auto bg-muted/60 text-foreground border border-border/50 rounded-bl-none",
+                "flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors border-b-2",
+                rightTab === "chat"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
-              <p>{m.text}</p>
-              <span className="text-[9px] opacity-60 mt-1 self-end">{m.timestamp}</span>
-            </div>
-          ))}
-          {isRegenerating && (
-            <div className="mr-auto bg-muted/60 text-foreground border border-border/50 rounded-xl rounded-bl-none p-3 text-xs flex items-center gap-2">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-              <span>Agents updating page code…</span>
+              <MessageSquare className="h-3.5 w-3.5" /> AI Chat
+            </button>
+            <button
+              type="button"
+              onClick={() => setRightTab("critique")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors border-b-2",
+                rightTab === "critique"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" /> Critique
+            </button>
+          </div>
+          {rightTab === "chat" && (
+            <div className="px-4 py-2 flex items-center justify-between">
+              <p className="text-[10px] text-muted-foreground">Direct your page edits in real-time</p>
+              <span className={cn(
+                "text-[10px] px-2 py-0.5 rounded-full font-mono font-medium border",
+                editsRemaining > 0 ? "bg-primary/10 text-primary border-primary/20" : "bg-destructive/10 text-destructive border-destructive/20"
+              )}>
+                {editCount}/{MAX_EDITS} edits
+              </span>
             </div>
           )}
-          <div ref={chatBottomRef} />
         </div>
 
-        {/* Quick action chips */}
-        <div className="p-2 border-t border-border bg-card flex gap-1.5 overflow-x-auto scrollbar-none">
-          {QUICK_EDITS.map((qe) => (
-            <button
-              key={qe.label}
-              type="button"
-              onClick={() => applyQuickEdit(qe.label)}
-              disabled={editsRemaining === 0 || isRegenerating}
-              className="px-2.5 py-1 rounded-full text-[11px] whitespace-nowrap bg-muted/40 hover:bg-primary/10 hover:text-primary border border-border/50 transition-colors shrink-0 disabled:opacity-40"
-            >
-              {qe.icon} {qe.label}
-            </button>
-          ))}
-        </div>
+        {/* ── Chat Tab ── */}
+        {rightTab === "chat" && (
+          <>
+            {/* Instant Palette Swapper */}
+            <div className="p-3 border-b border-border/60 bg-muted/20 space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                <Sliders className="h-3 w-3" /> Instant Theme Swapper (0 edits used)
+              </p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {THEME_PRESETS.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleSwapTheme(t.id)}
+                    className={cn(
+                      "px-2 py-1.5 rounded-md text-[11px] font-medium flex items-center gap-1 truncate transition-transform hover:scale-105",
+                      t.bg,
+                    )}
+                    title={`Swap to ${t.label}`}
+                  >
+                    <t.icon className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{t.label.split(" ")[0]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Input box */}
-        <div className="p-3 border-t border-border bg-card space-y-2">
-          <div className="relative">
-            <Textarea
-              ref={textareaRef}
-              placeholder="Tell the AI what to change..."
-              value={editInstruction}
-              onChange={(e) => setEditInstruction(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleRegenerate();
-                }
-              }}
-              disabled={editsRemaining === 0 || isRegenerating}
-              className="min-h-[70px] text-xs resize-none pr-10 bg-background/50"
-            />
-            <Button
-              size="icon"
-              className="absolute right-2 bottom-2 h-7 w-7 rounded-lg"
-              onClick={handleRegenerate}
-              disabled={!editInstruction.trim() || editsRemaining === 0 || isRegenerating}
-            >
-              <Send className="h-3.5 w-3.5" />
-            </Button>
+            {/* Chat message feed */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-muted/10">
+              {messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={cn(
+                    "flex flex-col max-w-[90%] rounded-xl p-3 text-xs leading-relaxed",
+                    m.sender === "user"
+                      ? "ml-auto bg-primary text-primary-foreground rounded-br-none shadow-sm"
+                      : "mr-auto bg-muted/60 text-foreground border border-border/50 rounded-bl-none",
+                  )}
+                >
+                  <p>{m.text}</p>
+                  <span className="text-[9px] opacity-60 mt-1 self-end">{m.timestamp}</span>
+                </div>
+              ))}
+              {isRegenerating && (
+                <div className="mr-auto bg-muted/60 text-foreground border border-border/50 rounded-xl rounded-bl-none p-3 text-xs flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                  <span>Agents updating page code…</span>
+                </div>
+              )}
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* Quick action chips */}
+            <div className="p-2 border-t border-border bg-card flex gap-1.5 overflow-x-auto scrollbar-none">
+              {QUICK_EDITS.map((qe) => (
+                <button
+                  key={qe.label}
+                  type="button"
+                  onClick={() => applyQuickEdit(qe.label)}
+                  disabled={editsRemaining === 0 || isRegenerating}
+                  className="px-2.5 py-1 rounded-full text-[11px] whitespace-nowrap bg-muted/40 hover:bg-primary/10 hover:text-primary border border-border/50 transition-colors shrink-0 disabled:opacity-40"
+                >
+                  {qe.icon} {qe.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Input box */}
+            <div className="p-3 border-t border-border bg-card space-y-2">
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="Tell the AI what to change..."
+                  value={editInstruction}
+                  onChange={(e) => setEditInstruction(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleRegenerate();
+                    }
+                  }}
+                  disabled={editsRemaining === 0 || isRegenerating}
+                  className="min-h-[70px] text-xs resize-none pr-10 bg-background/50"
+                />
+                <Button
+                  size="icon"
+                  className="absolute right-2 bottom-2 h-7 w-7 rounded-lg"
+                  onClick={handleRegenerate}
+                  disabled={!editInstruction.trim() || editsRemaining === 0 || isRegenerating}
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Critique & Audit Tab ── */}
+        {rightTab === "critique" && (
+          <div className="flex-1 overflow-y-auto">
+            {isAuditLoading ? (
+              <div className="flex items-center justify-center h-40 gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-xs">Loading design critique…</span>
+              </div>
+            ) : !auditData ? (
+              <div className="flex flex-col items-center justify-center h-40 gap-2 text-center px-4">
+                <ShieldCheck className="h-8 w-8 text-muted-foreground/40" />
+                <p className="text-xs text-muted-foreground">No audit data yet. Generate or edit your site to get a full design critique.</p>
+              </div>
+            ) : (
+              <>
+                {/* Score cards */}
+                <div className="p-3 border-b border-border/60 space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                    <BarChart3 className="h-3 w-3" /> Quality Scores
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { key: "visual", label: "Visual", color: "text-violet-400" },
+                      { key: "seo", label: "SEO", color: "text-emerald-400" },
+                      { key: "accessibility", label: "A11y", color: "text-blue-400" },
+                      { key: "performance", label: "Perf", color: "text-amber-400" },
+                    ] as const).map(({ key, label, color }) => {
+                      const score = Math.round(auditData.scores[key]);
+                      return (
+                        <div key={key} className="bg-muted/30 rounded-xl p-2.5 border border-border/50 flex flex-col gap-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-muted-foreground">{label}</span>
+                            <span className={cn("text-sm font-bold", color)}>{score}</span>
+                          </div>
+                          <div className="w-full h-1 rounded-full bg-border overflow-hidden">
+                            <div
+                              className={cn("h-full rounded-full transition-all",
+                                score >= 85 ? "bg-emerald-500" : score >= 70 ? "bg-amber-500" : "bg-red-500"
+                              )}
+                              style={{ width: `${score}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Issues */}
+                {auditData.issues.length > 0 && (
+                  <div className="p-3 border-b border-border/60 space-y-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3 text-amber-400" /> Issues ({auditData.issues.length})
+                    </p>
+                    <div className="space-y-2">
+                      {auditData.issues.slice(0, 8).map((issue, i) => (
+                        <div key={i} className="rounded-lg border border-border/50 bg-muted/20 p-2.5 space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn(
+                              "text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase",
+                              issue.severity === "critical" || issue.severity === "high"
+                                ? "bg-red-500/20 text-red-400"
+                                : issue.severity === "serious" || issue.severity === "medium"
+                                  ? "bg-amber-500/20 text-amber-400"
+                                  : "bg-blue-500/20 text-blue-400"
+                            )}>{issue.severity}</span>
+                            <span className="text-[9px] text-muted-foreground capitalize">{issue.category}</span>
+                          </div>
+                          <p className="text-[11px] text-foreground/80 leading-snug">{issue.description}</p>
+                          {issue.recommendation && (
+                            <p className="text-[10px] text-primary/70 leading-snug">→ {issue.recommendation}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Suggestions */}
+                {auditData.suggestions.length > 0 && (
+                  <div className="p-3 space-y-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Suggestions ({auditData.suggestions.length})
+                    </p>
+                    <div className="space-y-1.5">
+                      {auditData.suggestions.map((sug, i) => (
+                        <div key={i} className="flex gap-2 items-start">
+                          <span className="text-emerald-400 text-xs mt-0.5 shrink-0">✓</span>
+                          <p className="text-[11px] text-foreground/70 leading-snug">{sug}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {auditData.issues.length === 0 && auditData.suggestions.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-4">
+                    <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+                    <p className="text-xs text-muted-foreground">No issues found — your site passed all design checks!</p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Footer deploy CTA */}
+        {/* Footer deploy CTA (always visible) */}
         <div className="p-3 border-t border-border bg-muted/30">
           <Button
             className="w-full gap-2 h-9 text-xs"
