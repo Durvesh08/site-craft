@@ -60,10 +60,122 @@ function stripScriptExports(js: string): string {
 
 function patchHtml(html: string | null): string | null {
   if (!html) return null;
+
+  const helpers = `
+    if (typeof CountingNum === 'undefined') {
+      window.CountingNum = function CountingNum({ target, suffix = '', prefix = '', duration = 1.2 }) {
+        var ref = useRef(null);
+        var isInView = useInView(ref, { once: true, margin: '0px' });
+        var val = useMotionValue(0);
+        var spring = useSpring(val, { stiffness: 80, damping: 40 });
+        var [display, setDisplay] = useState('0');
+        useEffect(function() {
+          if (isInView) val.set(target);
+          return spring.on('change', function(v) {
+            setDisplay(Math.round(v).toLocaleString());
+          });
+        }, [isInView]);
+        return React.createElement('span', { ref: ref }, prefix, display, suffix);
+      };
+    }
+    if (typeof SplitReveal === 'undefined') {
+      window.SplitReveal = function SplitReveal({ text, stagger = 0.06, y = 24, delay = 0 }) {
+        var ref = useRef(null);
+        var isInView = useInView(ref, { once: true, margin: '-40px' });
+        var words = (text || '').split(' ');
+        return React.createElement('span', { ref: ref, style: { display: 'inline' } },
+          words.map(function(w, i) {
+            return React.createElement(motion.span, {
+              key: i,
+              style: { display: 'inline-block', marginRight: '0.25em' },
+              initial: { opacity: 0, y: y },
+              animate: isInView ? { opacity: 1, y: 0 } : {},
+              transition: { duration: 0.55, ease: 'easeOut', delay: delay + i * stagger }
+            }, w);
+          })
+        );
+      };
+    }
+    if (typeof ShimmerText === 'undefined') {
+      window.ShimmerText = function ShimmerText({ text, color = 'var(--primary)', shimColor = 'var(--foreground)' }) {
+        var chars = (text || '').split('');
+        return React.createElement('span', { style: { display: 'inline-block' } },
+          chars.map(function(c, i) {
+            return React.createElement(motion.span, {
+              key: i,
+              style: { display: 'inline-block', whiteSpace: 'pre' },
+              animate: { color: [color, shimColor, color] },
+              transition: { duration: 2, repeat: Infinity, repeatDelay: chars.length * 0.04, delay: (i * 2) / chars.length, ease: 'easeInOut' }
+            }, c);
+          })
+        );
+      };
+    }
+    if (typeof TypeWriter === 'undefined') {
+      window.TypeWriter = function TypeWriter({ phrases, speed = 60, hold = 1800, erase = 40 }) {
+        var [text, setText] = useState('');
+        var [idx, setIdx] = useState(0);
+        useEffect(function() {
+          var t;
+          if (!phrases || phrases.length === 0) return;
+          var phrase = phrases[idx % phrases.length];
+          var i = 0;
+          function type() {
+            if (i <= phrase.length) {
+              setText(phrase.slice(0, i++));
+              t = setTimeout(type, speed);
+            } else {
+              t = setTimeout(erase_, hold);
+            }
+          }
+          function erase_() {
+            if (i > 0) {
+              setText(phrase.slice(0, --i));
+              t = setTimeout(erase_, erase);
+            } else {
+              setIdx(function(p) { return p + 1; });
+            }
+          }
+          type();
+          return function() { clearTimeout(t); };
+        }, [idx, phrases]);
+        return React.createElement('span', null, 
+          text, 
+          React.createElement(motion.span, {
+            animate: { opacity: [1, 0] },
+            transition: { duration: 0.6, repeat: Infinity },
+            style: { display: 'inline-block', width: 2, height: '1em', background: 'currentColor', marginLeft: 2, verticalAlign: 'middle' }
+          })
+        );
+      };
+    }
+    if (typeof TiltCard === 'undefined') {
+      window.TiltCard = function TiltCard({ children, style }) {
+        var ref = useRef(null);
+        var x = useMotionValue(0);
+        var y = useMotionValue(0);
+        var rx = useSpring(x, { stiffness: 60, damping: 25 });
+        var ry = useSpring(y, { stiffness: 60, damping: 25 });
+        function onMove(e) {
+          var r = ref.current && ref.current.getBoundingClientRect();
+          if (!r) return;
+          x.set(((e.clientX - r.left) / r.width - 0.5) * 18);
+          y.set(((e.clientY - r.top) / r.height - 0.5) * -14);
+        }
+        return React.createElement(motion.div, {
+          ref: ref,
+          onMouseMove: onMove,
+          onMouseLeave: function() { x.set(0); y.set(0); },
+          style: Object.assign({ rotateX: rx, rotateY: ry, transformStyle: 'preserve-3d', transformPerspective: 800 }, style || {})
+        }, children);
+      };
+    }
+  `;
+
   // Target only the generated landing page <script> (after the React runtime)
   return html.replace(
     /(<!-- Generated landing page -->\s*<script\b[^>]*>)([\s\S]*?)(<\/script>)/,
-    (_, open, js: string, close) => open + stripScriptExports(js) + close,
+    (_, open, js: string, close) => open + helpers + stripScriptExports(js) + close,
   );
 }
 
@@ -233,7 +345,7 @@ router.get("/projects/:id/preview", async (req: Request, res: Response) => {
     // Serve as inline HTML (not download) — for iframe src or fullscreen preview
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.send(project.generatedHtml);
+    res.send(patchHtml(project.generatedHtml) ?? project.generatedHtml);
   } catch (err) {
     req.log.error({ err }, "Failed to serve project preview");
     res.status(500).json({ error: "InternalError", message: "Failed to load preview" });
