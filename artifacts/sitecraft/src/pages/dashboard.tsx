@@ -83,26 +83,26 @@ export default function Dashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "ready":
-        return <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200">Ready</Badge>;
+        return <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border border-emerald-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 shrink-0">Ready</Badge>;
       case "deployed":
-        return <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border-blue-200">Deployed</Badge>;
+        return <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border border-indigo-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 shrink-0">Deployed</Badge>;
       case "generating":
-        return <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-200">Generating</Badge>;
+        return <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 animate-pulse shrink-0">Generating</Badge>;
       case "failed":
-        return <Badge variant="destructive" className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">Failed</Badge>;
+        return <Badge className="bg-rose-50 text-rose-700 hover:bg-rose-50 border border-rose-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 shrink-0">Failed</Badge>;
       default:
-        return <Badge variant="secondary" className="bg-slate-500/10 text-slate-600 hover:bg-slate-500/20 border-slate-200">Draft</Badge>;
+        return <Badge className="bg-slate-50 text-slate-700 hover:bg-slate-50 border border-slate-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 shrink-0">Draft</Badge>;
     }
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
+    <div className="p-8 max-w-7xl mx-auto space-y-10 animate-fade-in bg-background min-h-screen">
+      <div className="flex items-center justify-between border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Command Center</h1>
-          <p className="text-muted-foreground mt-1">Overview of your generated web properties.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Command Center</h1>
+          <p className="text-muted-foreground text-sm mt-1">Manage and deploy your premium generated web properties.</p>
         </div>
-        <Button asChild className="gap-2">
+        <Button asChild className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/10 h-10 px-5 rounded-lg font-medium transition-all">
           <Link href="/new">
             <PlusCircle className="h-4 w-4" />
             New Project
@@ -111,76 +111,84 @@ export default function Dashboard() {
       </div>
 
       {/* Analytics Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="glass-panel">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="glass-panel hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Projects</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 border border-slate-100">
+              <Activity className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             {isLoadingAnalytics ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold">{analytics?.totalProjects ?? projects.length}</div>
+              <div className="text-3xl font-bold text-slate-900 tracking-tight">{analytics?.totalProjects ?? projects.length}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Active site properties</p>
+            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">Active site properties</p>
           </CardContent>
         </Card>
         
-        <Card className="glass-panel">
+        <Card className="glass-panel hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Deployed Sites</CardTitle>
-            <Globe className="h-4 w-4 text-emerald-500" />
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">Deployed Sites</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100/60">
+              <Globe className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             {isLoadingAnalytics ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold text-emerald-600">{(analytics as any)?.deployedProjects ?? projects.filter(p => p.status === 'deployed').length}</div>
+              <div className="text-3xl font-bold text-indigo-600 tracking-tight">{(analytics as any)?.deployedProjects ?? projects.filter(p => p.status === 'deployed').length}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Live on custom domain / web</p>
+            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">Live on custom domains</p>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel">
+        <Card className="glass-panel hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Deployments</CardTitle>
-            <Clock className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">Deployments</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100/60">
+              <Clock className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             {isLoadingAnalytics ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold">{analytics?.totalDeployments ?? 0}</div>
+              <div className="text-3xl font-bold text-slate-900 tracking-tight">{analytics?.totalDeployments ?? 0}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Total deployment actions</p>
+            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">Total deployment actions</p>
           </CardContent>
         </Card>
 
-        <Card className="glass-panel">
+        <Card className="glass-panel hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">AI Generation Jobs</CardTitle>
-            <Activity className="h-4 w-4 text-purple-500" />
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">AI Generation Jobs</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 border border-purple-100/60">
+              <Activity className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-2">
             {isLoadingAnalytics ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <div className="text-2xl font-bold">{(analytics as any)?.totalAiJobs ?? (analytics as any)?.totalGenerations ?? 0}</div>
+              <div className="text-3xl font-bold text-slate-900 tracking-tight">{(analytics as any)?.totalAiJobs ?? (analytics as any)?.totalGenerations ?? 0}</div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Completed agent workflows</p>
+            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">Completed agent workflows</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Projects List */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold tracking-tight">Recent Projects</h2>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between border-b border-border/40 pb-3">
+          <h2 className="text-lg font-semibold tracking-tight text-slate-900">Recent Projects</h2>
         </div>
         
         {isLoadingProjects ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <Card key={i} className="glass-panel">
                 <CardHeader className="gap-2">
@@ -195,25 +203,25 @@ export default function Dashboard() {
             ))}
           </div>
         ) : projects.length === 0 ? (
-          <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed glass-panel">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Globe className="h-6 w-6 text-primary" />
+          <Card className="flex flex-col items-center justify-center p-16 text-center border-dashed border-2 border-border/80 bg-card rounded-2xl shadow-sm">
+            <div className="h-14 w-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-5 text-indigo-600">
+              <Globe className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
-            <p className="text-muted-foreground max-w-sm mb-6">
-              Start your first AI-directed web project in 3 simple steps.
+            <h3 className="text-lg font-bold text-slate-900 mb-2">No projects yet</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mb-6 leading-relaxed">
+              Start your first AI-directed web project. The agents will build and design everything.
             </p>
-            <Button asChild>
+            <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-6">
               <Link href="/new">Create Project</Link>
             </Button>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <Card key={project.id} className="group glass-panel hover:border-primary/30 transition-colors flex flex-col">
-                <CardHeader className="pb-3 flex-none">
-                  <div className="flex justify-between items-start mb-1">
-                    <CardTitle className="text-lg truncate pr-2" title={project.name}>
+              <Card key={project.id} className="group glass-panel hover:border-indigo-200/80 hover:shadow-md flex flex-col rounded-2xl overflow-hidden">
+                <CardHeader className="pb-3 flex-none bg-slate-50/50 border-b border-border/40 px-5 py-4">
+                  <div className="flex justify-between items-center gap-2 mb-1">
+                    <CardTitle className="text-base font-semibold text-slate-900 truncate" title={project.name}>
                       {project.name}
                     </CardTitle>
                     <div className="flex items-center gap-1 shrink-0">
@@ -221,7 +229,7 @@ export default function Dashboard() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-7 w-7 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-all"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -229,12 +237,12 @@ export default function Dashboard() {
                         }}
                         title="Settings"
                       >
-                        <Settings className="h-4 w-4" />
+                        <Settings className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-7 w-7 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -242,50 +250,50 @@ export default function Dashboard() {
                         }}
                         title="Delete project"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
-                  <CardDescription className="flex items-center gap-1.5 text-xs font-mono">
-                    <Clock className="h-3 w-3" />
-                    {project.updatedAt ? format(new Date(project.updatedAt), "MMM d, yyyy") : "Recently"}
+                  <CardDescription className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                    <Clock className="h-3 w-3 text-slate-400" />
+                    Updated {project.updatedAt ? format(new Date(project.updatedAt), "MMM d, yyyy") : "Recently"}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
+                <CardContent className="flex-1 flex flex-col p-5">
+                  <p className="text-xs text-slate-500 line-clamp-3 mb-5 flex-1 leading-relaxed">
                     {project.businessDescription || "No description provided."}
                   </p>
                   
                   {project.status === "generating" ? (
-                    <Button variant="secondary" className="w-full gap-2 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-200" asChild>
+                    <Button variant="secondary" className="w-full gap-2 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-200/50 rounded-lg h-9 text-xs font-semibold" asChild>
                       <Link href={`/projects/${project.id}/generate`}>
-                        <Activity className="h-4 w-4 animate-pulse" />
+                        <Activity className="h-3.5 w-3.5 animate-pulse" />
                         View Progress
                       </Link>
                     </Button>
                   ) : project.status === "failed" ? (
-                    <Button variant="destructive" className="w-full gap-2" asChild>
+                    <Button variant="destructive" className="w-full gap-2 rounded-lg h-9 text-xs font-semibold" asChild>
                       <Link href={`/projects/${project.id}/generate`}>
-                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTriangle className="h-3.5 w-3.5" />
                         View Error
                       </Link>
                     </Button>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 mt-auto">
-                      <Button variant="outline" size="sm" asChild>
+                      <Button variant="outline" size="sm" className="rounded-lg h-9 text-xs font-semibold border-slate-200 text-slate-700 hover:bg-slate-50" asChild>
                         <Link href={`/projects/${project.id}/editor`}>
                           Open Editor
                         </Link>
                       </Button>
                       {project.liveUrl ? (
-                        <Button size="sm" className="gap-1.5" asChild>
+                        <Button size="sm" className="gap-1.5 rounded-lg h-9 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" asChild>
                           <a href={project.liveUrl} target="_blank" rel="noreferrer">
                             View Live
                             <ArrowRight className="h-3 w-3" />
                           </a>
                         </Button>
                       ) : (
-                        <Button size="sm" variant="outline" disabled className="gap-1.5 opacity-50 cursor-not-allowed">
+                        <Button size="sm" variant="outline" disabled className="gap-1.5 opacity-40 cursor-not-allowed rounded-lg h-9 text-xs font-semibold bg-slate-50 text-slate-400 border-slate-100">
                           Not Deployed
                         </Button>
                       )}

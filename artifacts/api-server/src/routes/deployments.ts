@@ -180,15 +180,46 @@ AddDefaultCharset UTF-8
 
 function buildDeployFiles(html: string, siteUrl: string) {
   const baseUrl = siteUrl.replace(/\/$/, "");
-  return [
-    { name: "index.html", content: patchHtmlForDeployment(html) },
+  const files: Array<{ name: string; content: string }> = [];
+
+  const isMultiPage = html.trimStart().startsWith("{");
+
+  if (isMultiPage) {
+    try {
+      const pages: Record<string, string> = JSON.parse(html);
+      for (const [name, content] of Object.entries(pages)) {
+        files.push({ name, content: patchHtmlForDeployment(content) });
+      }
+    } catch {
+      // Fallback
+      files.push({ name: "index.html", content: patchHtmlForDeployment(html) });
+    }
+  } else {
+    files.push({ name: "index.html", content: patchHtmlForDeployment(html) });
+  }
+
+  // Add utilities
+  files.push(
     { name: "robots.txt", content: `User-agent: *\nAllow: /\n\nSitemap: ${baseUrl}/sitemap.xml\n` },
-    { name: ".htaccess", content: buildHtaccess() },
-    {
-      name: "sitemap.xml",
-      content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${baseUrl}/</loc><priority>1.0</priority></url>\n</urlset>\n`,
-    },
-  ];
+    { name: ".htaccess", content: buildHtaccess() }
+  );
+
+  // Dynamic sitemap
+  const sitemapUrls = files
+    .filter(f => f.name.endsWith(".html"))
+    .map(f => {
+      const path = f.name === "index.html" ? "" : f.name;
+      const priority = f.name === "index.html" ? "1.0" : "0.8";
+      return `  <url><loc>${baseUrl}/${path}</loc><priority>${priority}</priority></url>`;
+    })
+    .join("\n");
+
+  files.push({
+    name: "sitemap.xml",
+    content: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapUrls}\n</urlset>\n`,
+  });
+
+  return files;
 }
 
 async function resolveCredentials(

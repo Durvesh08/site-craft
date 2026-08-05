@@ -90,6 +90,10 @@ export default function ProjectEditor() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
+  // Multi-page state
+  const [pages, setPages] = useState<string[]>(["index.html"]);
+  const [currentPage, setCurrentPage] = useState<string>("index.html");
+
   // Dialog states
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
@@ -109,6 +113,31 @@ export default function ProjectEditor() {
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
+
+  // Load pages list on load/update
+  useEffect(() => {
+    if (id) {
+      fetch(`/api/projects/${id}/pages`, { credentials: "include" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && Array.isArray(data.pages)) {
+            setPages(data.pages);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [id, project?.updatedAt]);
+
+  // Listen for navigation events from the preview iframe
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data && e.data.type === "sc-navigate" && typeof e.data.page === "string") {
+        setCurrentPage(e.data.page);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   // Load edit count from localStorage per project
   useEffect(() => {
@@ -139,7 +168,7 @@ export default function ProjectEditor() {
   }, [rightTab, id, auditData]);
 
   const iframeUrl = project?.id
-    ? `/api/projects/${project.id}/preview?t=${new Date(project.updatedAt).getTime()}&k=${iframeKey}`
+    ? `/api/projects/${project.id}/preview?page=${currentPage}&t=${new Date(project.updatedAt).getTime()}&k=${iframeKey}`
     : null;
 
   const triggerDownload = (url: string) => {
@@ -335,9 +364,23 @@ export default function ProjectEditor() {
 
 
 
+  const getPageCode = () => {
+    if (!project?.generatedHtml) return "<!-- No code generated yet -->";
+    const html = project.generatedHtml;
+    if (html.trim().startsWith("{")) {
+      try {
+        const parsed = JSON.parse(html);
+        return parsed[currentPage] || parsed["index.html"] || Object.values(parsed)[0] || "<!-- Page not found -->";
+      } catch {
+        return html;
+      }
+    }
+    return html;
+  };
+
   const handleCopyCode = () => {
-    if (!project?.generatedHtml) return;
-    navigator.clipboard.writeText(project.generatedHtml);
+    const code = getPageCode();
+    navigator.clipboard.writeText(code);
     setCopiedCode(true);
     toast.success("HTML copied to clipboard!");
     setTimeout(() => setCopiedCode(false), 2000);
@@ -369,6 +412,30 @@ export default function ProjectEditor() {
               );
             })}
           </div>
+          
+          {/* Page Switcher Tabs */}
+          {pages.length > 1 && (
+            <div className="hidden md:flex items-center gap-1.5 bg-muted/30 rounded-lg p-0.5 border border-border/50 max-w-md overflow-x-auto">
+              {pages.map((p) => {
+                const displayLabel = p.replace(".html", "").replace(/^index$/, "home");
+                const capitalized = displayLabel.charAt(0).toUpperCase() + displayLabel.slice(1);
+                return (
+                  <Button
+                    key={p}
+                    variant={currentPage === p ? "secondary" : "ghost"}
+                    size="sm"
+                    className={cn(
+                      "h-7 px-3 text-xs capitalize font-medium rounded-md transition-all duration-200",
+                      currentPage === p ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                    onClick={() => setCurrentPage(p)}
+                  >
+                    {capitalized}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-2">
@@ -759,14 +826,19 @@ export default function ProjectEditor() {
                 {copiedCode ? "Copied" : "Copy Code"}
               </Button>
             </DialogTitle>
-            <DialogDescription>
-              Exportable single-file HTML bundle. Can be hosted anywhere.
+             <DialogDescription className="flex items-center justify-between">
+              <span>Exportable single-file HTML bundle. Can be hosted anywhere.</span>
+              {pages.length > 1 && (
+                <span className="text-xs font-semibold text-primary">
+                  Viewing: {currentPage}
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-auto rounded-lg border border-border bg-[#0d1117] p-4 text-xs font-mono text-slate-200">
             <pre className="whitespace-pre-wrap break-all">
-              {project?.generatedHtml || "<!-- No code generated yet -->"}
+              {getPageCode()}
             </pre>
           </div>
         </DialogContent>

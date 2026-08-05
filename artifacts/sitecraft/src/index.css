@@ -89,38 +89,38 @@
 
 @layer base {
   :root {
-    /* Background: A very light cool gray */
-    --background: 216 20% 97%;
-    --foreground: 220 40% 15%;
+    /* Background: Clean Off-White */
+    --background: 0 0% 98%;
+    --foreground: 224 71.4% 4.1%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 40% 15%;
+    --card-foreground: 224 71.4% 4.1%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 40% 15%;
+    --popover-foreground: 224 71.4% 4.1%;
 
-    /* Primary: Electric Blue / Ultramarine */
-    --primary: 230 90% 55%;
+    /* Primary: Deep Indigo / Ultramarine */
+    --primary: 250 85% 50%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Soft cool slate */
-    --secondary: 216 20% 90%;
+    /* Secondary: Soft light grey */
+    --secondary: 220 13% 95%;
     --secondary-foreground: 220 40% 25%;
 
-    --muted: 216 15% 92%;
-    --muted-foreground: 220 20% 45%;
+    --muted: 220 13% 95%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 230 90% 95%;
-    --accent-foreground: 230 90% 40%;
+    --accent: 250 85% 96%;
+    --accent-foreground: 250 85% 45%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 216 20% 88%;
-    --input: 216 20% 88%;
-    --ring: 230 90% 55%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 250 85% 50%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 
   .dark {
@@ -186,5 +186,5 @@
 }
 
 .glass-panel {
-  @apply bg-card/80 backdrop-blur-md border border-border/50 shadow-sm;
+  @apply bg-card border border-border/80 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05),0_1px_3px_-1px_rgba(0,0,0,0.03)] rounded-xl transition-all duration-300;
 }

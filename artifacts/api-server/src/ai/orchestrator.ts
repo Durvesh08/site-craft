@@ -17,6 +17,7 @@ import {
   buildSectionPrompt,
   buildGlobalCSS,
   assembleHTML,
+  assembleMultiPageHTML,
   stripModuleStatements,
   type SectionCode,
 } from "./sectionAssembler";
@@ -476,7 +477,7 @@ export async function runGeneration(
           } catch { /* keep defaults */ }
 
           const globalCSS = buildGlobalCSS(agentOutputs["design-director"] ?? "{}", branding);
-          const html = await assembleHTML(sections, {
+          const html = await assembleMultiPageHTML(sections, {
             title,
             description,
             faviconUrl: branding["favicon_url"],
@@ -1311,10 +1312,17 @@ Return ONLY valid JSON (no markdown fences):
   "confidence": number
 }`,
 
-    "ux-strategist": `You are an elite UX Strategist, Information Architect, and Creative Director. Plan a premium landing page layout for a Stripe/Linear/Framer-tier product.
+    "ux-strategist": `You are an elite UX Strategist, Information Architect, and Creative Director. Plan a premium website layout for a Stripe/Linear/Framer-tier product.
 ${ctx}
 
-MISSION: Plan 7-10 sections as individual React components. The result must look world-class — never generic. Vary the hero type and section mix based on this specific business, not a standard template.
+MISSION: Plan 7-12 sections as individual React components. The result must look world-class — never generic. Vary the hero type and section mix based on this specific business, not a standard template.
+
+MULTI-PAGE DECISION:
+- For simple products, portfolios, or landing pages: plan a single-page site (all sections on "index.html").
+- For complex businesses, SaaS platforms, agencies, or when the user explicitly asks for multiple pages: plan a 2-4 page site.
+- When multi-page, split sections across pages: e.g. "index.html" (hero + key features + social proof + CTA), "about.html" (team/story + values + timeline), "contact.html" (contact form + map + FAQ), "features.html" (deep feature grid + comparison).
+- Each page MUST have its own navbar and footer.
+- The navbar links must reference the other pages by filename (e.g. href="about.html" NOT href="#about").
 
 HERO OPTIONS — pick the one that fits this brand:
 - gradient-hero: centered, large headline, aurora/mesh background, trust strip below CTAs
@@ -1322,22 +1330,24 @@ HERO OPTIONS — pick the one that fits this brand:
 - split-hero: 50/50 split, strong typography left, visual element right — best for visual products
 - emblem-hero: centered, large brand emblem or icon + headline — best for communities, brands
 
-SECTION PALETTE (choose 7-10 to tell this brand's story):
+SECTION PALETTE (choose 7-12 to tell this brand's story):
 navbar, gradient-hero, product-mockup-hero, split-hero, logo-cloud-grid, animated-stat-counters,
 bento-feature-grid, alternating-feature-rows, numbered-steps-timeline, integration-chip-grid,
 live-activity-widget, testimonial-carousel, testimonial-wall, tiered-pricing-cards,
-comparison-table, gradient-cta-banner, faq-accordion, footer-with-newsletter
+comparison-table, gradient-cta-banner, faq-accordion, footer-with-newsletter,
+team-grid, about-story-section, contact-form-section, feature-deep-dive
 
 RULES:
-- navbar always first, footer always last
+- navbar always first on every page, footer always last on every page
 - Include at least: hero + features/bento + social proof + CTA + footer
 - Choose sections that logically tell this specific business's story
 - Each page must have a unique section order — avoid identical generic layouts
 - Define the persuasive job of every section: attention, understanding, desire, proof, objection handling, conversion
 - Plan mobile scan order explicitly so the generated sections remain strong on narrow screens
+- Every section must include "page" field — the filename it belongs to (e.g. "index.html", "about.html")
 
 Return ONLY valid JSON (no markdown fences):
-{ "sections": [{ "name": string, "type": string, "purpose": string, "conversionJob": string, "mobilePriority": string, "order": number }], "heroType": string, "layoutRationale": string, "aboveFoldCta": string, "navLabels": string[], "confidence": number }`,
+{ "sections": [{ "name": string, "type": string, "purpose": string, "conversionJob": string, "mobilePriority": string, "order": number, "page": string }], "pages": string[], "heroType": string, "layoutRationale": string, "aboveFoldCta": string, "navLabels": string[], "confidence": number }`,
 
     "copywriter": `You are a world-class Copywriter, Audience Personalizer, and SEO specialist. Write bold, outcome-focused, conversion-optimized copy, metadata, and audience-targeted adjustments.
 ${ctx}
@@ -1393,9 +1403,10 @@ For each section specify:
 - id: short kebab-case identifier
 - type: exact component type from the UX layout plan
 - order: numeric order (0 = first)
+- page: the HTML filename this section belongs to (e.g. "index.html", "about.html"). Default to "index.html" if single-page.
 - brief: 2-3 sentence brief detailing unique visual layout techniques (asymmetric grid, timeline, comparison) to prevent duplicate look and feel.
 Return ONLY valid JSON:
-{ "sectionPlan": [{ "id": string, "type": string, "order": number, "brief": string, "mobileBehavior": string, "visualAccent": string }], "headlineStyle": "gradient-text"|"solid-text"|"split-color-text", "gradientColors": string|null, "heroType": string, "responsiveRules": string[], "confidence": number }`,
+{ "sectionPlan": [{ "id": string, "type": string, "order": number, "page": string, "brief": string, "mobileBehavior": string, "visualAccent": string }], "headlineStyle": "gradient-text"|"solid-text"|"split-color-text", "gradientColors": string|null, "heroType": string, "responsiveRules": string[], "confidence": number }`,
 
     "motion-designer": `You are a Motion Designer, Animation Choreographer, and 3D Visual Effects specialist. Plan the entire animation, camera flows, particle systems, and micro-interactions.
 ${ctx}

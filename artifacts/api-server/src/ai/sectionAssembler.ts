@@ -21,6 +21,7 @@ export interface SectionPlan {
   type: string;
   order: number;
   brief: string;
+  page?: string; // e.g. 'index.html', 'about.html' — defaults to 'index.html'
 }
 
 export interface SectionCode {
@@ -75,6 +76,7 @@ export function parseSectionPlan(componentPlannerOutput: string): SectionPlan[] 
         type: s.type ?? s.componentType ?? "content-section",
         order: typeof s.order === "number" ? s.order : i,
         brief: details,
+        page: typeof s.page === "string" ? s.page : undefined,
       };
     });
 
@@ -1413,6 +1415,8 @@ export async function assembleHTML(
     logoUrl?: string;
     copywriterOutput?: string;
     pixelCode?: string;
+    currentPage?: string;    // e.g. 'index.html'
+    allPages?: string[];     // e.g. ['index.html', 'about.html', 'contact.html']
   },
 ): Promise<string> {
   const { transform } = await import("esbuild");
@@ -1450,6 +1454,8 @@ export async function assembleHTML(
     `var _scTestimonials = _scCopyData.testimonials || [];`,
     `var _scFAQ       = _scCopyData.faq || [];`,
     `var _scStats     = _scCopyData.stats || [];`,
+    `var _scCurrentPage = '${(context.currentPage || 'index.html').replace(/'/g, "\\\'")}';`,
+    `var _scAllPages  = ${JSON.stringify(context.allPages || ['index.html']).replace(/<\/script/gi, '<\\/script')};`,
     `var React        = window.React;`,
     `var ReactDOM     = window.ReactDOM || window.React;`,
     // ── React hooks: ALL 17, with safe fallback to React.* ──
@@ -1810,7 +1816,7 @@ export async function assembleHTML(
 
   const runtimeScript = safeInlineScript(REACT_RUNTIME_JS);
   const pageScript = safeInlineScript(transpiledJS);
-  const pixelScript = context.pixelCode ? `\n  ${context.pixelCode}` : "";
+  const pixelScript = `\n  <!-- PIXEL_CODE_START -->${context.pixelCode || ""}<!-- PIXEL_CODE_END -->`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1880,6 +1886,16 @@ ${context.globalCSS}
         e.stopPropagation();
         return;
       }
+      // Allow internal page navigation for multi-page sites (e.g. about.html, contact.html)
+      if (/^[a-z0-9_-]+\.html$/i.test(href)) {
+        // In iframe context (editor preview), send message to parent instead of navigating
+        if (window.parent !== window) {
+          e.preventDefault();
+          window.parent.postMessage({ type: 'sc-navigate', page: href }, '*');
+        }
+        // Otherwise let the browser navigate normally (standalone/deployed)
+        return;
+      }
       if (/^https?:\/\//i.test(href)) {
         e.preventDefault();
         window.open(href, '_blank', 'noopener,noreferrer');
@@ -1894,6 +1910,69 @@ ${context.globalCSS}
   <script>${pageScript}</script>
 </body>
 </html>`;
+}
+
+/**
+ * Assemble a multi-page website. Groups sections by their `plan.page` field,
+ * runs `assembleHTML` for each page, and returns:
+ * - A JSON string mapping filename → HTML when there are 2+ pages
+ * - A plain HTML string when there is only 1 page (backward compatible)
+ */
+export async function assembleMultiPageHTML(
+  sections: SectionCode[],
+  context: {
+    title: string;
+    description: string;
+    faviconUrl?: string;
+    globalCSS: string;
+    companyName?: string;
+    logoUrl?: string;
+    copywriterOutput?: string;
+    pixelCode?: string;
+  },
+): Promise<string> {
+  // Group sections by page (default to index.html)
+  const pageMap = new Map<string, SectionCode[]>();
+  for (const section of sections) {
+    const pageName = section.plan.page || "index.html";
+    if (!pageMap.has(pageName)) pageMap.set(pageName, []);
+    pageMap.get(pageName)!.push(section);
+  }
+
+  const allPages = Array.from(pageMap.keys()).sort((a, b) => {
+    // index.html always first
+    if (a === "index.html") return -1;
+    if (b === "index.html") return 1;
+    return a.localeCompare(b);
+  });
+
+  // Single page — return plain HTML string (backward compatible)
+  if (allPages.length <= 1) {
+    return assembleHTML(sections, {
+      ...context,
+      currentPage: allPages[0] || "index.html",
+      allPages,
+    });
+  }
+
+  // Multi-page — assemble each page separately
+  const result: Record<string, string> = {};
+  for (const pageName of allPages) {
+    const pageSections = pageMap.get(pageName)!;
+    const pageLabel = pageName.replace(".html", "").replace(/^index$/, "");
+    const pageTitle = pageLabel
+      ? `${context.title} — ${pageLabel.charAt(0).toUpperCase() + pageLabel.slice(1)}`
+      : context.title;
+
+    result[pageName] = await assembleHTML(pageSections, {
+      ...context,
+      title: pageTitle,
+      currentPage: pageName,
+      allPages,
+    });
+  }
+
+  return JSON.stringify(result);
 }
 
 // ---------------------------------------------------------------------------

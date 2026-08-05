@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Rocket, Globe, Server, CheckCircle, XCircle, Clock,
   ExternalLink, Link2, RefreshCw, ChevronDown, ChevronUp,
-  Terminal, AlertTriangle, Trash2, Code2, Cloud,
+  Terminal, AlertTriangle, Trash2, Code2, Cloud, Github,
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // ── Deployment log viewer ────────────────────────────────────────────────────
 
@@ -239,6 +240,12 @@ export default function Deployments() {
   const [testStatus, setTestStatus] = useState<"none" | "testing" | "ok" | "fail">("none");
   const [testError, setTestError] = useState("");
 
+  // Platform choice and third party deploy state
+  const [deployTab, setDeployTab] = useState<"ftp" | "netlify" | "github">("ftp");
+  const [netlifyToken, setNetlifyToken] = useState(() => localStorage.getItem("sc_netlify_token") || "");
+  const [githubToken, setGithubToken] = useState(() => localStorage.getItem("sc_github_token") || "");
+  const [isDeployingThirdParty, setIsDeployingThirdParty] = useState(false);
+
   const projects = projectsData?.projects ?? [];
   const activeProjectId = viewProjectId || projects[0]?.id || "";
 
@@ -375,6 +382,57 @@ export default function Deployments() {
     }
   };
 
+  const handleDeployNetlify = async () => {
+    if (!selectedProjectId) { toast.error("Select a project first"); return; }
+    if (!netlifyToken.trim()) { toast.error("Please enter a Netlify token"); return; }
+    
+    setIsDeployingThirdParty(true);
+    localStorage.setItem("sc_netlify_token", netlifyToken.trim());
+    try {
+      const res = await fetch(`/api/projects/${selectedProjectId}/deploy/netlify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ netlifyToken: netlifyToken.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Netlify deployment failed");
+      
+      toast.success("Successfully deployed to Netlify! 🎉");
+      setIsDeployModalOpen(false);
+      setTimeout(refetch, 1000);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to deploy to Netlify");
+    } finally {
+      setIsDeployingThirdParty(false);
+    }
+  };
+
+  const handleDeployGithub = async () => {
+    if (!selectedProjectId) { toast.error("Select a project first"); return; }
+    if (!githubToken.trim()) { toast.error("Please enter a GitHub token"); return; }
+    
+    setIsDeployingThirdParty(true);
+    localStorage.setItem("sc_github_token", githubToken.trim());
+    try {
+      const res = await fetch(`/api/projects/${selectedProjectId}/deploy/github-pages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ githubToken: githubToken.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "GitHub Pages deployment failed");
+      
+      toast.success("Successfully deployed to GitHub Pages! 🎉 Site will be live in 1-2 minutes.");
+      setIsDeployModalOpen(false);
+      setTimeout(refetch, 1000);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to deploy to GitHub Pages");
+    } finally {
+      setIsDeployingThirdParty(false);
+    }
+  };
+
+
   // Connection status indicator chip
   const ConnectionStatus = () => {
     if (testStatus === "none") return null;
@@ -437,7 +495,7 @@ export default function Deployments() {
             <DialogHeader>
               <DialogTitle>Deploy Website</DialogTitle>
               <DialogDescription>
-                Upload your site to your hosting server via FTP, FTPS, or SFTP.
+                Choose your hosting target to publish your generated site live.
               </DialogDescription>
             </DialogHeader>
 
@@ -459,149 +517,271 @@ export default function Deployments() {
                 </Select>
               </div>
 
-              <div className="border-t border-border/40 pt-4 space-y-4">
-                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Server className="h-4 w-4 text-primary" />
-                  Server Connection
-                </p>
-
-                {/* Protocol + Host + Port */}
-                <div className="grid grid-cols-[120px_1fr_90px] gap-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Protocol</Label>
-                    <Select value={protocol} onValueChange={v => setProtocol(v as any)}>
-                      <SelectTrigger className="bg-background/50 h-9">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ftp">FTP</SelectItem>
-                        <SelectItem value="ftps">FTPS</SelectItem>
-                        <SelectItem value="sftp">SFTP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="d-host" className="text-xs">Host</Label>
-                    <Input
-                      id="d-host"
-                      value={ftpHost}
-                      onChange={e => setFtpHost(e.target.value)}
-                      placeholder="ftp.yourdomain.com"
-                      className="bg-background/50 h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="d-port" className="text-xs">Port</Label>
-                    <Input
-                      id="d-port"
-                      value={ftpPort}
-                      onChange={e => setFtpPort(e.target.value)}
-                      className="bg-background/50 h-9"
-                    />
-                  </div>
-                </div>
-
-                {/* Username + Password */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="d-user" className="text-xs">Username</Label>
-                    <Input
-                      id="d-user"
-                      value={ftpUsername}
-                      onChange={e => setFtpUsername(e.target.value)}
-                      placeholder="ftpuser"
-                      className="bg-background/50 h-9"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="d-pass" className="text-xs">Password</Label>
-                    <Input
-                      id="d-pass"
-                      type="password"
-                      value={ftpPassword}
-                      onChange={e => setFtpPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="bg-background/50 h-9"
-                    />
-                  </div>
-                </div>
-
-                {/* Remote path */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="d-path" className="text-xs">Remote Path</Label>
-                  <Input
-                    id="d-path"
-                    value={ftpPath}
-                    onChange={e => setFtpPath(e.target.value)}
-                    placeholder="/public_html/"
-                    className="bg-background/50 h-9 font-mono text-sm"
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Use /public_html/ for your main domain, or add a subfolder if you want a separate path.
-                  </p>
-                </div>
-
-                {/* Test connection row */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Button
-                    variant="outline" size="sm"
-                    className="gap-2 shrink-0"
-                    onClick={handleTestConnection}
-                    disabled={testStatus === "testing" || !ftpHost || !ftpUsername}
-                  >
-                    {testStatus === "testing"
-                      ? <Clock className="h-3.5 w-3.5 animate-spin" />
-                      : <CheckCircle className="h-3.5 w-3.5" />}
-                    Test Connection
-                  </Button>
-                  <ConnectionStatus />
-                </div>
+              {/* Platform Tabs */}
+              <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-lg border border-border/50">
+                <button
+                  type="button"
+                  onClick={() => setDeployTab("ftp")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
+                    deployTab === "ftp"
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Server className="h-3.5 w-3.5" />
+                  FTP / SFTP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeployTab("netlify")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
+                    deployTab === "netlify"
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Cloud className="h-3.5 w-3.5 text-cyan-500" />
+                  Netlify
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeployTab("github")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
+                    deployTab === "github"
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Github className="h-3.5 w-3.5" />
+                  GitHub Pages
+                </button>
               </div>
 
-              <div className="border-t border-border/40 pt-4 space-y-4">
-                {/* Site URL */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="d-url" className="text-xs flex items-center gap-1.5">
-                    <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    Live Site URL <span className="text-muted-foreground font-normal">(optional)</span>
-                  </Label>
-                  <Input
-                    id="d-url"
-                    value={siteUrl}
-                    onChange={e => setSiteUrl(e.target.value)}
-                    placeholder="https://yoursite.com"
-                    className="bg-background/50 h-9 font-mono text-sm"
-                  />
-                </div>
+              {/* ── FTP FORM ── */}
+              {deployTab === "ftp" && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="border-t border-border/40 pt-4 space-y-4">
+                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Server className="h-4 w-4 text-primary" />
+                      Server Connection
+                    </p>
 
-                {/* Do not overwrite toggle */}
-                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/30">
-                  <div>
-                    <p className="text-sm font-medium">Overwrite existing files</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      Disable to skip files that already exist on the server
+                    {/* Protocol + Host + Port */}
+                    <div className="grid grid-cols-[120px_1fr_90px] gap-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Protocol</Label>
+                        <Select value={protocol} onValueChange={v => setProtocol(v as any)}>
+                          <SelectTrigger className="bg-background/50 h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ftp">FTP</SelectItem>
+                            <SelectItem value="ftps">FTPS</SelectItem>
+                            <SelectItem value="sftp">SFTP</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="d-host" className="text-xs">Host</Label>
+                        <Input
+                          id="d-host"
+                          value={ftpHost}
+                          onChange={e => setFtpHost(e.target.value)}
+                          placeholder="ftp.yourdomain.com"
+                          className="bg-background/50 h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="d-port" className="text-xs">Port</Label>
+                        <Input
+                          id="d-port"
+                          value={ftpPort}
+                          onChange={e => setFtpPort(e.target.value)}
+                          className="bg-background/50 h-9"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Username + Password */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="d-user" className="text-xs">Username</Label>
+                        <Input
+                          id="d-user"
+                          value={ftpUsername}
+                          onChange={e => setFtpUsername(e.target.value)}
+                          placeholder="ftpuser"
+                          className="bg-background/50 h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="d-pass" className="text-xs">Password</Label>
+                        <Input
+                          id="d-pass"
+                          type="password"
+                          value={ftpPassword}
+                          onChange={e => setFtpPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="bg-background/50 h-9"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Remote path */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="d-path" className="text-xs">Remote Path</Label>
+                      <Input
+                        id="d-path"
+                        value={ftpPath}
+                        onChange={e => setFtpPath(e.target.value)}
+                        placeholder="/public_html/"
+                        className="bg-background/50 h-9 font-mono text-sm"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Use /public_html/ for your main domain, or add a subfolder if you want a separate path.
+                      </p>
+                    </div>
+
+                    {/* Test connection row */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <Button
+                        variant="outline" size="sm"
+                        className="gap-2 shrink-0"
+                        onClick={handleTestConnection}
+                        disabled={testStatus === "testing" || !ftpHost || !ftpUsername}
+                      >
+                        {testStatus === "testing"
+                          ? <Clock className="h-3.5 w-3.5 animate-spin" />
+                          : <CheckCircle className="h-3.5 w-3.5" />}
+                        Test Connection
+                      </Button>
+                      <ConnectionStatus />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border/40 pt-4 space-y-4">
+                    {/* Site URL */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="d-url" className="text-xs flex items-center gap-1.5">
+                        <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        Live Site URL <span className="text-muted-foreground font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="d-url"
+                        value={siteUrl}
+                        onChange={e => setSiteUrl(e.target.value)}
+                        placeholder="https://yoursite.com"
+                        className="bg-background/50 h-9 font-mono text-sm"
+                      />
+                    </div>
+
+                    {/* Do not overwrite toggle */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/30">
+                      <div>
+                        <p className="text-sm font-medium">Overwrite existing files</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Disable to skip files that already exist on the server
+                        </p>
+                      </div>
+                      <Switch
+                        checked={overwriteExisting}
+                        onCheckedChange={setOverwriteExisting}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── NETLIFY FORM ── */}
+              {deployTab === "netlify" && (
+                <div className="space-y-4 animate-fade-in pt-2">
+                  <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-muted-foreground leading-relaxed">
+                    <span className="font-semibold text-cyan-600 dark:text-cyan-400">Netlify Deployment:</span> We will automatically create a new site under your Netlify account and deploy your landing page live.
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="netlify-token" className="text-xs">Netlify Personal Access Token</Label>
+                    <Input
+                      id="netlify-token"
+                      type="password"
+                      value={netlifyToken}
+                      onChange={e => setNetlifyToken(e.target.value)}
+                      placeholder="e.g. nlf_abc123xyz..."
+                      className="bg-background/50 h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Get one in User Settings &gt; Applications &gt; Personal access tokens.
                     </p>
                   </div>
-                  <Switch
-                    checked={overwriteExisting}
-                    onCheckedChange={setOverwriteExisting}
-                  />
                 </div>
-              </div>
+              )}
+
+              {/* ── GITHUB FORM ── */}
+              {deployTab === "github" && (
+                <div className="space-y-4 animate-fade-in pt-2">
+                  <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3 text-xs text-muted-foreground leading-relaxed">
+                    <span className="font-semibold text-violet-600 dark:text-violet-400">GitHub Pages Deployment:</span> We will create a public GitHub repository, push your code, and enable GitHub Pages hosting automatically.
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="github-token" className="text-xs">GitHub Personal Access Token</Label>
+                    <Input
+                      id="github-token"
+                      type="password"
+                      value={githubToken}
+                      onChange={e => setGithubToken(e.target.value)}
+                      placeholder="e.g. ghp_abc123xyz..."
+                      className="bg-background/50 h-9"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Token must have <code className="bg-muted px-1 py-0.5 rounded text-[9px]">public_repo</code> and <code className="bg-muted px-1 py-0.5 rounded text-[9px]">workflow</code> permissions.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-2 border-t border-border/40">
               <Button variant="outline" onClick={() => setIsDeployModalOpen(false)}>Cancel</Button>
-              <Button
-                onClick={handleDeploy}
-                disabled={!selectedProjectId || !ftpHost || !ftpUsername || !ftpPassword || deployProject.isPending}
-                className="gap-2"
-              >
-                {deployProject.isPending
-                  ? <Clock className="h-4 w-4 animate-spin" />
-                  : <Rocket className="h-4 w-4" />}
-                Deploy Website
-              </Button>
+              {deployTab === "ftp" ? (
+                <Button
+                  onClick={handleDeploy}
+                  disabled={!selectedProjectId || !ftpHost || !ftpUsername || !ftpPassword || deployProject.isPending}
+                  className="gap-2 animate-fade-in"
+                >
+                  {deployProject.isPending
+                    ? <Clock className="h-4 w-4 animate-spin" />
+                    : <Rocket className="h-4 w-4" />}
+                  Deploy Website
+                </Button>
+              ) : deployTab === "netlify" ? (
+                <Button
+                  onClick={handleDeployNetlify}
+                  disabled={!selectedProjectId || !netlifyToken.trim() || isDeployingThirdParty}
+                  className="gap-2 animate-fade-in bg-cyan-600 hover:bg-cyan-700 text-white"
+                >
+                  {isDeployingThirdParty ? (
+                    <><Clock className="h-4 w-4 animate-spin" /> Deploying...</>
+                  ) : (
+                    <><Cloud className="h-4 w-4" /> Deploy to Netlify</>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleDeployGithub}
+                  disabled={!selectedProjectId || !githubToken.trim() || isDeployingThirdParty}
+                  className="gap-2 animate-fade-in bg-violet-600 hover:bg-violet-700 text-white"
+                >
+                  {isDeployingThirdParty ? (
+                    <><Clock className="h-4 w-4 animate-spin" /> Deploying...</>
+                  ) : (
+                    <><Github className="h-4 w-4" /> Deploy to GitHub Pages</>
+                  )}
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>

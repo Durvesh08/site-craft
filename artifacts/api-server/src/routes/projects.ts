@@ -13,6 +13,52 @@ import {
 } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
 
+// ── Multi-page helpers ─────────────────────────────────────────────────────
+// generatedHtml can be either:
+//   1. A plain HTML string (single-page, legacy) — starts with "<!DOCTYPE" or "<"
+//   2. A JSON string mapping filename→HTML (multi-page) — starts with "{"
+
+/** Check if stored generatedHtml is a multi-page JSON map */
+function isMultiPageJson(html: string): boolean {
+  return html.trimStart().startsWith("{");
+}
+
+/** Parse multi-page JSON and return the requested page (default: index.html) */
+function parseMultiPageHtml(html: string, pageName = "index.html"): string | null {
+  if (!isMultiPageJson(html)) return html; // single-page, return as-is
+  try {
+    const pages: Record<string, string> = JSON.parse(html);
+    return pages[pageName] ?? pages["index.html"] ?? Object.values(pages)[0] ?? null;
+  } catch {
+    return html; // parse failed, treat as single-page
+  }
+}
+
+/** Return a list of all page filenames from generatedHtml */
+function getPageList(html: string): string[] {
+  if (!isMultiPageJson(html)) return ["index.html"];
+  try {
+    return Object.keys(JSON.parse(html));
+  } catch {
+    return ["index.html"];
+  }
+}
+
+/** Apply a transformation function to every page in generatedHtml (single or multi) */
+function mapAllPages(html: string, fn: (pageHtml: string, pageName: string) => string): string {
+  if (!isMultiPageJson(html)) return fn(html, "index.html");
+  try {
+    const pages: Record<string, string> = JSON.parse(html);
+    const result: Record<string, string> = {};
+    for (const [name, content] of Object.entries(pages)) {
+      result[name] = fn(content, name);
+    }
+    return JSON.stringify(result);
+  } catch {
+    return fn(html, "index.html");
+  }
+}
+
 const router: IRouter = Router();
 
 function requireAuth(req: Request, res: Response): boolean {
@@ -319,6 +365,7 @@ router.get("/projects/:id", async (req: Request, res: Response) => {
 });
 
 // GET /projects/:id/preview  — serve HTML inline for iframe/fullscreen preview
+// Supports ?page=about.html for multi-page sites (default: index.html)
 router.get("/projects/:id/preview", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
@@ -342,13 +389,49 @@ router.get("/projects/:id/preview", async (req: Request, res: Response) => {
       return;
     }
 
+    // Extract the requested page (default: index.html)
+    const pageName = (req.query.page as string) || "index.html";
+    const pageHtml = parseMultiPageHtml(project.generatedHtml, pageName);
+
+    if (!pageHtml) {
+      res.status(404).json({ error: "NotFound", message: `Page "${pageName}" not found` });
+      return;
+    }
+
     // Serve as inline HTML (not download) — for iframe src or fullscreen preview
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.send(patchHtml(project.generatedHtml) ?? project.generatedHtml);
+    res.send(patchHtml(pageHtml) ?? pageHtml);
   } catch (err) {
     req.log.error({ err }, "Failed to serve project preview");
     res.status(500).json({ error: "InternalError", message: "Failed to load preview" });
+  }
+});
+
+// GET /projects/:id/pages — list all pages in a project (for multi-page sites)
+router.get("/projects/:id/pages", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const params = GetProjectParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project || !project.generatedHtml) {
+      res.json({ pages: ["index.html"] });
+      return;
+    }
+
+    res.json({ pages: getPageList(project.generatedHtml) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to list project pages");
+    res.status(500).json({ error: "InternalError", message: "Failed to list pages" });
   }
 });
 
@@ -450,11 +533,41 @@ router.get("/projects/:id/export/zip", async (req: Request, res: Response) => {
     // ── Build zip ──────────────────────────────────────────────────────────
     const designMd = await buildDesignMd(project.id, req.user!.id);
     const zip = new JSZip();
-    zip.file("index.html",  patchHtml(project.generatedHtml) ?? project.generatedHtml);
+
+    // Add HTML files — single or multi-page
+    const htmlFiles: Array<{ name: string; html: string }> = [];
+    if (isMultiPageJson(project.generatedHtml)) {
+      try {
+        const pages: Record<string, string> = JSON.parse(project.generatedHtml);
+        for (const [name, content] of Object.entries(pages)) {
+          const patched = patchHtml(content) ?? content;
+          zip.file(name, patched);
+          htmlFiles.push({ name, html: patched });
+        }
+      } catch {
+        // Fallback to single file
+        zip.file("index.html", patchHtml(project.generatedHtml) ?? project.generatedHtml);
+        htmlFiles.push({ name: "index.html", html: project.generatedHtml });
+      }
+    } else {
+      zip.file("index.html", patchHtml(project.generatedHtml) ?? project.generatedHtml);
+      htmlFiles.push({ name: "index.html", html: project.generatedHtml });
+    }
+
+    // Build sitemap with all HTML files
+    const sitemapUrls = htmlFiles
+      .map(f => {
+        const path = f.name === "index.html" ? "" : f.name;
+        const priority = f.name === "index.html" ? "1.0" : "0.8";
+        return `  <url><loc>${siteUrl}/${path}</loc><lastmod>${now}</lastmod><priority>${priority}</priority></url>`;
+      })
+      .join("\n");
+    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapUrls}\n</urlset>\n`;
+
     zip.file("DESIGN.md",   designMd);
     zip.file(".htaccess",   buildHtaccess(siteUrl));
     zip.file("robots.txt",  buildRobots(siteUrl));
-    zip.file("sitemap.xml", buildSitemap(siteUrl, now));
+    zip.file("sitemap.xml", sitemapContent);
     zip.file("README.txt",  buildReadme(siteTitle, slug));
 
     const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 9 } });
@@ -611,8 +724,48 @@ router.patch("/projects/:id", async (req: Request, res: Response) => {
       updatedAt: new Date(),
     };
     if (body.data.name !== undefined) updates.name = body.data.name;
-    if (body.data.description !== undefined) updates.description = body.data.description;
+    if (body.data.description !== undefined) {
+      updates.description = body.data.description;
+      updates.businessDescription = body.data.description;
+    }
     if (body.data.pixelCode !== undefined) updates.pixelCode = body.data.pixelCode;
+
+    // Update the generated HTML directly if it exists, so name, description, and pixelCode take effect instantly without AI regeneration
+    // Uses mapAllPages to apply changes across ALL pages of multi-page sites
+    if (existing.generatedHtml) {
+      const patchName = body.data.name;
+      const patchDesc = body.data.description;
+      const patchPixel = body.data.pixelCode;
+
+      updates.generatedHtml = mapAllPages(existing.generatedHtml, (pageHtml) => {
+        let html = pageHtml;
+
+        if (patchName !== undefined) {
+          html = html.replace(/<title>[^<]*<\/title>/i, `<title>${patchName}</title>`);
+        }
+
+        if (patchDesc !== undefined) {
+          const cleanDesc = patchDesc.replace(/"/g, '&quot;');
+          html = html.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i, `<meta name="description" content="${cleanDesc}" />`);
+        }
+
+        if (patchPixel !== undefined) {
+          const startTag = "<!-- PIXEL_CODE_START -->";
+          const endTag = "<!-- PIXEL_CODE_END -->";
+          const pixelContent = patchPixel || "";
+          if (html.includes(startTag) && html.includes(endTag)) {
+            const startIndex = html.indexOf(startTag) + startTag.length;
+            const endIndex = html.indexOf(endTag);
+            html = html.slice(0, startIndex) + pixelContent + html.slice(endIndex);
+          } else {
+            const replacement = `\n  ${startTag}${pixelContent}${endTag}\n</head>`;
+            html = html.replace("</head>", replacement);
+          }
+        }
+
+        return html;
+      });
+    }
 
     const [updated] = await db
       .update(projectsTable)
@@ -679,7 +832,6 @@ router.post("/projects/:id/theme", async (req: Request, res: Response) => {
       return;
     }
 
-    let html = project.generatedHtml;
 
     // Full CSS variable sets per theme — every preset must override ALL
     // background/foreground/card-bg/border/muted/primary vars so switching
@@ -755,37 +907,39 @@ router.post("/projects/:id/theme", async (req: Request, res: Response) => {
 
     const varsToApply = presets[preset || ""] || presets["dark"];
 
-    // Replace :root { ... } variables or inject custom style
-    if (html.includes(":root {")) {
-      html = html.replace(/:root\s*\{([^}]+)\}/, (match, inner) => {
-        let updated = inner;
-        const pairs = varsToApply.split(";").map(s => s.trim()).filter(Boolean);
-        for (const pair of pairs) {
-          const colonIdx = pair.indexOf(":");
-          if (colonIdx === -1) continue;
-          const key = pair.slice(0, colonIdx).trim();
-          const val = pair.slice(colonIdx + 1).trim();
-          if (key && val) {
-            // Escape dashes in the key for the regex
-            const escapedKey = key.replace(/-/g, "\\-");
-            const reg = new RegExp(`${escapedKey}\\s*:\\s*[^;]+;`, "g");
-            if (reg.test(updated)) {
-              updated = updated.replace(reg, `${key}: ${val};`);
-            } else {
-              updated += `\n    ${key}: ${val};`;
+    // Apply theme CSS variables to all pages (single or multi-page)
+    const themedHtml = mapAllPages(project.generatedHtml, (pageHtml) => {
+      let h = pageHtml;
+      if (h.includes(":root {")) {
+        h = h.replace(/:root\s*\{([^}]+)\}/, (match, inner) => {
+          let updated = inner;
+          const pairs = varsToApply.split(";").map(s => s.trim()).filter(Boolean);
+          for (const pair of pairs) {
+            const colonIdx = pair.indexOf(":");
+            if (colonIdx === -1) continue;
+            const key = pair.slice(0, colonIdx).trim();
+            const val = pair.slice(colonIdx + 1).trim();
+            if (key && val) {
+              const escapedKey = key.replace(/-/g, "\\-");
+              const reg = new RegExp(`${escapedKey}\\s*:\\s*[^;]+;`, "g");
+              if (reg.test(updated)) {
+                updated = updated.replace(reg, `${key}: ${val};`);
+              } else {
+                updated += `\n    ${key}: ${val};`;
+              }
             }
           }
-        }
-        return `:root {\n${updated}\n  }`;
-      });
-    } else {
-      // Inject a new :root block before </style>
-      const rootBlock = `:root { ${varsToApply}; }`;
-      html = html.replace("</style>", `${rootBlock}\n</style>`);
-    }
+          return `:root {\n${updated}\n  }`;
+        });
+      } else {
+        const rootBlock = `:root { ${varsToApply}; }`;
+        h = h.replace("</style>", `${rootBlock}\n</style>`);
+      }
+      return h;
+    });
 
     await db.update(projectsTable)
-      .set({ generatedHtml: html, theme: preset, updatedAt: new Date() })
+      .set({ generatedHtml: themedHtml, theme: preset, updatedAt: new Date() })
       .where(eq(projectsTable.id, projectId));
 
     res.json({ success: true, theme: preset });
