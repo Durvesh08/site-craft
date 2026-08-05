@@ -868,9 +868,9 @@ function getSectionTypeRules(type: string): string {
 
 - CAROUSEL layout (for testimonial-carousel type — FOLLOW EXACTLY to prevent overflow/clipping):
   State: const [active, setActive] = useState(0)
-  Auto-advance: useEffect(()=>{ const t=setInterval(()=>setActive(p=>(p+1)%testimonials.length),4500); return ()=>clearInterval(t); },[])
+  Auto-advance: useEffect(()=>{ const t=setInterval(()=>setActive(p=>(p+1)%testimonials.length),7000); return ()=>clearInterval(t); },[])
   Outer container: width:'100%', overflow:'hidden', position:'relative'
-  Inner track wrapper: display:'flex', transition:'transform 0.5s ease', transform: ('translateX(-' + (active*100) + '%)')
+  Inner track wrapper: display:'flex', transition:'transform 0.6s ease', transform: ('translateX(-' + (active*100) + '%)')
     Each slide: minWidth:'100%', padding:'0 12px'
   Dot navigation: row of circles below, filled dot = active
   Each card MUST have: maxWidth:'680px', margin:'0 auto', width:'100%'

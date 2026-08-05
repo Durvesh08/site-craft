@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import JSZip from "jszip";
 import { db } from "@workspace/db";
-import { projectsTable, aiJobsTable, aiJobStepsTable } from "@workspace/db";
+import { projectsTable, aiJobsTable, aiJobStepsTable, versionsTable } from "@workspace/db";
 import { eq, desc, and, count, asc } from "drizzle-orm";
 import {
   CreateProjectBody,
@@ -665,16 +665,92 @@ router.post("/projects/:id/theme", async (req: Request, res: Response) => {
       return;
     }
 
+    // "original" — restore the v1 HTML snapshot taken at generation time
+    if (preset === "original") {
+      const [v1] = await db.select().from(versionsTable)
+        .where(eq(versionsTable.projectId, projectId))
+        .orderBy(asc(versionsTable.versionNumber))
+        .limit(1);
+      const sourceHtml = v1?.generatedHtml ?? project.generatedHtml;
+      await db.update(projectsTable)
+        .set({ generatedHtml: sourceHtml, theme: null, updatedAt: new Date() })
+        .where(eq(projectsTable.id, projectId));
+      res.json({ success: true, theme: null });
+      return;
+    }
+
     let html = project.generatedHtml;
 
-    // Theme preset CSS variable mappings
+    // Full CSS variable sets per theme — every preset must override ALL
+    // background/foreground/card-bg/border/muted/primary vars so switching
+    // themes doesn't leave stale values from the previous theme mixed in.
     const presets: Record<string, string> = {
-      dark: `--background: #090d16; --foreground: #f8fafc; --card-bg: #131b2e; --border: rgba(255,255,255,0.1); --muted: #94a3b8;`,
-      light: `--background: #ffffff; --foreground: #0f172a; --card-bg: #f8fafc; --border: #e2e8f0; --muted: #64748b;`,
-      emerald: `--primary: #10b981; --primary-dark: #047857; --secondary: #059669; --accent: #34d399;`,
-      cyberpunk: `--primary: #f43f5e; --primary-dark: #be123c; --secondary: #8b5cf6; --accent: #06b6d4;`,
-      ocean: `--primary: #0284c7; --primary-dark: #0369a1; --secondary: #3b82f6; --accent: #38bdf8;`,
-      sunset: `--primary: #f97316; --primary-dark: #c2410c; --secondary: #ef4444; --accent: #fbbf24;`,
+      dark: [
+        "--background: #090d16",
+        "--foreground: #f8fafc",
+        "--card-bg: #131b2e",
+        "--border: rgba(255,255,255,0.1)",
+        "--muted: #94a3b8",
+        "--primary: #6366f1",
+        "--primary-dark: #4338ca",
+        "--secondary: #8b5cf6",
+        "--accent: #a78bfa",
+      ].join("; "),
+      light: [
+        "--background: #ffffff",
+        "--foreground: #0f172a",
+        "--card-bg: #f8fafc",
+        "--border: #e2e8f0",
+        "--muted: #64748b",
+        "--primary: #6366f1",
+        "--primary-dark: #4338ca",
+        "--secondary: #8b5cf6",
+        "--accent: #a78bfa",
+      ].join("; "),
+      emerald: [
+        "--background: #021a0d",
+        "--foreground: #d1fae5",
+        "--card-bg: #052e16",
+        "--border: rgba(16,185,129,0.2)",
+        "--muted: #6ee7b7",
+        "--primary: #10b981",
+        "--primary-dark: #047857",
+        "--secondary: #059669",
+        "--accent: #34d399",
+      ].join("; "),
+      cyberpunk: [
+        "--background: #0a0014",
+        "--foreground: #f0e6ff",
+        "--card-bg: #130a28",
+        "--border: rgba(244,63,94,0.25)",
+        "--muted: #c4b5fd",
+        "--primary: #f43f5e",
+        "--primary-dark: #be123c",
+        "--secondary: #8b5cf6",
+        "--accent: #06b6d4",
+      ].join("; "),
+      ocean: [
+        "--background: #020c1b",
+        "--foreground: #e0f2fe",
+        "--card-bg: #0c1a2e",
+        "--border: rgba(2,132,199,0.2)",
+        "--muted: #7dd3fc",
+        "--primary: #0284c7",
+        "--primary-dark: #0369a1",
+        "--secondary: #3b82f6",
+        "--accent: #38bdf8",
+      ].join("; "),
+      sunset: [
+        "--background: #1a0a00",
+        "--foreground: #fef3c7",
+        "--card-bg: #2d1500",
+        "--border: rgba(249,115,22,0.25)",
+        "--muted: #fcd34d",
+        "--primary: #f97316",
+        "--primary-dark: #c2410c",
+        "--secondary: #ef4444",
+        "--accent: #fbbf24",
+      ].join("; "),
     };
 
     const varsToApply = presets[preset || ""] || presets["dark"];
@@ -685,9 +761,14 @@ router.post("/projects/:id/theme", async (req: Request, res: Response) => {
         let updated = inner;
         const pairs = varsToApply.split(";").map(s => s.trim()).filter(Boolean);
         for (const pair of pairs) {
-          const [key, val] = pair.split(":").map(s => s.trim());
+          const colonIdx = pair.indexOf(":");
+          if (colonIdx === -1) continue;
+          const key = pair.slice(0, colonIdx).trim();
+          const val = pair.slice(colonIdx + 1).trim();
           if (key && val) {
-            const reg = new RegExp(`${key.replace('-', '\\-')}\\s*:\\s*[^;]+;`, 'g');
+            // Escape dashes in the key for the regex
+            const escapedKey = key.replace(/-/g, "\\-");
+            const reg = new RegExp(`${escapedKey}\\s*:\\s*[^;]+;`, "g");
             if (reg.test(updated)) {
               updated = updated.replace(reg, `${key}: ${val};`);
             } else {
@@ -697,6 +778,10 @@ router.post("/projects/:id/theme", async (req: Request, res: Response) => {
         }
         return `:root {\n${updated}\n  }`;
       });
+    } else {
+      // Inject a new :root block before </style>
+      const rootBlock = `:root { ${varsToApply}; }`;
+      html = html.replace("</style>", `${rootBlock}\n</style>`);
     }
 
     await db.update(projectsTable)
@@ -709,6 +794,7 @@ router.post("/projects/:id/theme", async (req: Request, res: Response) => {
     res.status(500).json({ error: "InternalError", message: "Failed to swap theme" });
   }
 });
+
 
 // GET /projects/:id/audit  — compile AI audit issues, suggestions & quality scores
 router.get("/projects/:id/audit", async (req: Request, res: Response) => {

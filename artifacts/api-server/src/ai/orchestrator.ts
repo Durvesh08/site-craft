@@ -420,18 +420,26 @@ export async function runGeneration(
               });
 
               try {
-                // PRO and FLASH both resolve to gemini-2.5-flash on Tier 1,
-                // so a single call is sufficient — no PRO→Flash retry needed.
+                // Primary attempt — Gemini PRO call
                 const rawCode = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
                 logger.info({ sectionId: section.id }, "Section generated successfully");
                 return { plan: section, componentName, code: cleanComponentCode(rawCode, componentName) } as SectionCode;
               } catch (err) {
-                logger.error({ err, sectionId: section.id }, "Section generation failed");
-                return {
-                  plan: section,
-                  componentName,
-                  code: buildFallbackSection(componentName, section.type),
-                } as SectionCode;
+                logger.warn({ err, sectionId: section.id }, "Section generation failed — retrying with FLASH");
+                // Retry once with FLASH (handles transient API overload errors)
+                try {
+                  await new Promise(r => setTimeout(r, 2000)); // brief back-off
+                  const retryCode = await callGemini(genai, FLASH, prompt, 32768, undefined, 0.8);
+                  logger.info({ sectionId: section.id }, "Section generated on retry");
+                  return { plan: section, componentName, code: cleanComponentCode(retryCode, componentName) } as SectionCode;
+                } catch (retryErr) {
+                  logger.error({ retryErr, sectionId: section.id }, "Section generation failed on retry — using invisible placeholder");
+                  return {
+                    plan: section,
+                    componentName,
+                    code: buildFallbackSection(componentName, section.type),
+                  } as SectionCode;
+                }
               }
             })
           );
@@ -1794,16 +1802,11 @@ function cleanComponentCode(raw: string, componentName: string): string {
   return code;
 }
 
-function buildFallbackSection(componentName: string, type: string): string {
+function buildFallbackSection(componentName: string, _type: string): string {
+  // Render an invisible empty section — no red error box shown to end users.
+  // The section is silently omitted from the page rather than showing a failure state.
   return `function ${componentName}() {
-  return (
-    <section style={{ padding: '80px 24px', textAlign: 'center', background: 'var(--background)', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-      <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '6px', padding: '6px 14px', display: 'inline-block' }}>
-        <span style={{ color: '#f87171', fontSize: '12px', fontWeight: 600, letterSpacing: '0.05em' }}>⚠ GENERATION FAILED</span>
-      </div>
-      <p style={{ color: 'var(--foreground)', fontSize: '14px', opacity: 0.7 }}>${type}</p>
-    </section>
-  )
+  return React.createElement('div', { style: { display: 'none' }, 'data-sc-fallback': '${_type}' });
 }`;
 }
 

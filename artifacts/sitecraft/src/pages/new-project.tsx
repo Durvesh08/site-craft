@@ -9,7 +9,7 @@ import {
   Wand2, ArrowRight, ArrowLeft, Check,
   Rocket, ShoppingBag, Palette, UtensilsCrossed,
   User, Stethoscope, Home, Calendar, Building2,
-  ChevronRight, Sparkles,
+  ChevronRight, Sparkles, AlignLeft, ListChecks,
 } from "lucide-react";
 import { ImageUploader } from "@/components/ImageUploader";
 import { cn } from "@/lib/utils";
@@ -156,6 +156,13 @@ export default function NewProject() {
 
   // Step state
   const [step, setStep] = useState(1);
+  // Input mode: 'wizard' (3-step guided) | 'quick' (paste brief)
+  const [inputMode, setInputMode] = useState<'wizard' | 'quick'>('wizard');
+
+  // Quick brief mode state
+  const [quickBusinessName, setQuickBusinessName] = useState("");
+  const [quickBrief, setQuickBrief] = useState("");
+  const [quickLogoUrl, setQuickLogoUrl] = useState("");
 
   // Step 1
   const [pageType, setPageType] = useState<PageTypeId | "">("");
@@ -225,12 +232,42 @@ export default function NewProject() {
     }
   }
 
+  async function handleQuickSubmit() {
+    if (!quickBusinessName.trim() || !quickBrief.trim()) {
+      toast.error("Please enter a business name and brief.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const project = await createProject.mutateAsync({
+        data: {
+          name: quickBusinessName,
+          businessDescription: quickBrief,
+        },
+      });
+
+      const job = await generateProject.mutateAsync({
+        id: project.id,
+        data: {
+          businessDescription: quickBrief,
+          logoUrl: quickLogoUrl || undefined,
+        },
+      });
+
+      toast.success("Generation started!");
+      setLocation(`/projects/${project.id}/generate?jobId=${job.id}`);
+    } catch {
+      toast.error("Failed to create project. Please try again.");
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-6 py-10 pb-24 animate-fade-in">
 
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="h-5 w-5 text-primary" />
             <h1 className="text-2xl font-bold tracking-tight">New Project</h1>
@@ -240,10 +277,111 @@ export default function NewProject() {
           </p>
         </div>
 
-        <StepIndicator step={step} total={3} />
+        {/* Input Mode Toggle */}
+        <div className="flex items-center gap-1 mb-6 p-1 bg-muted/40 rounded-xl border border-border/50 w-fit">
+          <button
+            type="button"
+            onClick={() => { setInputMode('wizard'); setStep(1); }}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+              inputMode === 'wizard'
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <ListChecks className="h-4 w-4" />
+            Guided Wizard
+          </button>
+          <button
+            type="button"
+            onClick={() => setInputMode('quick')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+              inputMode === 'quick'
+                ? "bg-background shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <AlignLeft className="h-4 w-4" />
+            Quick Brief
+          </button>
+        </div>
 
-        {/* ── STEP 1: Page Type ── */}
-        {step === 1 && (
+        {/* ── QUICK BRIEF MODE ── */}
+        {inputMode === 'quick' && (
+          <div className="space-y-5 animate-fade-in">
+            <div className="rounded-xl border border-border bg-muted/20 p-4">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">Quick mode:</span> Paste your full brief in one go. Great if you already know exactly what you want, have a PRD, or want to copy-paste from another document.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Business / Project name <span className="text-destructive">*</span>
+              </label>
+              <Input
+                placeholder="e.g. Acme Corp, My Portfolio, Ember & Oak"
+                value={quickBusinessName}
+                onChange={(e) => setQuickBusinessName(e.target.value)}
+                className="bg-background/50"
+                data-testid="input-quick-business-name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Your full brief <span className="text-destructive">*</span>
+              </label>
+              <Textarea
+                placeholder={`Paste your full brief here. Include as much detail as you like:\n\n• What the business does\n• Target audience\n• Key features / benefits\n• Desired tone (minimal, bold, luxury…)\n• Primary CTA (Book a call, Start free trial…)\n• Brand colors, typography preferences\n• Any specific sections you want (testimonials, pricing, FAQ…)\n\nThe more detail you give, the better the result.`}
+                value={quickBrief}
+                onChange={(e) => setQuickBrief(e.target.value.slice(0, 3000))}
+                className="min-h-[260px] bg-background/50 resize-y font-mono text-sm leading-relaxed"
+                data-testid="textarea-quick-brief"
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                <span className={quickBrief.length > 2700 ? "text-orange-400" : ""}>{quickBrief.length}/3000</span>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Brand logo <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <ImageUploader
+                value={quickLogoUrl}
+                onChange={setQuickLogoUrl}
+                label="Logo"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              />
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={handleQuickSubmit}
+                disabled={isSubmitting || !quickBusinessName.trim() || quickBrief.trim().length < 20}
+                size="lg"
+                className="gap-2 px-8 h-12 text-lg shadow-lg shadow-primary/20"
+                data-testid="button-quick-generate"
+              >
+                {isSubmitting ? (
+                  <><Wand2 className="h-5 w-5 animate-spin" /> Starting Agents…</>
+                ) : (
+                  <><Wand2 className="h-5 w-5" /> Generate Site <ChevronRight className="h-5 w-5" /></>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── WIZARD MODE ── */}
+        {inputMode === 'wizard' && (
+          <>
+            <StepIndicator step={step} total={3} />
+
+            {/* ── STEP 1: Page Type ── */}
+            {step === 1 && (
           <div className="space-y-6 animate-fade-in">
             <div>
               <h2 className="text-lg font-semibold mb-1">What kind of page are you building?</h2>
@@ -323,7 +461,7 @@ export default function NewProject() {
               </Button>
             </div>
           </div>
-        )}
+            )}
 
         {/* ── STEP 2: Brief ── */}
         {step === 2 && (
@@ -571,6 +709,8 @@ export default function NewProject() {
               </Button>
             </div>
           </div>
+          )}
+          </>
         )}
       </div>
     </div>

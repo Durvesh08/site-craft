@@ -39,6 +39,7 @@ const QUICK_EDITS = [
 ];
 
 const THEME_PRESETS = [
+  { id: "original", label: "Original", icon: RotateCcw, bg: "bg-violet-950/60 text-violet-200 border border-violet-800/40" },
   { id: "dark", label: "Dark Mode", icon: Moon, bg: "bg-slate-900 text-white" },
   { id: "light", label: "Light Mode", icon: Sun, bg: "bg-slate-100 text-slate-900 border" },
   { id: "emerald", label: "Emerald Luxury", icon: Sparkles, bg: "bg-emerald-900 text-emerald-100" },
@@ -176,8 +177,9 @@ export default function ProjectEditor() {
         body: JSON.stringify({ preset: presetId }),
       });
       if (!res.ok) throw new Error("Failed to swap theme");
-      toast.success(`Theme updated to ${presetId}!`);
-      refetch();
+      toast.success(presetId === "original" ? "Restored original design!" : `Theme updated to ${presetId}!`);
+      await refetch();
+      setIframeKey((k) => k + 1);
     } catch {
       toast.error("Failed to change theme.");
     }
