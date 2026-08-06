@@ -225,6 +225,33 @@ function patchHtml(html: string | null): string | null {
   );
 }
 
+/**
+ * Inject pixel/tracking code from the `pixelCode` DB column into an HTML page.
+ * Always strips any previously-stored pixel blocks first (prevents duplication),
+ * then injects a fresh block before </head>.
+ * Called at SERVE TIME — generatedHtml itself is never mutated for pixel code.
+ */
+function injectPixelCode(html: string | null, pixelCode: string | null | undefined): string | null {
+  if (!html) return null;
+
+  // Strip any stale PIXEL_CODE_START/END blocks (from old saves or broken injections)
+  let out = html.replace(
+    /\n?\s*<!--\s*PIXEL_CODE_START\s*-->[\s\S]*?<!--\s*PIXEL_CODE_END\s*-->\n?/g,
+    "",
+  );
+
+  // If no pixel code to inject, return the cleaned HTML
+  if (!pixelCode || !pixelCode.trim()) return out;
+
+  // Inject fresh block before </head>
+  const m = out.match(/<\/head>/i);
+  if (m && m.index !== undefined) {
+    const block = `\n  <!-- PIXEL_CODE_START -->${pixelCode}<!-- PIXEL_CODE_END -->\n`;
+    out = out.slice(0, m.index) + block + out.slice(m.index);
+  }
+  return out;
+}
+
 function toProjectResponse(p: typeof projectsTable.$inferSelect) {
   let parsedTokens = null;
   if (p.designTokensJson) {
@@ -401,7 +428,9 @@ router.get("/projects/:id/preview", async (req: Request, res: Response) => {
     // Serve as inline HTML (not download) — for iframe src or fullscreen preview
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.send(patchHtml(pageHtml) ?? pageHtml);
+    // injectPixelCode strips stale blocks then injects fresh from DB column at serve-time
+    const served = injectPixelCode(patchHtml(pageHtml), project.pixelCode);
+    res.send(served ?? pageHtml);
   } catch (err) {
     req.log.error({ err }, "Failed to serve project preview");
     res.status(500).json({ error: "InternalError", message: "Failed to load preview" });
@@ -462,7 +491,9 @@ router.get("/projects/:id/export", async (req: Request, res: Response) => {
     const slug = toSlug(project.name);
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${slug}.html"`);
-    res.send(patchHtml(project.generatedHtml) ?? project.generatedHtml);
+    // Inject pixel code at export time from DB column (never from stored HTML)
+    const exportHtml = injectPixelCode(patchHtml(project.generatedHtml), project.pixelCode);
+    res.send(exportHtml ?? project.generatedHtml);
   } catch (err) {
     req.log.error({ err }, "Failed to export project HTML");
     res.status(500).json({ error: "InternalError", message: "Failed to export" });
@@ -534,24 +565,26 @@ router.get("/projects/:id/export/zip", async (req: Request, res: Response) => {
     const designMd = await buildDesignMd(project.id, req.user!.id);
     const zip = new JSZip();
 
-    // Add HTML files — single or multi-page
+    // Add HTML files — single or multi-page; inject pixel code at export time
     const htmlFiles: Array<{ name: string; html: string }> = [];
     if (isMultiPageJson(project.generatedHtml)) {
       try {
         const pages: Record<string, string> = JSON.parse(project.generatedHtml);
         for (const [name, content] of Object.entries(pages)) {
-          const patched = patchHtml(content) ?? content;
+          const patched = injectPixelCode(patchHtml(content), project.pixelCode) ?? content;
           zip.file(name, patched);
           htmlFiles.push({ name, html: patched });
         }
       } catch {
         // Fallback to single file
-        zip.file("index.html", patchHtml(project.generatedHtml) ?? project.generatedHtml);
-        htmlFiles.push({ name: "index.html", html: project.generatedHtml });
+        const patched = injectPixelCode(patchHtml(project.generatedHtml), project.pixelCode) ?? project.generatedHtml;
+        zip.file("index.html", patched);
+        htmlFiles.push({ name: "index.html", html: patched });
       }
     } else {
-      zip.file("index.html", patchHtml(project.generatedHtml) ?? project.generatedHtml);
-      htmlFiles.push({ name: "index.html", html: project.generatedHtml });
+      const patched = injectPixelCode(patchHtml(project.generatedHtml), project.pixelCode) ?? project.generatedHtml;
+      zip.file("index.html", patched);
+      htmlFiles.push({ name: "index.html", html: patched });
     }
 
     // Build sitemap with all HTML files
@@ -792,9 +825,9 @@ router.patch("/projects/:id", async (req: Request, res: Response) => {
   }
 });
 
-// POST /projects/:id/pixel — Save pixel/tracking code without AI regeneration
-// This dedicated endpoint is the most reliable way to update pixel code.
-// It updates BOTH the pixelCode column AND injects into the stored generatedHtml.
+// POST /projects/:id/pixel — Save pixel/tracking code
+// This dedicated endpoint updates ONLY the pixelCode column.
+// Pixel code is injected dynamically at serve-time/export-time, never mutated into generatedHtml.
 router.post("/projects/:id/pixel", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
@@ -815,32 +848,9 @@ router.post("/projects/:id/pixel", async (req: Request, res: Response) => {
     }
 
     const pixelContent = pixelCode || "";
-    let newHtml = project.generatedHtml;
-
-    if (newHtml) {
-      newHtml = mapAllPages(newHtml, (pageHtml) => {
-        let html = pageHtml;
-        const startTag = "<!-- PIXEL_CODE_START -->";
-        const endTag   = "<!-- PIXEL_CODE_END -->";
-
-        if (html.includes(startTag) && html.includes(endTag)) {
-          // Replace content between existing tags
-          const si = html.indexOf(startTag) + startTag.length;
-          const ei = html.indexOf(endTag);
-          html = html.slice(0, si) + pixelContent + html.slice(ei);
-        } else {
-          // Inject before </head>
-          const m = html.match(/<\/head>/i);
-          if (m && m.index !== undefined) {
-            html = html.slice(0, m.index) + `\n  ${startTag}${pixelContent}${endTag}\n` + html.slice(m.index);
-          }
-        }
-        return html;
-      });
-    }
 
     const [updated] = await db.update(projectsTable)
-      .set({ pixelCode: pixelContent, generatedHtml: newHtml, updatedAt: new Date() })
+      .set({ pixelCode: pixelContent, updatedAt: new Date() })
       .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)))
       .returning();
 
