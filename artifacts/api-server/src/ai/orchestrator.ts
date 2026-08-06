@@ -1631,10 +1631,16 @@ function buildChatEditPrompt(
   const pageOutline  = extractSectionOutline(currentHtml);
 
   const prompts: Record<string, string> = {
-    "intent-analyzer": `Analyse this landing page edit request and classify the intent.
+    "intent-analyzer": `You are a Senior Creative Director & Principal Product Designer analyzing landing page edit requests.
 User request: "${message}"
+
+INTENT CLASSIFICATION RULES:
+- Identify if request is broad aesthetic direction (e.g. "make it Linear style", "dark theme", "more premium", "Stripe vibe")
+- Identify if request targets specific sections (e.g. "turn features into bento grid", "make hero split layout")
+- Identify if request is text/copy tweak or visual accent update
+
 Return ONLY valid JSON (no markdown fences):
-{ "intent": string, "scope": "style"|"content"|"structural", "targetSection": string | null, "changeType": string, "confidence": number }`,
+{ "intent": string, "scope": "style"|"content"|"structural"|"preset", "targetSection": string | null, "changeType": string, "brandVibe": string | null, "confidence": number }`,
 
     "section-detector": `Given the user's edit request, identify which section(s) of the landing page to modify.
 User request: "${message}"
@@ -1642,9 +1648,9 @@ Page sections:
 ${pageOutline}
 Previous analysis: ${previousOutputs["intent-analyzer"] ?? ""}
 Return ONLY valid JSON (no markdown fences):
-{ "targetSections": string[], "approach": "css-change"|"content-change"|"regenerate", "preserveSections": string[], "confidence": number }`,
+{ "targetSections": string[], "approach": "css-change"|"content-change"|"regenerate"|"design-dna-overhaul", "preserveSections": string[], "confidence": number }`,
 
-    "refinement-agent": `You are an expert landing page designer. Apply the user's requested changes.
+    "refinement-agent": `You are a Senior Creative Director & Principal Product Designer. Intelligently apply the user's edit request to elevate the page.
 
 User request: "${message}"
 Intent analysis: ${previousOutputs["intent-analyzer"] ?? ""}
@@ -1656,14 +1662,23 @@ ${cssVars}
 Page sections:
 ${pageOutline}
 
-INSTRUCTIONS:
-- For color/font/style changes: return updated CSS custom property values as JSON.
-- For text/copy changes: describe what to change in which section.
-- Do NOT attempt to rewrite JavaScript or HTML structure — only CSS vars and text are safe to change via this pipeline.
+CREATIVE DIRECTOR DESIGN DNA INTENT RULES:
+1. If request implies visual theme / style ("Linear", "Stripe", "Cyber", "Executive", "Dark mode", "Glass"):
+   - Linear style: { "--background": "#08090a", "--card-bg": "#121518", "--primary": "#5e6ad2", "--border": "rgba(255,255,255,0.08)", "--radius": "8px" }
+   - Stripe style: { "--background": "#0a2540", "--card-bg": "#113156", "--primary": "#635bff", "--accent": "#00d4ff", "--radius": "12px" }
+   - Cyber / Dark: { "--background": "#030712", "--card-bg": "#0f172a", "--primary": "#06b6d4", "--accent": "#f43f5e", "--radius": "16px" }
+   - Clean Light:  { "--background": "#ffffff", "--card-bg": "#f8fafc", "--primary": "#0f172a", "--border": "rgba(0,0,0,0.08)", "--radius": "8px" }
+   - Glass / Framer: { "--background": "#09090b", "--card-bg": "rgba(255,255,255,0.04)", "--primary": "#38bdf8", "--radius": "20px" }
+2. If request says "make it premium" or "improve spacing":
+   - Subtle contrast polish, refined primary/accent colors, 12-16px card radii.
+
+SECTION MUTATION RULES:
+- For section-specific layout changes ("bento grid", "split hero", "pricing cards"):
+  Specify "section" (exact ComponentName from Page sections) and "description" detailing the exact new layout structure to generate.
 
 Return ONLY valid JSON (no markdown fences):
 {
-  "cssChanges": { "--primary": "#hex", "--background": "#hex", ... } | null,
+  "cssChanges": { "--primary": "#hex", "--background": "#hex", "--card-bg": "#hex", "--radius": "px" } | null,
   "textChanges": [{ "section": string, "description": string }] | null,
   "summary": string
 }
