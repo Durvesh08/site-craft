@@ -1277,16 +1277,71 @@ button, a { transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.1
 .slide-reveal { animation: _slide-reveal 0.7s cubic-bezier(0.77,0,0.175,1) forwards; }
 
 /* ── animate-ui: bento card hover glow ─────────────────────────────────── */
-.bento-card {
+.bento-card, .sc-bento-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.22s ease;
+  position: relative;
+  overflow: hidden;
 }
-.bento-card:hover {
+.bento-card:hover, .sc-bento-card:hover {
   border-color: var(--primary);
-  box-shadow: 0 0 32px color-mix(in srgb, var(--primary) 20%, transparent);
+  box-shadow: 0 12px 40px -10px color-mix(in srgb, var(--primary) 25%, transparent);
+  transform: translateY(-4px);
+}
+
+/* ── bento-grid system ─────────────────────────────────────────────────── */
+.sc-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+}
+.sc-col-12 { grid-column: span 12; }
+.sc-col-8  { grid-column: span 8; }
+.sc-col-6  { grid-column: span 6; }
+.sc-col-4  { grid-column: span 4; }
+.sc-col-3  { grid-column: span 3; }
+@media (max-width: 900px) {
+  .sc-col-8, .sc-col-6, .sc-col-4, .sc-col-3 { grid-column: span 12 !important; }
+}
+
+/* ── glassmorphism card system ─────────────────────────────────────────── */
+.sc-glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
+}
+.sc-glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sc-glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
   transform: translateY(-3px);
+  box-shadow: 0 16px 48px -12px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* ── aurora background mesh animation ───────────────────────────────────── */
+@keyframes _aurora-pulse {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  50% { transform: translate(30px, -20px) scale(1.15); opacity: 0.7; }
+}
+.sc-aurora-mesh {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.sc-aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: _aurora-pulse 8s ease-in-out infinite;
 }
 
 /* ── animate-ui: magnetic button area (CSS part — JS does the movement) ── */

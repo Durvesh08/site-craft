@@ -1332,8 +1332,8 @@ HERO OPTIONS — pick the one that fits this brand:
 
 SECTION PALETTE (choose 7-12 to tell this brand's story):
 navbar, gradient-hero, product-mockup-hero, split-hero, logo-cloud-grid, animated-stat-counters,
-bento-feature-grid, alternating-feature-rows, numbered-steps-timeline, integration-chip-grid,
-live-activity-widget, testimonial-carousel, testimonial-wall, tiered-pricing-cards,
+bento-feature-grid, interactive-showcase, bento-stats, alternating-feature-rows, numbered-steps-timeline,
+integration-chip-grid, live-activity-widget, testimonial-carousel, testimonial-wall, tiered-pricing-cards,
 comparison-table, gradient-cta-banner, faq-accordion, footer-with-newsletter,
 team-grid, about-story-section, contact-form-section, feature-deep-dive
 
@@ -1404,7 +1404,7 @@ For each section specify:
 - type: exact component type from the UX layout plan
 - order: numeric order (0 = first)
 - page: the HTML filename this section belongs to (e.g. "index.html", "about.html"). Default to "index.html" if single-page.
-- brief: 2-3 sentence brief detailing unique visual layout techniques (asymmetric grid, timeline, comparison) to prevent duplicate look and feel.
+- brief: 2-3 sentence brief detailing unique visual layout techniques (asymmetric bento grid, interactive showcase, timeline, comparison) to prevent duplicate look and feel. Specify bento span classes (fg-span2, sc-col-8) and card treatments (sc-glass-card, gradient-border).
 Return ONLY valid JSON:
 { "sectionPlan": [{ "id": string, "type": string, "order": number, "page": string, "brief": string, "mobileBehavior": string, "visualAccent": string }], "headlineStyle": "gradient-text"|"solid-text"|"split-color-text", "gradientColors": string|null, "heroType": string, "responsiveRules": string[], "confidence": number }`,
 
