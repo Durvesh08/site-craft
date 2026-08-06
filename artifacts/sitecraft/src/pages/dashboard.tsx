@@ -41,19 +41,31 @@ export default function Dashboard() {
     if (!selectedProject) return;
     setIsSaving(true);
     try {
+      // 1. Save name + description via the general PATCH endpoint
       await updateProjectMutation.mutateAsync({
         id: selectedProject.id,
         data: {
           name: projName,
           description: projDesc,
-          pixelCode: projPixel || "",
         },
       });
+
+      // 2. Save pixel code via the dedicated /pixel endpoint (no AI, no credits)
+      const pixelRes = await fetch(`/api/projects/${selectedProject.id}/pixel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pixelCode: projPixel }),
+      });
+      if (!pixelRes.ok) {
+        const err = await pixelRes.json().catch(() => ({}));
+        throw new Error(err?.message || "Failed to save pixel code");
+      }
+
       toast.success("Project settings updated successfully!");
       setIsSettingsOpen(false);
       refetchProjects();
-    } catch (err) {
-      toast.error("Failed to update project settings.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update project settings.");
     } finally {
       setIsSaving(false);
     }

@@ -751,15 +751,27 @@ router.patch("/projects/:id", async (req: Request, res: Response) => {
 
         if (patchPixel !== undefined) {
           const startTag = "<!-- PIXEL_CODE_START -->";
-          const endTag = "<!-- PIXEL_CODE_END -->";
+          const endTag   = "<!-- PIXEL_CODE_END -->";
           const pixelContent = patchPixel || "";
           if (html.includes(startTag) && html.includes(endTag)) {
+            // Tags already exist — replace only the content between them
             const startIndex = html.indexOf(startTag) + startTag.length;
-            const endIndex = html.indexOf(endTag);
+            const endIndex   = html.indexOf(endTag);
             html = html.slice(0, startIndex) + pixelContent + html.slice(endIndex);
           } else {
-            const replacement = `\n  ${startTag}${pixelContent}${endTag}\n</head>`;
-            html = html.replace("</head>", replacement);
+            // No tags yet — inject block before </head> (case-insensitive match)
+            const headMatch = html.match(/<\/head>/i);
+            if (headMatch && headMatch.index !== undefined) {
+              const injection = `\n  ${startTag}${pixelContent}${endTag}\n`;
+              html = html.slice(0, headMatch.index) + injection + html.slice(headMatch.index);
+            } else {
+              // Fallback: inject before </body>
+              const bodyMatch = html.match(/<\/body>/i);
+              if (bodyMatch && bodyMatch.index !== undefined) {
+                const injection = `\n  ${startTag}${pixelContent}${endTag}\n`;
+                html = html.slice(0, bodyMatch.index) + injection + html.slice(bodyMatch.index);
+              }
+            }
           }
         }
 
@@ -770,13 +782,72 @@ router.patch("/projects/:id", async (req: Request, res: Response) => {
     const [updated] = await db
       .update(projectsTable)
       .set(updates)
-      .where(eq(projectsTable.id, params.data.id))
+      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)))
       .returning();
 
     res.json(toProjectResponse(updated));
   } catch (err) {
     req.log.error({ err }, "Failed to update project");
     res.status(500).json({ error: "InternalError", message: "Failed to update project" });
+  }
+});
+
+// POST /projects/:id/pixel — Save pixel/tracking code without AI regeneration
+// This dedicated endpoint is the most reliable way to update pixel code.
+// It updates BOTH the pixelCode column AND injects into the stored generatedHtml.
+router.post("/projects/:id/pixel", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const { pixelCode } = req.body as { pixelCode?: string };
+
+    if (pixelCode === undefined) {
+      res.status(400).json({ error: "BadRequest", message: "pixelCode is required" });
+      return;
+    }
+
+    const [project] = await db.select().from(projectsTable)
+      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    const pixelContent = pixelCode || "";
+    let newHtml = project.generatedHtml;
+
+    if (newHtml) {
+      newHtml = mapAllPages(newHtml, (pageHtml) => {
+        let html = pageHtml;
+        const startTag = "<!-- PIXEL_CODE_START -->";
+        const endTag   = "<!-- PIXEL_CODE_END -->";
+
+        if (html.includes(startTag) && html.includes(endTag)) {
+          // Replace content between existing tags
+          const si = html.indexOf(startTag) + startTag.length;
+          const ei = html.indexOf(endTag);
+          html = html.slice(0, si) + pixelContent + html.slice(ei);
+        } else {
+          // Inject before </head>
+          const m = html.match(/<\/head>/i);
+          if (m && m.index !== undefined) {
+            html = html.slice(0, m.index) + `\n  ${startTag}${pixelContent}${endTag}\n` + html.slice(m.index);
+          }
+        }
+        return html;
+      });
+    }
+
+    const [updated] = await db.update(projectsTable)
+      .set({ pixelCode: pixelContent, generatedHtml: newHtml, updatedAt: new Date() })
+      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)))
+      .returning();
+
+    res.json({ success: true, pixelCode: updated.pixelCode });
+  } catch (err) {
+    req.log.error({ err }, "Failed to save pixel code");
+    res.status(500).json({ error: "InternalError", message: "Failed to save pixel code" });
   }
 });
 
