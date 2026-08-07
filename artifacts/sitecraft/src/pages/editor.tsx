@@ -4,13 +4,12 @@ import { useGetProject } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  RotateCcw, Monitor, Tablet, Smartphone, Sparkles, Send, Zap,
-  Rocket, Loader2, Code, Layers, Paperclip, Check, CornerDownLeft
+  RotateCcw, Monitor, Tablet, Smartphone, Sparkles, Send,
+  Rocket, Loader2, Eye, Layers, Paperclip, Check, CornerDownLeft, Undo2, Redo2, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { soundEngine } from "@/lib/sound-effects";
-import { CommandPalette } from "@/components/ui/command-palette";
 import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 
 type Viewport = "desktop" | "tablet" | "mobile";
@@ -32,9 +31,7 @@ export default function ProjectEditor() {
   });
 
   const [viewport, setViewport] = useState<Viewport>("desktop");
-  const [selectedSection, setSelectedSection] = useState<string | null>("Hero Section");
-  const [isCommandOpen, setIsCommandOpen] = useState(false);
-
+  const [selectedSection, setSelectedSection] = useState<string>("Hero Section");
   const [editInstruction, setEditInstruction] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
@@ -45,23 +42,39 @@ export default function ProjectEditor() {
   const [pages, setPages] = useState<string[]>(["index.html"]);
   const [currentPage, setCurrentPage] = useState<string>("index.html");
 
-  // Left Section Layers
+  // Sections List
   const [sections] = useState([
-    { id: "Hero Section", name: "Hero Section", elements: ["Headline", "CTA Button", "3D Canvas"], status: "Ready" },
-    { id: "Constellation", name: "Agent Swarm Graph", elements: ["18 Neural Nodes", "Energy Rays"], status: "Active" },
-    { id: "Telemetry", name: "Telemetry Console", elements: ["Terminal Output", "WAI-ARIA Score"], status: "Ready" },
-    { id: "Pricing", name: "Pricing Matrix", elements: ["Developer Tier", "Enterprise Tier"], status: "Ready" },
+    { id: "hero", name: "Hero Section", type: "Header & Hero" },
+    { id: "features", name: "Features & Benefits", type: "Grid" },
+    { id: "testimonials", name: "Testimonials & Reviews", type: "Social Proof" },
+    { id: "pricing", name: "Pricing Options", type: "Table" },
+    { id: "faq", name: "FAQ & Contact", type: "Footer" },
   ]);
 
-  // Chat conversation stream (90% of right sidebar)
+  // Chat conversation stream
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "init",
       sender: "ai",
-      text: "I'm your AI Design Partner. Select any section on the canvas or type what you want to transform.",
+      text: "You're editing Hero Section. What would you like to change?",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
+
+  // Handle Section Click (Auto Update AI Context)
+  const handleSelectSection = (sectionName: string) => {
+    soundEngine.playTabSwitch();
+    setSelectedSection(sectionName);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        sender: "ai",
+        text: `Selected: ${sectionName}. What would you like to change?`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+  };
 
   // Load pages list
   useEffect(() => {
@@ -86,18 +99,6 @@ export default function ProjectEditor() {
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  // Keyboard shortcut CMD+K
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setIsCommandOpen((prev) => !prev);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   // Auto-scroll chat
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -110,20 +111,19 @@ export default function ProjectEditor() {
   const getViewportWidth = () => {
     if (viewport === "mobile") return "w-[375px] h-[812px]";
     if (viewport === "tablet") return "w-[768px] h-[1024px]";
-    return "w-full max-w-[1480px] h-full";
+    return "w-full max-w-[1400px] h-full";
   };
 
   const handlePromptSubmit = async (customPrompt?: string) => {
     const rawPrompt = (customPrompt || editInstruction).trim();
     if (!rawPrompt) {
-      toast.error("Tell the AI what to change first.");
+      toast.error("Describe your change first.");
       return;
     }
     if (!id) return;
 
     soundEngine.playPrimaryClick();
 
-    // Contextual prompt injection if a section is selected
     const fullPrompt = selectedSection
       ? `Editing [${selectedSection}]: ${rawPrompt}`
       : rawPrompt;
@@ -147,7 +147,7 @@ export default function ProjectEditor() {
         body: JSON.stringify({ message: fullPrompt }),
       });
 
-      if (!res.ok) throw new Error("Design update failed");
+      if (!res.ok) throw new Error("Update failed");
 
       setTimeout(async () => {
         soundEngine.playSuccess();
@@ -160,54 +160,52 @@ export default function ProjectEditor() {
           {
             id: Date.now().toString(),
             sender: "ai",
-            text: `I updated ${selectedSection || "the page"}.`,
+            text: `Updated ${selectedSection}.`,
             bullets: [
-              "Improved typography hierarchy & contrast",
-              "Applied dark glassmorphism & soft borders",
-              "Optimized WAI-ARIA 99/100 accessibility",
+              "Improved layout hierarchy and spacing",
+              "Refined headlines and copy text",
+              "Verified mobile responsiveness",
             ],
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           },
         ]);
-        toast.success("Design update applied!");
-      }, 1600);
+        toast.success("Website updated!");
+      }, 1500);
 
     } catch {
       soundEngine.playError();
       setIsRegenerating(false);
-      toast.error("Design update failed.");
+      toast.error("Failed to update website.");
     }
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#030305] text-foreground font-sans overflow-hidden select-none relative">
+    <div className="flex flex-col h-screen w-full bg-[#F8F9FC] text-[#111827] font-sans overflow-hidden select-none relative">
       
-      <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} />
-
-      {/* ── TOP MINIMALIST TOOLBAR ── */}
-      <header className="absolute top-0 inset-x-0 h-14 border-b border-white/10 glass flex items-center justify-between px-6 z-40 shadow-2xl backdrop-blur-2xl">
+      {/* ── CLEAN STUDIO TOP BAR ── */}
+      <header className="h-14 border-b border-[#E8EAF2] bg-white flex items-center justify-between px-6 z-40 shrink-0 shadow-xs font-sans">
         
-        {/* Left: Project & Page Switcher */}
+        {/* Left: Brand & Page Switcher */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => setLocation("/dashboard")}>
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setLocation("/dashboard")}>
             <ZovaixLogo size="sm" showLabel={false} />
-            <span className="font-extrabold text-sm tracking-tight text-foreground">
-              {project?.name || "ZOVAIX SITES"}
+            <span className="font-bold text-sm tracking-tight text-[#111827]">
+              {project?.name || "ZOVAIX SITES Builder"}
             </span>
           </div>
 
-          <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />
+          <div className="h-4 w-[1px] bg-[#E8EAF2] hidden sm:block" />
 
-          {/* Pages */}
+          {/* Page Switcher */}
           {pages.length > 0 && (
-            <div className="flex items-center gap-1 bg-secondary/30 rounded-xl p-1 border border-white/10">
+            <div className="flex items-center gap-1 bg-[#F8F9FC] rounded-xl p-1 border border-[#E8EAF2]">
               {pages.map((p) => (
                 <button
                   key={p}
                   onClick={() => { soundEngine.playTabSwitch(); setCurrentPage(p); }}
                   className={cn(
-                    "px-3 py-1 text-xs font-mono font-bold rounded-lg transition-all",
-                    currentPage === p ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
+                    "px-3 py-1 text-xs font-semibold rounded-lg transition-all",
+                    currentPage === p ? "bg-white text-[#6D5EF8] shadow-xs" : "text-[#6B7280] hover:text-[#111827]"
                   )}
                 >
                   {p.replace(".html", "")}
@@ -218,7 +216,7 @@ export default function ProjectEditor() {
         </div>
 
         {/* Center: Viewport Switcher */}
-        <div className="flex items-center gap-1 bg-secondary/40 rounded-xl p-1 border border-white/10">
+        <div className="flex items-center gap-1 bg-[#F8F9FC] rounded-xl p-1 border border-[#E8EAF2]">
           {(["desktop", "tablet", "mobile"] as Viewport[]).map((v) => {
             const Icon = v === "desktop" ? Monitor : v === "tablet" ? Tablet : Smartphone;
             return (
@@ -226,8 +224,8 @@ export default function ProjectEditor() {
                 key={v}
                 onClick={() => { soundEngine.playTabSwitch(); setViewport(v); }}
                 className={cn(
-                  "h-8 px-3 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 transition-all",
-                  viewport === v ? "bg-primary/20 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"
+                  "h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all",
+                  viewport === v ? "bg-white text-[#6D5EF8] shadow-xs" : "text-[#6B7280] hover:text-[#111827]"
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -237,107 +235,75 @@ export default function ProjectEditor() {
           })}
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Actions (Preview & Publish Website) */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsCommandOpen(true)}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/40 border border-white/10 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 text-xs gap-1.5 rounded-xl border-[#E8EAF2] text-[#4B5563]"
+            disabled={!iframeUrl}
+            asChild
           >
-            <span>Command</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[10px]">⌘K</kbd>
-          </button>
-
-          <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5" onClick={() => refetch()}>
-            <RotateCcw className="h-3.5 w-3.5" /> Reload
+            <a href={iframeUrl || "#"} target="_blank" rel="noreferrer">
+              <Eye className="h-3.5 w-3.5 text-[#6D5EF8]" /> Preview
+            </a>
           </Button>
 
-          <Button size="sm" className="h-9 px-4 rounded-xl text-xs font-bold shadow-lg shadow-primary/30 btn-magnetic" onClick={() => setLocation(`/projects/${id}/deployments`)}>
-            <Rocket className="h-3.5 w-3.5 mr-1" /> Deploy
+          <Button size="sm" className="btn-consumer-primary h-9 px-4 text-xs gap-1.5" onClick={() => setLocation(`/projects/${id}/deployments`)}>
+            <Rocket className="h-3.5 w-3.5" /> Publish Website
           </Button>
         </div>
 
       </header>
 
       {/* ── MAIN WORKSPACE ── */}
-      <div className="flex-1 flex pt-14 h-full relative overflow-hidden">
+      <div className="flex-1 flex h-full relative overflow-hidden">
         
-        {/* ── LEFT SECTION LAYERS PANEL ── */}
-        <aside className="w-64 border-r border-white/10 glass flex flex-col z-30">
-          <div className="p-4 border-b border-white/10 flex items-center justify-between font-mono text-xs font-bold text-foreground">
+        {/* ── LEFT SECTIONS PANEL ── */}
+        <aside className="w-64 border-r border-[#E8EAF2] bg-white flex flex-col z-30 font-sans">
+          <div className="p-4 border-b border-[#E8EAF2] flex items-center justify-between text-xs font-bold text-[#111827]">
             <span className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" /> SECTION LAYERS
+              <Layers className="h-4 w-4 text-[#6D5EF8]" /> SECTIONS
             </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 font-mono text-xs">
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
             {sections.map((sec) => (
               <button
                 key={sec.id}
-                onClick={() => { soundEngine.playTabSwitch(); setSelectedSection(sec.name); }}
+                onClick={() => handleSelectSection(sec.name)}
                 className={cn(
-                  "w-full p-3 rounded-2xl text-left border transition-all space-y-1.5",
+                  "w-full p-3 rounded-xl text-left border transition-all space-y-1 group",
                   selectedSection === sec.name
-                    ? "bg-primary/20 border-primary/50 text-primary shadow-lg"
-                    : "bg-secondary/15 border-white/5 text-muted-foreground hover:border-white/20 hover:text-foreground"
+                    ? "bg-[#F2F3FF] border-[#6D5EF8]/40 text-[#6D5EF8] font-bold shadow-xs"
+                    : "bg-white border-[#E8EAF2] text-[#4B5563] hover:border-[#CBD5E1] hover:text-[#111827]"
                 )}
               >
-                <div className="flex items-center justify-between font-bold text-foreground">
-                  <span>■ {sec.name}</span>
-                  <span className="text-[10px] text-emerald-400 font-normal">✓ {sec.status}</span>
+                <div className="flex items-center justify-between">
+                  <span>{sec.name}</span>
+                  <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-[#6D5EF8]" />
                 </div>
-                <div className="text-[10px] text-muted-foreground/80 leading-relaxed">
-                  Contains: {sec.elements.join(", ")}
-                </div>
+                <div className="text-[11px] text-[#6B7280] font-normal">{sec.type}</div>
               </button>
             ))}
           </div>
         </aside>
 
-        {/* ── CENTER HERO CANVAS (20-25% LARGER PREVIEW) ── */}
-        <main className="flex-1 relative flex flex-col items-center justify-center p-4 md:p-6 bg-[#05050a] overflow-auto">
+        {/* ── CENTER WEBSITE CANVAS ── */}
+        <main className="flex-1 relative flex flex-col items-center justify-center p-6 bg-[#F8F9FC] overflow-auto">
           
-          {/* Ambient Lighting */}
-          <div className="absolute inset-0 bg-[radial-gradient(#818cf8_1px,transparent_1px)] [background-size:36px_36px] opacity-15 pointer-events-none" />
-
-          {/* Floating Contextual Toolbar above canvas */}
-          {selectedSection && (
-            <div className="mb-3 glass px-4 py-1.5 rounded-2xl border border-white/20 shadow-2xl flex items-center gap-3 z-30 animate-fade-in">
-              <span className="text-xs font-mono font-bold text-primary flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> {selectedSection}
-              </span>
-              <div className="h-3 w-[1px] bg-white/10" />
-              <button onClick={() => handlePromptSubmit("make it premium")} className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                ✨ Improve
-              </button>
-              <button onClick={() => handlePromptSubmit("redesign layout")} className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                🎨 Redesign
-              </button>
-              <button onClick={() => handlePromptSubmit("rewrite copy to sound punchy")} className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                ✍️ Rewrite
-              </button>
-              <button onClick={() => handlePromptSubmit("add Framer motion animations")} className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                ⚡ Animate
-              </button>
-            </div>
-          )}
-
-          {/* Floating Canvas Box (Expanded Size) */}
+          {/* Website Preview Box */}
           <div
             className={cn(
-              "transition-all duration-500 rounded-3xl glass border border-white/20 shadow-2xl overflow-hidden relative flex flex-col backdrop-blur-2xl h-full max-h-[920px]",
+              "transition-all duration-300 rounded-2xl bg-white border border-[#E8EAF2] shadow-md overflow-hidden relative flex flex-col h-full max-h-[880px]",
               getViewportWidth()
             )}
           >
-            {/* Window Bar */}
-            <div className="h-9 px-4 border-b border-white/10 bg-secondary/40 flex items-center justify-between font-mono text-[10px] text-muted-foreground shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
-                <div className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
-                <span className="ml-2 font-bold text-foreground">app.sitecraft.ai / {currentPage}</span>
-              </div>
-              <span className="text-emerald-400 font-bold flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> LIVE CANVAS
+            {/* Top Chrome URL Bar */}
+            <div className="h-9 px-4 border-b border-[#E8EAF2] bg-[#F8F9FC] flex items-center justify-between text-xs text-[#6B7280] shrink-0 font-sans">
+              <span className="font-medium text-[#111827]">https://mywebsite.zovaix.com / {currentPage}</span>
+              <span className="text-emerald-600 text-[11px] font-semibold flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> Live Editor
               </span>
             </div>
 
@@ -346,14 +312,14 @@ export default function ProjectEditor() {
               <iframe
                 key={iframeKey}
                 src={iframeUrl}
-                className="w-full flex-1 bg-white animate-fade-in"
+                className="w-full flex-1 bg-white"
                 sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation"
-                title="Visual Studio Preview"
+                title="Website Preview"
               />
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                <p className="text-xs font-mono text-muted-foreground">Synthesizing Visual Preview...</p>
+                <Loader2 className="h-8 w-8 text-[#6D5EF8] animate-spin" />
+                <p className="text-xs font-semibold text-[#6B7280]">Preparing Website Preview...</p>
               </div>
             )}
 
@@ -361,55 +327,48 @@ export default function ProjectEditor() {
 
         </main>
 
-        {/* ── RIGHT PANEL: AI WORKSPACE CHAT (90% Conversational Dominance) ── */}
-        <aside className="w-96 border-l border-white/10 glass flex flex-col z-30 shadow-2xl backdrop-blur-2xl">
+        {/* ── RIGHT PANEL: AI ASSISTANT ── */}
+        <aside className="w-96 border-l border-[#E8EAF2] bg-white flex flex-col z-30 font-sans shadow-sm">
           
-          {/* Workspace Header */}
-          <div className="p-4 border-b border-white/10 bg-secondary/30 flex items-center justify-between font-mono text-xs font-bold text-foreground">
+          {/* Header */}
+          <div className="p-4 border-b border-[#E8EAF2] bg-[#F8F9FC] flex items-center justify-between text-xs font-bold text-[#111827]">
             <span className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" /> AI WORKSPACE
+              <Sparkles className="h-4 w-4 text-[#6D5EF8]" /> AI ASSISTANT
             </span>
-            <span className="text-[10px] text-emerald-400">GPT-4o SYNTHESIZER</span>
+            <span className="text-[11px] text-[#6D5EF8] font-semibold">Editing: {selectedSection}</span>
           </div>
 
-          {/* Conversation Feed (90% Height) */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs">
+          {/* Chat Stream */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={cn(
-                  "p-4 rounded-2xl leading-relaxed space-y-2 transition-all",
+                  "p-3.5 rounded-2xl leading-relaxed space-y-2 transition-all",
                   m.sender === "user"
-                    ? "bg-primary/20 text-primary border border-primary/30 ml-6 rounded-br-none shadow-md"
-                    : "bg-secondary/30 text-foreground border border-white/10 mr-6 rounded-bl-none"
+                    ? "bg-[#6D5EF8] text-white ml-6 rounded-br-none shadow-xs"
+                    : "bg-[#F8F9FC] text-[#111827] border border-[#E8EAF2] mr-6 rounded-bl-none"
                 )}
               >
-                <p className="font-medium text-xs">{m.text}</p>
+                <p className="font-medium">{m.text}</p>
 
                 {m.bullets && (
-                  <div className="space-y-1 pt-1 border-t border-white/10 font-mono text-[11px]">
+                  <div className="space-y-1 pt-1 border-t border-[#E8EAF2] text-[11px] text-[#4B5563]">
                     {m.bullets.map((b, idx) => (
-                      <div key={idx} className="flex items-start gap-1.5 text-emerald-400">
+                      <div key={idx} className="flex items-start gap-1.5 text-emerald-600">
                         <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                         <span>{b}</span>
                       </div>
                     ))}
                   </div>
                 )}
-
-                <div className="text-[9px] font-mono text-muted-foreground opacity-60 text-right pt-0.5">
-                  {m.timestamp}
-                </div>
               </div>
             ))}
 
             {isRegenerating && (
-              <div className="mr-6 p-4 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-xs space-y-2 animate-pulse">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
-                  <span className="font-bold">AI Swarm Partner is working...</span>
-                </div>
-                <p className="text-[11px] text-purple-300/80">Refining typography, glass tokens, and layout physics...</p>
+              <div className="mr-6 p-3.5 rounded-2xl bg-[#F2F3FF] border border-[#6D5EF8]/30 text-[#6D5EF8] font-medium text-xs flex items-center gap-2.5 animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                <span>Updating website with your changes...</span>
               </div>
             )}
 
@@ -417,7 +376,7 @@ export default function ProjectEditor() {
           </div>
 
           {/* Fixed Bottom Input Area */}
-          <div className="p-4 border-t border-white/10 bg-secondary/30 space-y-2">
+          <div className="p-4 border-t border-[#E8EAF2] bg-[#F8F9FC] space-y-2">
             <div className="relative flex items-center">
               <Textarea
                 ref={textareaRef}
@@ -430,32 +389,18 @@ export default function ProjectEditor() {
                     handlePromptSubmit();
                   }
                 }}
-                placeholder={selectedSection ? `Transform ${selectedSection}...` : "Type what you want..."}
-                className="min-h-[75px] bg-black/40 border border-white/10 text-xs font-medium rounded-2xl p-3 pr-10 focus:outline-none focus:border-primary shadow-inner"
+                placeholder={`Describe your change for ${selectedSection}...`}
+                className="min-h-[75px] bg-white border border-[#E8EAF2] text-xs font-medium rounded-2xl p-3 pr-10 focus:outline-none focus:border-[#6D5EF8] text-[#111827]"
               />
               
-              <div className="absolute right-3 bottom-3 flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => toast.info("Asset attachment coming soon")}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePromptSubmit()}
-                  disabled={isRegenerating || !editInstruction.trim()}
-                  className="p-2 rounded-xl bg-primary text-primary-foreground disabled:opacity-40 shadow-md"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground px-1">
-              <span>Shift + Enter for new line</span>
-              <span className="flex items-center gap-1">Press <CornerDownLeft className="h-2.5 w-2.5" /> to send</span>
+              <button
+                type="button"
+                onClick={() => handlePromptSubmit()}
+                disabled={isRegenerating || !editInstruction.trim()}
+                className="absolute right-2 bottom-2 p-2 rounded-xl bg-[#6D5EF8] text-white disabled:opacity-40 shadow-xs"
+              >
+                <Send className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
 

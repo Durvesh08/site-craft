@@ -2,9 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Zap, Sparkles, ArrowRight, CheckCircle2, Command } from "lucide-react";
-import { CursorGlow } from "@/components/ui/cursor-glow";
-import { AICoreCanvas } from "@/components/canvas/ai-core-canvas";
+import { Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
 import { ChapterConstellation } from "@/components/narrative/chapter-constellation";
 import { ChapterTopology } from "@/components/narrative/chapter-topology";
 import { ChapterDashboardPreview } from "@/components/narrative/chapter-dashboard-preview";
@@ -21,8 +19,8 @@ export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  const [prompt, setPrompt] = useState("Build an AI SaaS platform with dark theme, JetBrains typography, and high conversion copy.");
-  const [activeChip, setActiveChip] = useState("SaaS Platform");
+  const [prompt, setPrompt] = useState("Build an online store for an artisanal coffee roastery with online ordering.");
+  const [activeChip, setActiveChip] = useState("Online Store");
 
   const goToLogin = () => {
     soundEngine.playPrimaryClick();
@@ -37,85 +35,78 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0B0D]">
-        <div className="animate-pulse flex flex-col items-center gap-4 font-mono text-xs text-[#8C8D93]">
-          <p className="tracking-widest">INITIALIZING ZOVAIX SITES CORE</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#F8F9FC]">
+        <div className="animate-pulse flex flex-col items-center gap-3 text-[#6B7280]">
+          <p className="font-semibold text-sm">Opening ZOVAIX SITES Builder...</p>
         </div>
       </div>
     );
   }
 
   const promptPresets = [
-    { label: "SaaS Platform", prompt: "Build an AI SaaS platform with dark theme, JetBrains typography, and high conversion copy." },
-    { label: "Crypto Protocol", prompt: "Synthesize a Web3 DEX protocol landing page with 3D token swap preview and animated staking stats." },
-    { label: "Design Agency", prompt: "Create a minimalist high-end portfolio for a product design agency with case study drawers." },
+    { label: "Online Store", prompt: "Build an online store for an artisanal coffee roastery with online ordering." },
+    { label: "SaaS Platform", prompt: "Create a modern SaaS product website with interactive feature demos and pricing." },
+    { label: "Agency Portfolio", prompt: "Synthesize a high-converting agency portfolio for a digital branding studio." },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0A0B0D] text-[#F3F2ED] font-sans overflow-x-hidden relative">
+    <div className="min-h-screen flex flex-col bg-[#F8F9FC] text-[#111827] font-sans overflow-x-hidden relative">
       
-      {/* 3D Ray-Marched Procedural AI Core Canvas */}
-      <AICoreCanvas />
-
-      {/* Dynamic Cursor Light Glow */}
-      <CursorGlow />
-
-      {/* Precision Instrument Navbar */}
-      <header className="fixed top-4 left-1/2 -translate-x-1/2 h-14 px-6 bg-[#131417] border border-[#26272C] rounded-lg flex items-center justify-between z-50 w-full max-w-4xl font-mono text-xs">
+      {/* Clean Consumer Navbar */}
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 h-14 px-6 bg-white/90 backdrop-blur-md border border-[#E8EAF2] rounded-2xl flex items-center justify-between z-50 w-full max-w-4xl shadow-sm">
         <div className="cursor-pointer" onClick={() => setLocation("/")}>
           <ZovaixLogo size="sm" />
         </div>
 
-        <div className="flex items-center gap-4">
-          <button onClick={goToLogin} className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors hidden md:block">
+        <div className="flex items-center gap-4 text-xs font-semibold">
+          <button onClick={goToLogin} className="text-[#4B5563] hover:text-[#111827] transition-colors hidden md:block">
             Sign In
           </button>
-          <Button className="h-10 px-5 rounded-xl text-xs font-bold gap-2 shadow-xl shadow-primary/25 btn-magnetic" onClick={goToLogin}>
-            Launch Studio <ArrowRight className="h-3.5 w-3.5" />
+          <Button className="btn-consumer-primary h-9 px-4 text-xs gap-1.5" onClick={goToLogin}>
+            Get Started Free <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </div>
       </header>
 
-      {/* CONTINUOUS SCROLL NARRATIVE */}
+      {/* HERO SECTION */}
       <main className="flex-1 flex flex-col items-center w-full z-10 relative">
         
-        {/* CHAPTER 01: THE BEGINNING */}
-        <section className="w-full min-h-screen pt-32 pb-24 px-6 flex flex-col items-center justify-center text-center relative z-10">
+        <section className="w-full min-h-[85vh] pt-36 pb-20 px-6 flex flex-col items-center justify-center text-center relative">
           
-          <div className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs text-primary font-mono shadow-inner mb-8 font-semibold tracking-widest uppercase">
-            <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-            CHAPTER 01 — THE BEGINNING
+          <div className="inline-flex items-center rounded-full bg-[#F2F3FF] border border-[#6D5EF8]/20 px-4 py-1.5 text-xs text-[#6D5EF8] mb-6 font-semibold">
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+            AI Website Builder for Business Owners & Creators
           </div>
 
-          <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter text-foreground leading-[1.02] max-w-6xl">
-            Don't build websites.<br />
-            <span className="text-gradient-primary">
-              Direct an AI Studio to synthesize them.
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#111827] leading-[1.08] max-w-5xl">
+            Build stunning websites<br />
+            <span className="text-gradient-purple">
+              in minutes with AI.
             </span>
           </h1>
 
-          <p className="mt-8 text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-normal">
-            18 specialized AI agents — UX strategists, copywriters, Framer motion designers, and React architects — build, optimize, and deploy your business website in seconds.
+          <p className="mt-6 text-lg sm:text-xl text-[#6B7280] max-w-2xl mx-auto leading-relaxed font-normal">
+            Describe your business in simple words. ZOVAIX SITES builds your copy, designs your pages, and publishes your site instantly.
           </p>
 
-          {/* Prompt Bar */}
-          <div className="w-full max-w-3xl mx-auto mt-12 space-y-4">
-            <div className="glass-panel p-2 rounded-2xl border border-primary/30 flex items-center gap-3 shadow-2xl">
-              <Sparkles className="h-6 w-6 text-primary shrink-0 ml-3" />
+          {/* Prompt Surface */}
+          <div className="w-full max-w-2xl mx-auto mt-10 space-y-4 font-sans">
+            <div className="card-consumer p-2 flex items-center gap-3 shadow-md">
+              <Sparkles className="h-5 w-5 text-[#6D5EF8] shrink-0 ml-3" />
               <input
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onFocus={() => soundEngine.playInputFocus()}
-                className="flex-1 bg-transparent border-0 text-sm font-medium text-foreground focus:outline-none placeholder:text-muted-foreground"
-                placeholder="Describe the website you want to synthesize..."
+                className="flex-1 bg-transparent border-0 text-sm font-medium text-[#111827] focus:outline-none placeholder:text-[#9CA3AF]"
+                placeholder="Describe your business or website idea..."
               />
-              <Button size="lg" className="h-12 px-8 font-bold gap-2 rounded-xl shadow-lg shadow-primary/30 btn-magnetic" onClick={goToLogin}>
-                Synthesize <ArrowRight className="h-4 w-4" />
+              <Button size="sm" className="btn-consumer-primary h-11 px-6 text-sm font-bold gap-2" onClick={goToLogin}>
+                Create Website <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
 
             <div className="flex items-center justify-center gap-2 flex-wrap">
-              <span className="text-xs font-mono text-muted-foreground mr-2">Try Preset:</span>
+              <span className="text-xs font-semibold text-[#6B7280] mr-1">Popular Examples:</span>
               {promptPresets.map((chip) => (
                 <button
                   key={chip.label}
@@ -124,10 +115,12 @@ export default function Home() {
                     setPrompt(chip.prompt);
                     setActiveChip(chip.label);
                   }}
-                  onMouseEnter={() => soundEngine.playHoverShimmer()}
-                  className={`px-3 py-1 rounded-full text-xs font-mono font-semibold transition-all ${
-                    activeChip === chip.label ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary/40 text-muted-foreground hover:bg-secondary"
-                  }`}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-xs font-medium transition-all",
+                    activeChip === chip.label
+                      ? "bg-[#6D5EF8] text-white shadow-xs"
+                      : "bg-white text-[#4B5563] border border-[#E8EAF2] hover:bg-[#F8F9FC]"
+                  )}
                 >
                   {chip.label}
                 </button>
@@ -136,87 +129,76 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CHAPTER 02: THE SWARM AWAKENS */}
+        {/* Narrative Sections */}
         <ChapterConstellation />
 
-        {/* CHAPTER 03: EVERY AGENT STARTS WORKING */}
-        <section className="w-full max-w-5xl px-6 py-24 z-10">
+        <section className="w-full max-w-5xl px-6 py-16">
           <ActivityStream />
         </section>
 
-        {/* CHAPTER 04: REAL-TIME NEURAL PIPELINE */}
         <AgentPipelineMatrix />
-
-        {/* CHAPTER 05: DEPLOYMENT HAPPENS */}
         <ChapterTopology />
-
-        {/* CHAPTER 06: LIVE OPERATING SYSTEM */}
         <ChapterDashboardPreview />
-
-        {/* CHAPTER 07: EVERYTHING IS CONNECTED */}
         <ChapterIntegrations />
         <TestimonialsShowcase />
-
-        {/* CHAPTER 08: FREQUENTLY ASKED QUESTIONS */}
         <InteractiveFAQ />
 
-        {/* CHAPTER 09: PRICING MATRIX */}
-        <section className="w-full max-w-5xl mx-auto px-6 py-24">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">
-              Simple, transparent pricing.
+        {/* Pricing Matrix */}
+        <section className="w-full max-w-5xl mx-auto px-6 py-20">
+          <div className="text-center mb-12 space-y-2">
+            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#111827]">
+              Simple, transparent pricing
             </h2>
-            <p className="text-xl text-muted-foreground">
-              Start building for free, upgrade when you need to scale.
+            <p className="text-base text-[#6B7280]">
+              Start building for free, upgrade when your business grows.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="glass-panel rounded-3xl p-10 flex flex-col border border-border/50 hover:border-primary/30 transition-all">
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-2">Developer</h3>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-5xl font-bold">₹499</span>
-                  <span className="text-muted-foreground">/ month</span>
+            <div className="card-consumer p-8 flex flex-col justify-between space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold text-[#111827]">Starter</h3>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-extrabold text-[#111827]">₹499</span>
+                  <span className="text-sm text-[#6B7280]">/ month</span>
                 </div>
-                <p className="text-muted-foreground">Perfect for indie hackers and creators.</p>
+                <p className="text-sm text-[#6B7280]">Perfect for small business owners and creators.</p>
+                <ul className="space-y-3 pt-4 border-t border-[#E8EAF2] text-sm text-[#4B5563]">
+                  {["3 AI Websites", "Instant Domain Publishing", "Mobile Responsive", "Standard Support"].map((f) => (
+                    <li key={f} className="flex items-center gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-[#6D5EF8] shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-4 flex-1 mb-10">
-                {["5 AI Agents", "3 Projects", "Community Support", "Basic Analytics", "Standard Speed"].map((f) => (
-                  <li key={f} className="flex items-center gap-3 text-muted-foreground">
-                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button size="lg" variant="outline" className="w-full h-14 rounded-xl text-base font-semibold" onClick={goToLogin}>
-                Start Building
+              <Button size="lg" variant="outline" className="w-full h-11 rounded-xl text-sm font-bold border-[#E8EAF2]" onClick={goToLogin}>
+                Get Started
               </Button>
             </div>
 
-            <div className="glow-card rounded-3xl p-10 flex flex-col border-primary/50 relative">
-              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-accent" />
-              <div className="absolute top-6 right-6 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase">
-                Most Popular
-              </div>
-              <div className="mb-8">
-                <h3 className="text-2xl font-semibold mb-2 text-foreground">Enterprise</h3>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-5xl font-bold text-foreground">₹999</span>
-                  <span className="text-muted-foreground">/ month</span>
+            <div className="card-consumer p-8 flex flex-col justify-between space-y-6 border-[#6D5EF8] relative shadow-md">
+              <div className="space-y-4">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-[#F2F3FF] text-[#6D5EF8] text-xs font-bold">
+                  Most Popular
                 </div>
-                <p className="text-muted-foreground">For scaling teams and serious businesses.</p>
+                <h3 className="text-xl font-bold text-[#111827]">Pro Studio</h3>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-extrabold text-[#111827]">₹999</span>
+                  <span className="text-sm text-[#6B7280]">/ month</span>
+                </div>
+                <p className="text-sm text-[#6B7280]">For agencies, businesses, and growing teams.</p>
+                <ul className="space-y-3 pt-4 border-t border-[#E8EAF2] text-sm text-[#111827] font-medium">
+                  {["Unlimited AI Websites", "Custom Domain Connection", "Priority AI Processing", "Code Export & Full Backup", "24/7 Priority Support"].map((f) => (
+                    <li key={f} className="flex items-center gap-2.5">
+                      <CheckCircle2 className="h-4 w-4 text-[#6D5EF8] shrink-0" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-4 flex-1 mb-10">
-                {["18-Agent Swarm Access", "Unlimited Projects", "Priority Support", "Advanced Analytics", "Turbo Speed", "Custom Domains", "Code Export"].map((f) => (
-                  <li key={f} className="flex items-center gap-3 text-foreground font-medium">
-                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button size="lg" className="w-full h-14 rounded-xl text-base font-bold shadow-xl shadow-primary/20 btn-magnetic" onClick={goToLogin}>
-                Get Enterprise Access
+              <Button size="lg" className="btn-consumer-primary w-full h-11 text-sm font-bold" onClick={goToLogin}>
+                Start Pro Trial
               </Button>
             </div>
           </div>
