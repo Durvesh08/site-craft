@@ -9,7 +9,7 @@ import { ChapterConstellation } from "@/components/narrative/chapter-constellati
 import { ChapterTopology } from "@/components/narrative/chapter-topology";
 import { ChapterDashboardPreview } from "@/components/narrative/chapter-dashboard-preview";
 import { ChapterIntegrations } from "@/components/narrative/chapter-integrations";
-import { BeforeAfterSlider } from "@/components/landing/before-after";
+import { AgentPipelineMatrix } from "@/components/landing/agent-pipeline-matrix";
 import { TestimonialsShowcase } from "@/components/landing/testimonials-showcase";
 import { InteractiveFAQ } from "@/components/landing/interactive-faq";
 import { ActivityStream } from "@/components/dashboard/activity-stream";
@@ -148,8 +148,8 @@ export default function Home() {
           <ActivityStream />
         </section>
 
-        {/* CHAPTER 04: HOLOGRAPHIC BEFORE/AFTER TRANSFORMATION */}
-        <BeforeAfterSlider />
+        {/* CHAPTER 04: REAL-TIME NEURAL PIPELINE */}
+        <AgentPipelineMatrix />
 
         {/* CHAPTER 05: DEPLOYMENT HAPPENS */}
         <ChapterTopology />
