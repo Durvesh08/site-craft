@@ -4,115 +4,63 @@ import { useCreateProject, useGenerateProject } from "@workspace/api-client-reac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Wand2, ArrowRight, ArrowLeft, Check,
-  Rocket, ShoppingBag, Palette, UtensilsCrossed,
-  User, Stethoscope, Home, Calendar, Building2,
-  ChevronRight, Sparkles, AlignLeft, ListChecks,
+  Sparkles, Cpu, Palette, Shield, Flame, Globe, Terminal, Zap, Gauge,
+  ListChecks, AlignLeft, Building2, ChevronRight,
+  Briefcase, GraduationCap, ShoppingBag, Utensils, Laptop, Heart, Camera, Calendar
 } from "lucide-react";
-import { ImageUploader } from "@/components/ImageUploader";
 import { cn } from "@/lib/utils";
 
-// ── Page type definitions ──────────────────────────────────────────────────────
-const PAGE_TYPES = [
-  {
-    id: "saas",
-    label: "SaaS / Tech",
-    description: "Software, apps, platforms",
-    icon: Rocket,
-    color: "text-violet-500",
-    bg: "bg-violet-500/10 hover:bg-violet-500/20 border-violet-500/20 hover:border-violet-500/50",
-    activeStyle: "bg-violet-500/20 border-violet-500 shadow-violet-500/10",
-  },
-  {
-    id: "ecommerce",
-    label: "E-Commerce",
-    description: "Products, online store",
-    icon: ShoppingBag,
-    color: "text-orange-500",
-    bg: "bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20 hover:border-orange-500/50",
-    activeStyle: "bg-orange-500/20 border-orange-500 shadow-orange-500/10",
-  },
-  {
-    id: "agency",
-    label: "Agency / Studio",
-    description: "Creative, branding, design",
-    icon: Palette,
-    color: "text-pink-500",
-    bg: "bg-pink-500/10 hover:bg-pink-500/20 border-pink-500/20 hover:border-pink-500/50",
-    activeStyle: "bg-pink-500/20 border-pink-500 shadow-pink-500/10",
-  },
-  {
-    id: "restaurant",
-    label: "Restaurant / Cafe",
-    description: "Food, dining, hospitality",
-    icon: UtensilsCrossed,
-    color: "text-amber-500",
-    bg: "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 hover:border-amber-500/50",
-    activeStyle: "bg-amber-500/20 border-amber-500 shadow-amber-500/10",
-  },
-  {
-    id: "portfolio",
-    label: "Portfolio",
-    description: "Personal, freelancer, creator",
-    icon: User,
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10 hover:bg-cyan-500/20 border-cyan-500/20 hover:border-cyan-500/50",
-    activeStyle: "bg-cyan-500/20 border-cyan-500 shadow-cyan-500/10",
-  },
-  {
-    id: "professional",
-    label: "Professional Services",
-    description: "Law, finance, consulting",
-    icon: Stethoscope,
-    color: "text-emerald-500",
-    bg: "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 hover:border-emerald-500/50",
-    activeStyle: "bg-emerald-500/20 border-emerald-500 shadow-emerald-500/10",
-  },
-  {
-    id: "realestate",
-    label: "Real Estate",
-    description: "Property, listings, agents",
-    icon: Home,
-    color: "text-blue-500",
-    bg: "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20 hover:border-blue-500/50",
-    activeStyle: "bg-blue-500/20 border-blue-500 shadow-blue-500/10",
-  },
-  {
-    id: "event",
-    label: "Event / Wedding",
-    description: "Events, venues, celebrations",
-    icon: Calendar,
-    color: "text-rose-500",
-    bg: "bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20 hover:border-rose-500/50",
-    activeStyle: "bg-rose-500/20 border-rose-500 shadow-rose-500/10",
-  },
-] as const;
+// ── Type definitions ────────────────────────────────────────────────────────────
+type PageTypeId = "landing" | "portfolio" | "ecommerce" | "restaurant" | "saas" | "nonprofit" | "agency" | "event";
+type ToneOption = "Minimal" | "Bold" | "Luxury" | "Playful" | "Corporate" | "Warm" | "Dark" | "Editorial";
 
-type PageTypeId = typeof PAGE_TYPES[number]["id"];
+// ── Constants ───────────────────────────────────────────────────────────────────
+const PAGE_TYPES: { id: PageTypeId; label: string; description: string; icon: React.FC<{ className?: string }>; color: string; bg: string; activeStyle: string }[] = [
+  { id: "landing", label: "Landing Page", description: "SaaS, startup, or product launch", icon: Sparkles, color: "text-blue-500", bg: "bg-blue-500/5 border-blue-500/20", activeStyle: "bg-blue-500/10 border-blue-500" },
+  { id: "portfolio", label: "Portfolio", description: "Creative, freelancer, or personal", icon: Camera, color: "text-purple-500", bg: "bg-purple-500/5 border-purple-500/20", activeStyle: "bg-purple-500/10 border-purple-500" },
+  { id: "ecommerce", label: "E-Commerce", description: "Shop, product catalog, DTC brand", icon: ShoppingBag, color: "text-emerald-500", bg: "bg-emerald-500/5 border-emerald-500/20", activeStyle: "bg-emerald-500/10 border-emerald-500" },
+  { id: "restaurant", label: "Restaurant", description: "Café, bar, or food business", icon: Utensils, color: "text-orange-500", bg: "bg-orange-500/5 border-orange-500/20", activeStyle: "bg-orange-500/10 border-orange-500" },
+  { id: "saas", label: "SaaS / App", description: "Software, dashboard, API product", icon: Laptop, color: "text-cyan-500", bg: "bg-cyan-500/5 border-cyan-500/20", activeStyle: "bg-cyan-500/10 border-cyan-500" },
+  { id: "nonprofit", label: "Non-Profit", description: "Charity, cause, NGO", icon: Heart, color: "text-rose-500", bg: "bg-rose-500/5 border-rose-500/20", activeStyle: "bg-rose-500/10 border-rose-500" },
+  { id: "agency", label: "Agency", description: "Marketing, design, or consulting", icon: Briefcase, color: "text-amber-500", bg: "bg-amber-500/5 border-amber-500/20", activeStyle: "bg-amber-500/10 border-amber-500" },
+  { id: "event", label: "Event", description: "Conference, webinar, meetup", icon: Calendar, color: "text-indigo-500", bg: "bg-indigo-500/5 border-indigo-500/20", activeStyle: "bg-indigo-500/10 border-indigo-500" },
+];
 
-const TONE_OPTIONS = ["Minimal", "Bold", "Warm", "Playful", "Luxury", "Corporate"] as const;
-type ToneOption = typeof TONE_OPTIONS[number];
-
-const AUDIENCE_OPTIONS = [
-  "General public",
-  "Young professionals",
-  "Businesses (B2B)",
-  "Luxury buyers",
-  "Local community",
-  "Students / creators",
-] as const;
-
+const AUDIENCE_OPTIONS = ["B2B SaaS", "B2C Consumer", "Enterprise", "Developers", "Creators", "Local Customers", "Students", "Healthcare", "Investors"];
+const TONE_OPTIONS: ToneOption[] = ["Minimal", "Bold", "Luxury", "Playful", "Corporate", "Warm", "Dark", "Editorial"];
 const FONT_OPTIONS = [
-  { value: "", label: "Let AI decide (recommended)" },
-  { value: "Inter", label: "Modern Sans — Inter" },
-  { value: "Playfair Display", label: "Elegant Serif — Playfair Display" },
-  { value: "JetBrains Mono", label: "Mono / Tech — JetBrains Mono" },
-  { value: "Nunito", label: "Friendly Rounded — Nunito" },
-] as const;
+  { value: "", label: "AI Decides (recommended)" },
+  { value: "sans", label: "Clean Sans-Serif (Inter / Outfit)" },
+  { value: "serif", label: "Elegant Serif (Playfair Display)" },
+  { value: "mono", label: "Technical Mono (JetBrains Mono)" },
+  { value: "display", label: "Bold Display (Clash Display)" },
+];
 
-// ── Step indicator ─────────────────────────────────────────────────────────────
+// ── Simple Image Uploader (URL-based, no file upload server needed) ─────────
+function ImageUploader({ value, onChange, label, accept }: { value: string; onChange: (v: string) => void; label: string; accept?: string }) {
+  return (
+    <div className="space-y-2">
+      <Input
+        placeholder={`Paste ${label.toLowerCase()} URL (e.g. https://...)`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-background/50 text-sm"
+      />
+      {value && (
+        <div className="flex items-center gap-3">
+          <img src={value} alt={label} className="h-10 w-10 rounded-lg object-cover border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <button type="button" onClick={() => onChange("")} className="text-xs text-muted-foreground hover:text-foreground underline">Remove</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function StepIndicator({ step, total }: { step: number; total: number }) {
   const labels = ["Page Type", "Your Brief", "Brand (optional)"];
   return (

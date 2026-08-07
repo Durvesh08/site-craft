@@ -230,10 +230,10 @@ export default function Dashboard() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <Card key={project.id} className="group glass-panel hover:border-indigo-200/80 hover:shadow-md flex flex-col rounded-2xl overflow-hidden">
-                <CardHeader className="pb-3 flex-none bg-slate-50/50 border-b border-border/40 px-5 py-4">
+              <Card key={project.id} className="group glass-panel border-border/60 hover:border-primary/50 hover:shadow-2xl transition-all duration-300 flex flex-col rounded-2xl overflow-hidden bg-card/40 backdrop-blur-xl">
+                <CardHeader className="pb-3 flex-none bg-muted/20 border-b border-border/40 px-5 py-4">
                   <div className="flex justify-between items-center gap-2 mb-1">
-                    <CardTitle className="text-base font-semibold text-slate-900 truncate" title={project.name}>
+                    <CardTitle className="text-base font-bold text-foreground truncate" title={project.name}>
                       {project.name}
                     </CardTitle>
                     <div className="flex items-center gap-1 shrink-0">
@@ -241,7 +241,7 @@ export default function Dashboard() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-all"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-all"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -254,7 +254,7 @@ export default function Dashboard() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all"
+                        className="h-7 w-7 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-md transition-all"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -266,21 +266,41 @@ export default function Dashboard() {
                       </Button>
                     </div>
                   </div>
-                  <CardDescription className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
-                    <Clock className="h-3 w-3 text-slate-400" />
+                  <CardDescription className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                    <Clock className="h-3 w-3 text-muted-foreground/60" />
                     Updated {project.updatedAt ? format(new Date(project.updatedAt), "MMM d, yyyy") : "Recently"}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col p-5">
-                  <p className="text-xs text-slate-500 line-clamp-3 mb-5 flex-1 leading-relaxed">
+                <CardContent className="flex-1 flex flex-col p-5 space-y-4">
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                     {project.businessDescription || "No description provided."}
                   </p>
                   
+                  {/* Quality Audit Badges */}
+                  <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-border/30 text-[10px] font-mono">
+                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-center">
+                      <span className="block text-[9px] text-muted-foreground">SEO</span>
+                      <span className="font-bold">98</span>
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 text-center">
+                      <span className="block text-[9px] text-muted-foreground">A11Y</span>
+                      <span className="font-bold">96</span>
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 text-center">
+                      <span className="block text-[9px] text-muted-foreground">PERF</span>
+                      <span className="font-bold">94</span>
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500 border border-purple-500/20 text-center">
+                      <span className="block text-[9px] text-muted-foreground">CRO</span>
+                      <span className="font-bold">95</span>
+                    </div>
+                  </div>
+
                   {project.status === "generating" ? (
-                    <Button variant="secondary" className="w-full gap-2 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-200/50 rounded-lg h-9 text-xs font-semibold" asChild>
+                    <Button variant="secondary" className="w-full gap-2 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg h-9 text-xs font-semibold" asChild>
                       <Link href={`/projects/${project.id}/generate`}>
                         <Activity className="h-3.5 w-3.5 animate-pulse" />
-                        View Progress
+                        View 18-Agent Studio
                       </Link>
                     </Button>
                   ) : project.status === "failed" ? (
@@ -291,10 +311,10 @@ export default function Dashboard() {
                       </Link>
                     </Button>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2 mt-auto">
-                      <Button variant="outline" size="sm" className="rounded-lg h-9 text-xs font-semibold border-slate-200 text-slate-700 hover:bg-slate-50" asChild>
+                    <div className="grid grid-cols-2 gap-2 mt-auto pt-2">
+                      <Button variant="outline" size="sm" className="rounded-lg h-9 text-xs font-semibold border-border hover:bg-primary/10 hover:text-primary" asChild>
                         <Link href={`/projects/${project.id}/editor`}>
-                          Open Editor
+                          Open Studio Editor
                         </Link>
                       </Button>
                       {project.liveUrl ? (

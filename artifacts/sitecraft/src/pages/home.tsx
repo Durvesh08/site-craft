@@ -53,61 +53,63 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col justify-center items-center text-center px-6 z-10 relative">
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm text-primary font-mono mb-4">
+      <main className="flex-1 flex flex-col justify-center items-center text-center px-6 z-10 relative space-y-24 py-16">
+        {/* HERO SECTION */}
+        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pt-8">
+          <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs text-primary font-mono shadow-inner">
             <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-            AI DIRECTED GENERATION
+            SITE CRAFT V5 — THE AI OPERATING SYSTEM FOR WEBSITES
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground leading-[1.1]">
-            Direct your vision.<br />
-            Let <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">18 AI agents</span> build it.
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground leading-[1.1]">
+            Don't build websites.<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-purple-500">
+              Direct an AI Studio to synthesize them.
+            </span>
           </h1>
           
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            SiteCraft is not a template builder. Type one sentence about your business, and watch a team of specialized AI agents conceptualize, design, and code a premium landing page in real-time.
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-normal">
+            18 specialized AI agents — UX strategists, copywriters, Framer motion designers, and React architects — build, optimize, and deploy your business website in seconds.
           </p>
 
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="h-14 px-8 text-lg font-medium gap-2 shadow-xl shadow-primary/20" onClick={goToLogin} data-testid="button-start-directing">
-              Start Directing
-              <Sparkles className="h-5 w-5" />
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button size="lg" className="h-14 px-8 text-base font-bold gap-3 shadow-2xl shadow-primary/30 bg-gradient-to-r from-primary via-accent to-purple-600 hover:opacity-90 text-primary-foreground rounded-xl" onClick={goToLogin}>
+              Launch AI OS Free <Sparkles className="h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="h-14 px-8 text-lg font-medium bg-background/50 backdrop-blur-sm" onClick={goToLogin} data-testid="button-view-examples">
-              View Examples
+            <Button size="lg" variant="outline" className="h-14 px-8 text-base font-semibold border-border bg-background/50 backdrop-blur-xl rounded-xl" onClick={goToLogin}>
+              View Live Demo <ArrowRight className="h-5 w-5" />
             </Button>
           </div>
         </div>
 
-        {/* Feature grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-24 max-w-5xl mx-auto text-left w-full">
-          <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-              <Zap className="h-6 w-6" />
-            </div>
-            <h3 className="font-semibold text-lg">Real-Time Collaboration</h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Watch step-by-step as copywriters, designers, and engineers collaborate on your project right before your eyes.
-            </p>
+        {/* 18-AGENT ANIMATED WORKFLOW PIPELINE */}
+        <div className="w-full max-w-5xl mx-auto space-y-6">
+          <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">The 18-Agent Autonomous Pipeline</h2>
+          <div className="grid grid-cols-2 md:grid-cols-9 gap-2 text-xs font-mono">
+            {["Idea", "Planning", "Wireframe", "Copy", "Design", "Animations", "Coding", "Testing", "Deploy"].map((step, i) => (
+              <div key={step} className="p-3 rounded-xl border border-primary/20 bg-card/40 backdrop-blur-xl text-center space-y-1 hover:border-primary/50 transition-all">
+                <span className="text-[10px] text-muted-foreground">0{i + 1}</span>
+                <p className="font-bold text-foreground truncate">{step}</p>
+              </div>
+            ))}
           </div>
-          <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-              <Layers className="h-6 w-6" />
-            </div>
-            <h3 className="font-semibold text-lg">Bespoke Design</h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              No templates. Every site is generated from scratch based on a deep semantic understanding of your business needs.
-            </p>
+        </div>
+
+        {/* PSYCHOLOGICAL PRICING SCARCITY BANNER */}
+        <div className="w-full max-w-4xl mx-auto p-8 rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-purple-900/10 backdrop-blur-2xl shadow-2xl space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 text-xs font-mono">
+            <Zap className="h-3.5 w-3.5" /> Limited Launch Offer — Only 237 Lifetime Licenses Remaining
           </div>
-          <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-              <Code className="h-6 w-6" />
-            </div>
-            <h3 className="font-semibold text-lg">Split-Screen Editing</h3>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              Tweak the result using our AI chat editor. Chat with the agents to regenerate sections or modify the theme instantly.
-            </p>
+          
+          <h3 className="text-3xl font-extrabold text-foreground">Own SiteCraft V5 Forever</h3>
+          <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+            Unlimited AI generations, custom domain deployments, multi-model router access (Gemini, GPT-4o, Claude, DeepSeek), and full React/Next.js code exports.
+          </p>
+
+          <div className="pt-2">
+            <Button size="lg" className="h-12 px-8 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl" onClick={goToLogin}>
+              Claim Lifetime License Now <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
           </div>
         </div>
 
