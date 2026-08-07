@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   RotateCcw, Monitor, Tablet, Smartphone, Sparkles, Send,
-  Rocket, Loader2, Eye, Layers, Paperclip, Check, CornerDownLeft, Undo2, Redo2, ChevronRight
+  Rocket, Loader2, Eye, Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -31,7 +31,6 @@ export default function ProjectEditor() {
   });
 
   const [viewport, setViewport] = useState<Viewport>("desktop");
-  const [selectedSection, setSelectedSection] = useState<string>("Hero Section");
   const [editInstruction, setEditInstruction] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
@@ -42,39 +41,15 @@ export default function ProjectEditor() {
   const [pages, setPages] = useState<string[]>(["index.html"]);
   const [currentPage, setCurrentPage] = useState<string>("index.html");
 
-  // Sections List
-  const [sections] = useState([
-    { id: "hero", name: "Hero Section", type: "Header & Hero" },
-    { id: "features", name: "Features & Benefits", type: "Grid" },
-    { id: "testimonials", name: "Testimonials & Reviews", type: "Social Proof" },
-    { id: "pricing", name: "Pricing Options", type: "Table" },
-    { id: "faq", name: "FAQ & Contact", type: "Footer" },
-  ]);
-
   // Chat conversation stream
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "init",
       sender: "ai",
-      text: "You're editing Hero Section. What would you like to change?",
+      text: "AI Assistant ready. Describe what you'd like to build or change on your website.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
-
-  // Handle Section Click (Auto Update AI Context)
-  const handleSelectSection = (sectionName: string) => {
-    soundEngine.playTabSwitch();
-    setSelectedSection(sectionName);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        sender: "ai",
-        text: `Selected: ${sectionName}. What would you like to change?`,
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      },
-    ]);
-  };
 
   // Load pages list
   useEffect(() => {
@@ -111,7 +86,7 @@ export default function ProjectEditor() {
   const getViewportWidth = () => {
     if (viewport === "mobile") return "w-[375px] h-[812px]";
     if (viewport === "tablet") return "w-[768px] h-[1024px]";
-    return "w-full max-w-[1400px] h-full";
+    return "w-full max-w-[1540px] h-full";
   };
 
   const handlePromptSubmit = async (customPrompt?: string) => {
@@ -123,10 +98,6 @@ export default function ProjectEditor() {
     if (!id) return;
 
     soundEngine.playPrimaryClick();
-
-    const fullPrompt = selectedSection
-      ? `Editing [${selectedSection}]: ${rawPrompt}`
-      : rawPrompt;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -144,7 +115,7 @@ export default function ProjectEditor() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ message: fullPrompt }),
+        body: JSON.stringify({ message: rawPrompt }),
       });
 
       if (!res.ok) throw new Error("Update failed");
@@ -160,10 +131,10 @@ export default function ProjectEditor() {
           {
             id: Date.now().toString(),
             sender: "ai",
-            text: `Updated ${selectedSection}.`,
+            text: "Updated website based on your instructions.",
             bullets: [
               "Improved layout hierarchy and spacing",
-              "Refined headlines and copy text",
+              "Refined copy and call-to-action buttons",
               "Verified mobile responsiveness",
             ],
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -259,43 +230,13 @@ export default function ProjectEditor() {
       {/* ── MAIN WORKSPACE ── */}
       <div className="flex-1 flex h-full relative overflow-hidden">
         
-        {/* ── LEFT SECTIONS PANEL ── */}
-        <aside className="w-64 border-r border-[#E8EAF2] bg-white flex flex-col z-30 font-sans">
-          <div className="p-4 border-b border-[#E8EAF2] flex items-center justify-between text-xs font-bold text-[#111827]">
-            <span className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-[#6D5EF8]" /> SECTIONS
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
-            {sections.map((sec) => (
-              <button
-                key={sec.id}
-                onClick={() => handleSelectSection(sec.name)}
-                className={cn(
-                  "w-full p-3 rounded-xl text-left border transition-all space-y-1 group",
-                  selectedSection === sec.name
-                    ? "bg-[#F2F3FF] border-[#6D5EF8]/40 text-[#6D5EF8] font-bold shadow-xs"
-                    : "bg-white border-[#E8EAF2] text-[#4B5563] hover:border-[#CBD5E1] hover:text-[#111827]"
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{sec.name}</span>
-                  <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-[#6D5EF8]" />
-                </div>
-                <div className="text-[11px] text-[#6B7280] font-normal">{sec.type}</div>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        {/* ── CENTER WEBSITE CANVAS ── */}
-        <main className="flex-1 relative flex flex-col items-center justify-center p-6 bg-[#F8F9FC] overflow-auto">
+        {/* ── CENTER WEBSITE PREVIEW CANVAS (MAXIMIZED FULL WIDTH) ── */}
+        <main className="flex-1 relative flex flex-col items-center justify-center p-4 md:p-6 bg-[#F8F9FC] overflow-auto">
           
           {/* Website Preview Box */}
           <div
             className={cn(
-              "transition-all duration-300 rounded-2xl bg-white border border-[#E8EAF2] shadow-md overflow-hidden relative flex flex-col h-full max-h-[880px]",
+              "transition-all duration-300 rounded-2xl bg-white border border-[#E8EAF2] shadow-md overflow-hidden relative flex flex-col h-full max-h-[920px]",
               getViewportWidth()
             )}
           >
@@ -335,7 +276,6 @@ export default function ProjectEditor() {
             <span className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[#6D5EF8]" /> AI ASSISTANT
             </span>
-            <span className="text-[11px] text-[#6D5EF8] font-semibold">Editing: {selectedSection}</span>
           </div>
 
           {/* Chat Stream */}
@@ -389,7 +329,7 @@ export default function ProjectEditor() {
                     handlePromptSubmit();
                   }
                 }}
-                placeholder={`Describe your change for ${selectedSection}...`}
+                placeholder="Describe what you want to change..."
                 className="min-h-[75px] bg-white border border-[#E8EAF2] text-xs font-medium rounded-2xl p-3 pr-10 focus:outline-none focus:border-[#6D5EF8] text-[#111827]"
               />
               
