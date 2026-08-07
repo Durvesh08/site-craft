@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Sparkles, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Zap, Sparkles, ArrowRight, CheckCircle2, Command } from "lucide-react";
+import { CursorGlow } from "@/components/ui/cursor-glow";
+import { AICoreCanvas } from "@/components/canvas/ai-core-canvas";
 import { ChapterConstellation } from "@/components/narrative/chapter-constellation";
 import { ChapterTopology } from "@/components/narrative/chapter-topology";
 import { ChapterDashboardPreview } from "@/components/narrative/chapter-dashboard-preview";
@@ -12,13 +14,12 @@ import { TestimonialsShowcase } from "@/components/landing/testimonials-showcase
 import { InteractiveFAQ } from "@/components/landing/interactive-faq";
 import { ActivityStream } from "@/components/dashboard/activity-stream";
 import { soundEngine } from "@/lib/sound-effects";
-import { cn } from "@/lib/utils";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  const [prompt, setPrompt] = useState("Build an AI SaaS platform with dark theme, JetBrains typography, and high conversion copy.");
+  const [prompt, setPrompt] = useState("Build an AI SaaS landing page with dark glassmorphism, Framer animations, and Stripe pricing.");
   const [activeChip, setActiveChip] = useState("SaaS Platform");
 
   const goToLogin = () => {
@@ -34,80 +35,91 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0A0B0D]">
-        <div className="animate-pulse flex flex-col items-center gap-4 font-mono text-xs text-[#8C8D93]">
-          <p className="tracking-widest">INITIALIZING SITECRAFT CORE</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#030305]">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <Sparkles className="h-8 w-8 text-primary animate-spin-slow" />
+          <p className="text-muted-foreground font-mono text-sm tracking-widest">INITIALIZING SITECRAFT CORE</p>
         </div>
       </div>
     );
   }
 
   const promptPresets = [
-    { label: "SaaS Platform", prompt: "Build an AI SaaS platform with dark theme, JetBrains typography, and high conversion copy." },
+    { label: "SaaS Platform", prompt: "Build an AI SaaS landing page with dark glassmorphism, Framer animations, and Stripe pricing." },
     { label: "Crypto Protocol", prompt: "Synthesize a Web3 DEX protocol landing page with 3D token swap preview and animated staking stats." },
-    { label: "Design Agency", prompt: "Create a minimalist high-end portfolio for a product design agency with case study drawers." },
+    { label: "Design Agency", prompt: "Create a minimalist high-end portfolio for a product design agency with interactive case study drawers." },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0A0B0D] text-[#F3F2ED] font-sans overflow-x-hidden relative">
+    <div className="min-h-screen flex flex-col bg-[#030305] text-foreground font-sans overflow-x-hidden selection:bg-primary/30 relative">
       
-      {/* Precision Instrument Navbar */}
-      <header className="fixed top-4 left-1/2 -translate-x-1/2 h-14 px-6 bg-[#131417] border border-[#26272C] rounded-lg flex items-center justify-between z-50 w-full max-w-4xl font-mono text-xs">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setLocation("/")}>
-          <span className="font-semibold tracking-wider text-[#F3F2ED]">SITECRAFT OS</span>
-          <span className="text-[10px] text-[#C99B4D] border border-[#C99B4D]/30 px-1.5 py-0.5 rounded">v6.0</span>
+      {/* 3D Ray-Marched Procedural AI Core Canvas */}
+      <AICoreCanvas />
+
+      {/* Dynamic Cursor Light Glow */}
+      <CursorGlow />
+
+      {/* Floating VisionOS Glass Dock Navbar */}
+      <header className="fixed top-6 left-1/2 -translate-x-1/2 h-16 px-6 glass rounded-2xl border border-white/10 flex items-center justify-between z-50 w-full max-w-4xl shadow-2xl backdrop-blur-2xl">
+        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setLocation("/")}>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <span className="font-black text-xl tracking-tight text-foreground">
+            SiteCraft OS
+          </span>
         </div>
 
         <div className="flex items-center gap-4">
-          <button onClick={goToLogin} className="text-xs text-[#8C8D93] hover:text-[#F3F2ED] transition-colors hidden md:block">
-            SIGN IN
+          <button onClick={goToLogin} className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors hidden md:block">
+            Sign In
           </button>
-          <Button className="btn-signal h-8 px-4 text-xs tracking-wide uppercase gap-1.5 shadow-none" onClick={goToLogin}>
-            LAUNCH STUDIO <ArrowRight className="h-3.5 w-3.5" />
+          <Button className="h-10 px-5 rounded-xl text-xs font-bold gap-2 shadow-xl shadow-primary/25 btn-magnetic" onClick={goToLogin}>
+            Launch Studio <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </div>
       </header>
 
-      {/* CONTINUOUS NARRATIVE */}
+      {/* CONTINUOUS SCROLL NARRATIVE */}
       <main className="flex-1 flex flex-col items-center w-full z-10 relative">
         
-        {/* HERO SECTION */}
-        <section className="w-full min-h-[90vh] pt-32 pb-20 px-6 flex flex-col items-center justify-center text-center relative z-10">
+        {/* CHAPTER 01: THE BEGINNING */}
+        <section className="w-full min-h-screen pt-32 pb-24 px-6 flex flex-col items-center justify-center text-center relative z-10">
           
-          <div className="inline-flex items-center rounded border border-[#26272C] bg-[#131417] px-3 py-1 text-xs text-[#C99B4D] font-mono mb-8 font-semibold tracking-widest uppercase">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#C99B4D] mr-2" />
-            CHAPTER 01 — SYNTHESIS ENGINE
+          <div className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs text-primary font-mono shadow-inner mb-8 font-semibold tracking-widest uppercase">
+            <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
+            CHAPTER 01 — THE BEGINNING
           </div>
 
-          <h1 className="text-5xl sm:text-6xl md:text-7xl font-semibold tracking-tight text-[#F3F2ED] leading-[1.08] max-w-5xl">
+          <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter text-foreground leading-[1.02] max-w-6xl">
             Don't build websites.<br />
-            <span className="text-[#C99B4D]">
+            <span className="text-gradient-primary">
               Direct an AI Studio to synthesize them.
             </span>
           </h1>
 
-          <p className="mt-6 text-base sm:text-lg text-[#8C8D93] max-w-2xl mx-auto leading-relaxed font-mono">
+          <p className="mt-8 text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-normal">
             18 specialized AI agents — UX strategists, copywriters, Framer motion designers, and React architects — build, optimize, and deploy your business website in seconds.
           </p>
 
-          {/* Prompt Input Surface */}
-          <div className="w-full max-w-2xl mx-auto mt-10 space-y-4 font-mono">
-            <div className="panel-instrument p-2 flex items-center gap-3">
-              <Sparkles className="h-5 w-5 text-[#C99B4D] shrink-0 ml-2" />
+          {/* Prompt Bar */}
+          <div className="w-full max-w-3xl mx-auto mt-12 space-y-4">
+            <div className="glass-panel p-2 rounded-2xl border border-primary/30 flex items-center gap-3 shadow-2xl">
+              <Sparkles className="h-6 w-6 text-primary shrink-0 ml-3" />
               <input
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onFocus={() => soundEngine.playInputFocus()}
-                className="flex-1 bg-transparent border-0 text-xs text-[#F3F2ED] focus:outline-none placeholder:text-[#5B5C62]"
+                className="flex-1 bg-transparent border-0 text-sm font-medium text-foreground focus:outline-none placeholder:text-muted-foreground"
                 placeholder="Describe the website you want to synthesize..."
               />
-              <Button size="sm" className="btn-signal h-10 px-5 text-xs font-semibold uppercase tracking-wide gap-2 shadow-none" onClick={goToLogin}>
-                SYNTHESIZE <ArrowRight className="h-4 w-4" />
+              <Button size="lg" className="h-12 px-8 font-bold gap-2 rounded-xl shadow-lg shadow-primary/30 btn-magnetic" onClick={goToLogin}>
+                Synthesize <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
 
             <div className="flex items-center justify-center gap-2 flex-wrap">
-              <span className="text-[11px] text-[#5B5C62] uppercase tracking-wider mr-1">Presets:</span>
+              <span className="text-xs font-mono text-muted-foreground mr-2">Try Preset:</span>
               {promptPresets.map((chip) => (
                 <button
                   key={chip.label}
@@ -116,12 +128,10 @@ export default function Home() {
                     setPrompt(chip.prompt);
                     setActiveChip(chip.label);
                   }}
-                  className={cn(
-                    "px-2.5 py-1 rounded text-[11px] font-mono transition-colors",
-                    activeChip === chip.label
-                      ? "bg-[#1B1C20] text-[#C99B4D] border border-[#26272C] font-semibold"
-                      : "text-[#8C8D93] hover:text-[#F3F2ED]"
-                  )}
+                  onMouseEnter={() => soundEngine.playHoverShimmer()}
+                  className={`px-3 py-1 rounded-full text-xs font-mono font-semibold transition-all ${
+                    activeChip === chip.label ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary/40 text-muted-foreground hover:bg-secondary"
+                  }`}
                 >
                   {chip.label}
                 </button>
@@ -130,74 +140,87 @@ export default function Home() {
           </div>
         </section>
 
-        {/* NARRATIVE CHAPTERS */}
+        {/* CHAPTER 02: THE SWARM AWAKENS */}
         <ChapterConstellation />
 
-        <section className="w-full max-w-5xl px-6 py-20 z-10">
+        {/* CHAPTER 03: EVERY AGENT STARTS WORKING */}
+        <section className="w-full max-w-5xl px-6 py-24 z-10">
           <ActivityStream />
         </section>
 
+        {/* CHAPTER 04: REAL-TIME NEURAL PIPELINE */}
         <AgentPipelineMatrix />
+
+        {/* CHAPTER 05: DEPLOYMENT HAPPENS */}
         <ChapterTopology />
+
+        {/* CHAPTER 06: LIVE OPERATING SYSTEM */}
         <ChapterDashboardPreview />
+
+        {/* CHAPTER 07: EVERYTHING IS CONNECTED */}
         <ChapterIntegrations />
         <TestimonialsShowcase />
+
+        {/* CHAPTER 08: FREQUENTLY ASKED QUESTIONS */}
         <InteractiveFAQ />
 
-        {/* PRICING MATRIX */}
-        <section className="w-full max-w-5xl mx-auto px-6 py-20">
-          <div className="text-center mb-12 space-y-2">
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#F3F2ED]">
-              Transparent instrument pricing.
+        {/* CHAPTER 09: PRICING MATRIX */}
+        <section className="w-full max-w-5xl mx-auto px-6 py-24">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">
+              Simple, transparent pricing.
             </h2>
-            <p className="text-sm font-mono text-[#8C8D93]">
-              Start building for free, upgrade when you scale.
+            <p className="text-xl text-muted-foreground">
+              Start building for free, upgrade when you need to scale.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="panel-instrument p-8 flex flex-col">
-              <div className="mb-6">
-                <h3 className="text-lg font-mono font-semibold mb-1 text-[#F3F2ED]">DEVELOPER TIER</h3>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-4xl font-mono font-semibold text-[#F3F2ED]">₹499</span>
-                  <span className="text-xs font-mono text-[#8C8D93]">/ month</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="glass-panel rounded-3xl p-10 flex flex-col border border-border/50 hover:border-primary/30 transition-all">
+              <div className="mb-8">
+                <h3 className="text-2xl font-semibold mb-2">Developer</h3>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-5xl font-bold">₹499</span>
+                  <span className="text-muted-foreground">/ month</span>
                 </div>
-                <p className="text-xs text-[#8C8D93] font-mono">For indie hackers and creators.</p>
+                <p className="text-muted-foreground">Perfect for indie hackers and creators.</p>
               </div>
-              <ul className="space-y-3 flex-1 mb-8 font-mono text-xs text-[#8C8D93]">
-                {["5 AI Agents", "3 Workspaces", "Community Support", "Standard Speed"].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#C99B4D] shrink-0" />
+              <ul className="space-y-4 flex-1 mb-10">
+                {["5 AI Agents", "3 Projects", "Community Support", "Basic Analytics", "Standard Speed"].map((f) => (
+                  <li key={f} className="flex items-center gap-3 text-muted-foreground">
+                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                     <span>{f}</span>
                   </li>
                 ))}
               </ul>
-              <Button size="lg" variant="outline" className="btn-ghost-instrument border-[#26272C] h-11 text-xs font-mono" onClick={goToLogin}>
-                START BUILDING
+              <Button size="lg" variant="outline" className="w-full h-14 rounded-xl text-base font-semibold" onClick={goToLogin}>
+                Start Building
               </Button>
             </div>
 
-            <div className="panel-raised p-8 flex flex-col relative border-[#37383F]">
-              <div className="mb-6">
-                <div className="text-[10px] font-mono text-[#C99B4D] uppercase tracking-widest mb-1">RECOMMENDED</div>
-                <h3 className="text-lg font-mono font-semibold mb-1 text-[#F3F2ED]">ENTERPRISE SWARM</h3>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-4xl font-mono font-semibold text-[#F3F2ED]">₹999</span>
-                  <span className="text-xs font-mono text-[#8C8D93]">/ month</span>
-                </div>
-                <p className="text-xs text-[#8C8D93] font-mono">For production business platforms.</p>
+            <div className="glow-card rounded-3xl p-10 flex flex-col border-primary/50 relative">
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-accent" />
+              <div className="absolute top-6 right-6 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase">
+                Most Popular
               </div>
-              <ul className="space-y-3 flex-1 mb-8 font-mono text-xs text-[#F3F2ED]">
-                {["18-Agent Swarm Access", "Unlimited Workspaces", "Priority Telemetry", "Turbo Speed", "Custom Domains", "Code Export"].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#C99B4D] shrink-0" />
+              <div className="mb-8">
+                <h3 className="text-2xl font-semibold mb-2 text-foreground">Enterprise</h3>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-5xl font-bold text-foreground">₹999</span>
+                  <span className="text-muted-foreground">/ month</span>
+                </div>
+                <p className="text-muted-foreground">For scaling teams and serious businesses.</p>
+              </div>
+              <ul className="space-y-4 flex-1 mb-10">
+                {["18-Agent Swarm Access", "Unlimited Projects", "Priority Support", "Advanced Analytics", "Turbo Speed", "Custom Domains", "Code Export"].map((f) => (
+                  <li key={f} className="flex items-center gap-3 text-foreground font-medium">
+                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
                     <span>{f}</span>
                   </li>
                 ))}
               </ul>
-              <Button size="lg" className="btn-signal h-11 text-xs uppercase tracking-wider font-mono shadow-none" onClick={goToLogin}>
-                ENTERPRISE ACCESS
+              <Button size="lg" className="w-full h-14 rounded-xl text-base font-bold shadow-xl shadow-primary/20 btn-magnetic" onClick={goToLogin}>
+                Get Enterprise Access
               </Button>
             </div>
           </div>

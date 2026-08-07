@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=General+Sans:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 @import "tw-animate-css";
@@ -7,18 +7,7 @@
 
 @theme {
   --font-sans: "Inter", sans-serif;
-  --font-display: "General Sans", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
-
-  --color-ink: var(--ink);
-  --color-surface: var(--surface);
-  --color-surface-raised: var(--surface-raised);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-signal: var(--signal);
-  --color-signal-dim: var(--signal-dim);
-  --color-success: var(--success);
-  --color-danger: var(--danger);
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -47,16 +36,20 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
-  --radius-xl: 12px;
-  --radius-lg: 8px;
-  --radius-md: 4px;
-  --radius-sm: 4px;
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
-  --animate-fade-in: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-fade-out: fade-out 0.3s ease-out forwards;
-  --animate-slide-up: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-in: fade-in 0.4s ease-out forwards;
+  --animate-fade-out: fade-out 0.4s ease-out forwards;
+  --animate-slide-up: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-gradient: gradient 8s linear infinite;
+  --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-spin-slow: spin 12s linear infinite;
 
   @keyframes accordion-down {
     from { height: 0; }
@@ -67,147 +60,133 @@
     to { height: 0; }
   }
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
   @keyframes fade-out {
     from { opacity: 1; }
     to { opacity: 0; }
   }
   @keyframes slide-up {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 }
 
 @layer base {
   :root {
-    /* Precision Instrument Token System */
-    --ink: #0A0B0D;
-    --surface: #131417;
-    --surface-raised: #1B1C20;
-    --line: #26272C;
-    --line-strong: #37383F;
-    --text: #F3F2ED;
-    --text-muted: #8C8D93;
-    --text-faint: #5B5C62;
-    --signal: #C99B4D;
-    --signal-dim: #4A3E28;
-    --success: #5FA88A;
-    --danger: #C9614D;
+    /* Deep Obsidian & Graphite Palette */
+    --background: 240 10% 2%;
+    --foreground: 210 40% 98%;
 
-    --background: 220 13% 5%;
-    --foreground: 45 14% 94%;
+    --card: 240 8% 4%;
+    --card-foreground: 210 40% 98%;
 
-    --card: 225 9% 8%;
-    --card-foreground: 45 14% 94%;
+    --popover: 240 8% 4%;
+    --popover-foreground: 210 40% 98%;
 
-    --popover: 225 9% 12%;
-    --popover-foreground: 45 14% 94%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
 
-    --primary: 38 52% 54%;
-    --primary-foreground: 220 13% 5%;
+    --secondary: 240 6% 8%;
+    --secondary-foreground: 210 40% 98%;
 
-    --secondary: 225 9% 12%;
-    --secondary-foreground: 45 14% 94%;
+    --muted: 240 6% 12%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --muted: 225 9% 12%;
-    --muted-foreground: 228 3% 56%;
+    --accent: 240 6% 12%;
+    --accent-foreground: 210 40% 98%;
 
-    --accent: 38 52% 54%;
-    --accent-foreground: 220 13% 5%;
-
-    --destructive: 10 54% 54%;
+    --destructive: 0 62% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 225 8% 16%;
-    --input: 225 8% 16%;
-    --ring: 38 52% 54%;
+    --border: 240 6% 12%;
+    --input: 240 6% 12%;
+    --ring: 243 75% 59%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 }
 
 @layer base {
   * {
-    border-color: var(--line);
+    @apply border-border;
   }
   body {
-    background-color: var(--ink);
-    color: var(--text);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    selection-background-color: rgba(201, 155, 77, 0.25);
-    selection-color: var(--signal);
-  }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
-  }
-  code, pre, kbd, .font-mono {
-    font-family: var(--font-mono);
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-color: #020204;
   }
 }
 
-/* Hairline Precision Scrollbar */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--ink);
+  background: #020204;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: rgba(255, 255, 255, 0.3);
 }
 
-/* Precision Instrument Utility Styles - No Drop Shadows, Hairlines Only */
-.panel-instrument {
-  background-color: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+/* Aceternity / Magic UI Glass & Caustic Utilities */
+.glass {
+  background: rgba(10, 10, 15, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.panel-raised {
-  background-color: var(--surface-raised);
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
+.glass-panel {
+  background: rgba(15, 17, 26, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.btn-signal {
-  background-color: var(--signal);
-  color: var(--ink);
-  font-weight: 600;
-  border-radius: 4px;
-  transition: opacity 0.2s ease;
-}
-.btn-signal:hover {
-  opacity: 0.9;
+.glow-card {
+  position: relative;
+  background: rgba(12, 14, 22, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
 }
 
-.btn-ghost-instrument {
-  background-color: transparent;
-  color: var(--text-muted);
-  border: 1px solid transparent;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-.btn-ghost-instrument:hover {
-  background-color: var(--surface-raised);
-  color: var(--text);
-  border-color: var(--line);
+.glow-card:hover {
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.15);
 }
 
-/* Accessibility reduced motion overrides */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+.text-gradient-primary {
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 40%, #818cf8 70%, #c084fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #ffffff 0%, #38bdf8 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.btn-magnetic {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-magnetic:active {
+  transform: scale(0.96);
 }
