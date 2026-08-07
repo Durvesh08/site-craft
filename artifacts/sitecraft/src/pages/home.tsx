@@ -24,7 +24,7 @@ export default function Home() {
   const [activeChip, setActiveChip] = useState("SaaS Platform");
 
   const goToLogin = () => {
-    soundEngine.playClick();
+    soundEngine.playPrimaryClick();
     setLocation("/login");
   };
 
@@ -110,6 +110,7 @@ export default function Home() {
               <input
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
+                onFocus={() => soundEngine.playInputFocus()}
                 className="flex-1 bg-transparent border-0 text-sm font-medium text-foreground focus:outline-none placeholder:text-muted-foreground"
                 placeholder="Describe the website you want to synthesize..."
               />
@@ -123,7 +124,12 @@ export default function Home() {
               {promptPresets.map((chip) => (
                 <button
                   key={chip.label}
-                  onClick={() => { setPrompt(chip.prompt); setActiveChip(chip.label); }}
+                  onClick={() => {
+                    soundEngine.playTabSwitch();
+                    setPrompt(chip.prompt);
+                    setActiveChip(chip.label);
+                  }}
+                  onMouseEnter={() => soundEngine.playHoverShimmer()}
                   className={`px-3 py-1 rounded-full text-xs font-mono font-semibold transition-all ${
                     activeChip === chip.label ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary/40 text-muted-foreground hover:bg-secondary"
                   }`}

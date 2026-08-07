@@ -30,6 +30,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [soundEnabled, setSoundEnabled] = useState(soundEngine.enabled);
 
   useEffect(() => {
+    if (open) {
+      soundEngine.playModalOpen();
+    }
+  }, [open]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
@@ -41,15 +47,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   }, [open, onOpenChange]);
 
   const navigateTo = (href: string) => {
-    soundEngine.playClick();
+    soundEngine.playPrimaryClick();
     setLocation(href);
     onOpenChange(false);
   };
 
   const toggleSound = () => {
-    soundEngine.enabled = !soundEngine.enabled;
-    setSoundEnabled(soundEngine.enabled);
-    if (soundEngine.enabled) soundEngine.playToggle();
+    const nextVal = !soundEnabled;
+    soundEngine.setEnabled(nextVal);
+    setSoundEnabled(nextVal);
+    if (nextVal) soundEngine.playToggle();
   };
 
   const commands = [
@@ -82,13 +89,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     .filter((cat) => cat.items.length > 0);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(val) => {
+      if (!val) soundEngine.playModalClose();
+      onOpenChange(val);
+    }}>
       <DialogContent className="sm:max-w-[640px] p-0 glass border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50">
         <div className="flex items-center px-4 border-b border-white/10 bg-secondary/30">
           <Search className="h-5 w-5 text-muted-foreground shrink-0 mr-3" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => soundEngine.playInputFocus()}
             placeholder="Type a command or search workspace..."
             className="h-14 border-0 bg-transparent text-base focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
             autoFocus
@@ -122,6 +133,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   <button
                     key={item.label}
                     onClick={() => navigateTo(item.href)}
+                    onMouseEnter={() => soundEngine.playHoverShimmer()}
                     className="w-full flex items-center justify-between px-3 py-3 rounded-xl text-sm font-medium text-foreground/90 hover:bg-primary/10 hover:text-primary transition-all group outline-none"
                   >
                     <div className="flex items-center gap-3">
