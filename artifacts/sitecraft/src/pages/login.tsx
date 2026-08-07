@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, ArrowRight, Loader2, Command } from "lucide-react";
+import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 
 export default function Login() {
   const { login, localLogin, localRegister } = useAuth();
@@ -53,11 +54,8 @@ export default function Login() {
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[100px] animate-pulse-slow pointer-events-none" />
         <div className="absolute top-[40%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent/20 blur-[120px] animate-float pointer-events-none" />
 
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <span className="font-bold text-2xl tracking-tight">SiteCraft</span>
+        <div className="relative z-10">
+          <ZovaixLogo size="lg" />
         </div>
 
         <div className="relative z-10 space-y-6 max-w-lg">
@@ -65,22 +63,8 @@ export default function Login() {
             Build the next generation of <span className="text-gradient-primary">web experiences.</span>
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Join thousands of creators building highly optimized, beautifully designed web applications with the power of Autonomous AI Agents.
+            Join thousands of creators building highly optimized, beautifully designed web applications with ZOVAIX SITES Autonomous AI.
           </p>
-          
-          <div className="flex items-center gap-4 pt-8">
-            <div className="flex -space-x-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-10 w-10 rounded-full bg-secondary border-2 border-background overflow-hidden">
-                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}&backgroundColor=transparent`} alt="User" />
-                </div>
-              ))}
-            </div>
-            <div className="text-sm">
-              <p className="font-medium">Loved by builders</p>
-              <p className="text-muted-foreground">Over 10,000+ deployments</p>
-            </div>
-          </div>
         </div>
 
         <div className="relative z-10 flex items-center text-sm text-muted-foreground gap-2 font-mono">
@@ -91,10 +75,7 @@ export default function Login() {
       {/* Right Panel: Auth Form */}
       <div className="flex w-full lg:w-1/2 flex-col items-center justify-center p-8 sm:p-12 relative">
         <Link href="/" className="absolute top-8 left-8 lg:hidden flex items-center gap-2 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <span className="font-bold text-lg tracking-tight">SiteCraft</span>
+          <ZovaixLogo size="sm" />
         </Link>
 
         <div className="w-full max-w-[420px] space-y-8 animate-slide-up">

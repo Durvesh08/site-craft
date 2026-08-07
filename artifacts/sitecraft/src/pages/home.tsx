@@ -14,12 +14,14 @@ import { TestimonialsShowcase } from "@/components/landing/testimonials-showcase
 import { InteractiveFAQ } from "@/components/landing/interactive-faq";
 import { ActivityStream } from "@/components/dashboard/activity-stream";
 import { soundEngine } from "@/lib/sound-effects";
+import { cn } from "@/lib/utils";
+import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  const [prompt, setPrompt] = useState("Build an AI SaaS landing page with dark glassmorphism, Framer animations, and Stripe pricing.");
+  const [prompt, setPrompt] = useState("Build an AI SaaS platform with dark theme, JetBrains typography, and high conversion copy.");
   const [activeChip, setActiveChip] = useState("SaaS Platform");
 
   const goToLogin = () => {
@@ -35,23 +37,22 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#030305]">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <Sparkles className="h-8 w-8 text-primary animate-spin-slow" />
-          <p className="text-muted-foreground font-mono text-sm tracking-widest">INITIALIZING SITECRAFT CORE</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0B0D]">
+        <div className="animate-pulse flex flex-col items-center gap-4 font-mono text-xs text-[#8C8D93]">
+          <p className="tracking-widest">INITIALIZING ZOVAIX SITES CORE</p>
         </div>
       </div>
     );
   }
 
   const promptPresets = [
-    { label: "SaaS Platform", prompt: "Build an AI SaaS landing page with dark glassmorphism, Framer animations, and Stripe pricing." },
+    { label: "SaaS Platform", prompt: "Build an AI SaaS platform with dark theme, JetBrains typography, and high conversion copy." },
     { label: "Crypto Protocol", prompt: "Synthesize a Web3 DEX protocol landing page with 3D token swap preview and animated staking stats." },
-    { label: "Design Agency", prompt: "Create a minimalist high-end portfolio for a product design agency with interactive case study drawers." },
+    { label: "Design Agency", prompt: "Create a minimalist high-end portfolio for a product design agency with case study drawers." },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#030305] text-foreground font-sans overflow-x-hidden selection:bg-primary/30 relative">
+    <div className="min-h-screen flex flex-col bg-[#0A0B0D] text-[#F3F2ED] font-sans overflow-x-hidden relative">
       
       {/* 3D Ray-Marched Procedural AI Core Canvas */}
       <AICoreCanvas />
@@ -59,15 +60,10 @@ export default function Home() {
       {/* Dynamic Cursor Light Glow */}
       <CursorGlow />
 
-      {/* Floating VisionOS Glass Dock Navbar */}
-      <header className="fixed top-6 left-1/2 -translate-x-1/2 h-16 px-6 glass rounded-2xl border border-white/10 flex items-center justify-between z-50 w-full max-w-4xl shadow-2xl backdrop-blur-2xl">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setLocation("/")}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <span className="font-black text-xl tracking-tight text-foreground">
-            SiteCraft OS
-          </span>
+      {/* Precision Instrument Navbar */}
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 h-14 px-6 bg-[#131417] border border-[#26272C] rounded-lg flex items-center justify-between z-50 w-full max-w-4xl font-mono text-xs">
+        <div className="cursor-pointer" onClick={() => setLocation("/")}>
+          <ZovaixLogo size="sm" />
         </div>
 
         <div className="flex items-center gap-4">

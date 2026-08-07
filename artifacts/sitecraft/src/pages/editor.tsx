@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { soundEngine } from "@/lib/sound-effects";
 import { CommandPalette } from "@/components/ui/command-palette";
+import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 
 type Viewport = "desktop" | "tablet" | "mobile";
 
@@ -109,7 +110,7 @@ export default function ProjectEditor() {
   const getViewportWidth = () => {
     if (viewport === "mobile") return "w-[375px] h-[812px]";
     if (viewport === "tablet") return "w-[768px] h-[1024px]";
-    return "w-full max-w-[1440px] h-full";
+    return "w-full max-w-[1480px] h-full";
   };
 
   const handlePromptSubmit = async (customPrompt?: string) => {
@@ -159,7 +160,7 @@ export default function ProjectEditor() {
           {
             id: Date.now().toString(),
             sender: "ai",
-            text: `I updated ${selectedSection || "the layout"}.`,
+            text: `I updated ${selectedSection || "the page"}.`,
             bullets: [
               "Improved typography hierarchy & contrast",
               "Applied dark glassmorphism & soft borders",
@@ -189,11 +190,9 @@ export default function ProjectEditor() {
         {/* Left: Project & Page Switcher */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => setLocation("/dashboard")}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
-              <Sparkles className="h-4 w-4" />
-            </div>
+            <ZovaixLogo size="sm" showLabel={false} />
             <span className="font-extrabold text-sm tracking-tight text-foreground">
-              {project?.name || "SiteCraft Studio"}
+              {project?.name || "ZOVAIX SITES"}
             </span>
           </div>
 
