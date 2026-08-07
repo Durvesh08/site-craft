@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   RotateCcw, Monitor, Tablet, Smartphone, Sparkles, Send, Zap,
-  Rocket, Loader2, Code, Layers, Paperclip, Check, CornerDownLeft
+  Rocket, Loader2, Code, Paperclip, Check, CornerDownLeft, Eye, ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -44,20 +44,12 @@ export default function ProjectEditor() {
   const [pages, setPages] = useState<string[]>(["index.html"]);
   const [currentPage, setCurrentPage] = useState<string>("index.html");
 
-  // Left Section Layers
-  const [sections] = useState([
-    { id: "Hero Section", name: "Hero Section", elements: ["Headline", "CTA Button", "3D Canvas"], status: "Ready" },
-    { id: "Constellation", name: "Agent Swarm Graph", elements: ["18 Neural Nodes", "Energy Rays"], status: "Active" },
-    { id: "Telemetry", name: "Telemetry Console", elements: ["Terminal Output", "WAI-ARIA Score"], status: "Ready" },
-    { id: "Pricing", name: "Pricing Matrix", elements: ["Developer Tier", "Enterprise Tier"], status: "Ready" },
-  ]);
-
   // Chat conversation stream (90% of right sidebar)
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "init",
       sender: "ai",
-      text: "I'm your AI Design Partner. Select any section on the canvas or type what you want to transform.",
+      text: "I'm your AI Design Partner. Direct what you want to edit on the page.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -109,7 +101,7 @@ export default function ProjectEditor() {
   const getViewportWidth = () => {
     if (viewport === "mobile") return "w-[375px] h-[812px]";
     if (viewport === "tablet") return "w-[768px] h-[1024px]";
-    return "w-full max-w-[1440px] h-full";
+    return "w-full max-w-[1480px] h-full";
   };
 
   const handlePromptSubmit = async (customPrompt?: string) => {
@@ -122,7 +114,6 @@ export default function ProjectEditor() {
 
     soundEngine.playPrimaryClick();
 
-    // Contextual prompt injection if a section is selected
     const fullPrompt = selectedSection
       ? `Editing [${selectedSection}]: ${rawPrompt}`
       : rawPrompt;
@@ -159,7 +150,7 @@ export default function ProjectEditor() {
           {
             id: Date.now().toString(),
             sender: "ai",
-            text: `I updated ${selectedSection || "the layout"}.`,
+            text: `I updated ${selectedSection || "the page"}.`,
             bullets: [
               "Improved typography hierarchy & contrast",
               "Applied dark glassmorphism & soft borders",
@@ -238,8 +229,9 @@ export default function ProjectEditor() {
           })}
         </div>
 
-        {/* Right: Actions */}
+        {/* Right: Actions (with Preview Button) */}
         <div className="flex items-center gap-3">
+          
           <button
             onClick={() => setIsCommandOpen(true)}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/40 border border-white/10 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
@@ -247,6 +239,19 @@ export default function ProjectEditor() {
             <span>Command</span>
             <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[10px]">⌘K</kbd>
           </button>
+
+          {/* EXPLICIT LIVE PREVIEW BUTTON */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs gap-1.5 border-white/15 hover:bg-white/10"
+            disabled={!iframeUrl}
+            asChild
+          >
+            <a href={iframeUrl || "#"} target="_blank" rel="noreferrer">
+              <Eye className="h-3.5 w-3.5 text-primary" /> Live Preview
+            </a>
+          </Button>
 
           <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5" onClick={() => refetch()}>
             <RotateCcw className="h-3.5 w-3.5" /> Reload
@@ -262,39 +267,7 @@ export default function ProjectEditor() {
       {/* ── MAIN WORKSPACE ── */}
       <div className="flex-1 flex pt-14 h-full relative overflow-hidden">
         
-        {/* ── LEFT SECTION LAYERS PANEL ── */}
-        <aside className="w-64 border-r border-white/10 glass flex flex-col z-30">
-          <div className="p-4 border-b border-white/10 flex items-center justify-between font-mono text-xs font-bold text-foreground">
-            <span className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" /> SECTION LAYERS
-            </span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 font-mono text-xs">
-            {sections.map((sec) => (
-              <button
-                key={sec.id}
-                onClick={() => { soundEngine.playTabSwitch(); setSelectedSection(sec.name); }}
-                className={cn(
-                  "w-full p-3 rounded-2xl text-left border transition-all space-y-1.5",
-                  selectedSection === sec.name
-                    ? "bg-primary/20 border-primary/50 text-primary shadow-lg"
-                    : "bg-secondary/15 border-white/5 text-muted-foreground hover:border-white/20 hover:text-foreground"
-                )}
-              >
-                <div className="flex items-center justify-between font-bold text-foreground">
-                  <span>■ {sec.name}</span>
-                  <span className="text-[10px] text-emerald-400 font-normal">✓ {sec.status}</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground/80 leading-relaxed">
-                  Contains: {sec.elements.join(", ")}
-                </div>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        {/* ── CENTER HERO CANVAS (20-25% LARGER PREVIEW) ── */}
+        {/* ── CENTER HERO CANVAS (NOW EXPANDED MAXIMUM WIDTH) ── */}
         <main className="flex-1 relative flex flex-col items-center justify-center p-4 md:p-6 bg-[#05050a] overflow-auto">
           
           {/* Ambient Lighting */}
@@ -322,7 +295,7 @@ export default function ProjectEditor() {
             </div>
           )}
 
-          {/* Floating Canvas Box (Expanded Size) */}
+          {/* Floating Canvas Box (Maximum Size) */}
           <div
             className={cn(
               "transition-all duration-500 rounded-3xl glass border border-white/20 shadow-2xl overflow-hidden relative flex flex-col backdrop-blur-2xl h-full max-h-[920px]",
