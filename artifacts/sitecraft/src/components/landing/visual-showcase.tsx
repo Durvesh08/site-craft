@@ -1,10 +1,9 @@
-import { Sparkles, Terminal, Cpu, Zap, Activity, CheckCircle2 } from "lucide-react";
+import { Terminal, Cpu, Zap, Activity, CheckCircle2, ShieldCheck } from "lucide-react";
 
 export function VisualShowcase() {
   return (
     <section className="w-full max-w-7xl mx-auto px-6 py-28 relative z-10">
       
-      {/* Section Header */}
       <div className="text-center space-y-4 max-w-3xl mx-auto mb-16">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono font-bold tracking-wider">
           <Zap className="h-3.5 w-3.5" /> INDUSTRIAL GRADE STUDIO OS
@@ -17,36 +16,42 @@ export function VisualShowcase() {
         </p>
       </div>
 
-      {/* Main Studio Showcase Frame */}
-      <div className="relative rounded-3xl overflow-hidden glass border border-white/15 shadow-2xl group">
-        
-        {/* Background Image */}
-        <div className="relative h-[480px] sm:h-[560px] w-full overflow-hidden">
-          <img
-            src="/images/dark_workspace.jpg"
-            alt="Dark Studio Workspace"
-            className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-1000"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-        </div>
+      {/* Pure UI Studio Telemetry Console */}
+      <div className="relative rounded-3xl overflow-hidden glass border border-white/15 shadow-2xl p-8 space-y-8 bg-black/80">
+        <div className="flex items-center justify-between border-b border-white/10 pb-6">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+              <Terminal className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">SiteCraft Neural Operating System</h3>
+              <p className="text-xs text-muted-foreground font-mono">18 Active Agent Nodes · WAI-ARIA 99% Compliance</p>
+            </div>
+          </div>
 
-        {/* Floating Telemetry Glass Badges */}
-        <div className="absolute top-6 left-6 p-4 rounded-2xl glass border border-white/10 space-y-1 shadow-2xl backdrop-blur-xl animate-float">
-          <span className="text-[10px] font-mono text-primary font-bold tracking-widest uppercase">SWARM TELEMETRY</span>
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-emerald-400 animate-pulse" />
-            <span className="text-sm font-bold text-foreground font-mono">18 Active Agents</span>
+          <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 font-bold">
+            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE TELEMETRY STREAM
           </div>
         </div>
 
-        <div className="absolute bottom-6 right-6 p-5 rounded-2xl glass border border-primary/40 space-y-2 shadow-2xl max-w-xs backdrop-blur-xl">
-          <div className="flex items-center justify-between text-xs font-mono text-primary font-bold">
-            <span>PERFORMANCE VERIFIED</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-xs">
+          <div className="p-6 rounded-2xl bg-secondary/20 border border-white/10 space-y-2">
+            <span className="text-muted-foreground">01. COMPILATION SPEED</span>
+            <div className="text-3xl font-black text-primary">99ms</div>
+            <p className="text-[10px] text-muted-foreground">Anycast Edge CDN Routing</p>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            WAI-ARIA accessible primitives compiled with 99ms global edge CDN latency.
-          </p>
+
+          <div className="p-6 rounded-2xl bg-secondary/20 border border-white/10 space-y-2">
+            <span className="text-muted-foreground">02. ACCESSIBILITY</span>
+            <div className="text-3xl font-black text-emerald-400">99 / 100</div>
+            <p className="text-[10px] text-muted-foreground">WAI-ARIA Contrast Verified</p>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-secondary/20 border border-white/10 space-y-2">
+            <span className="text-muted-foreground">03. CODE CLEANLINESS</span>
+            <div className="text-3xl font-black text-purple-400">Zero Bloat</div>
+            <p className="text-[10px] text-muted-foreground">Modular React 19 + Tailwind</p>
+          </div>
         </div>
       </div>
     </section>

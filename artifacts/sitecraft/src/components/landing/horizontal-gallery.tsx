@@ -1,28 +1,27 @@
-import { useState } from "react";
-import { Sparkles, Layers, Cpu, Globe, Rocket, ShieldCheck, Zap } from "lucide-react";
+import { Cpu, Layers, Globe, Terminal, ShieldCheck, Zap } from "lucide-react";
 
 export function HorizontalGallery() {
   const cards = [
     {
       title: "18-Agent Swarm",
       desc: "Localized neural pipeline running concurrent UX, copy, and React code synthesis.",
-      image: "/images/agent_swarm_ui.jpg",
+      previewText: "SWARM TELEMETRY :: 18 ACTIVE NODES",
       icon: Cpu,
-      color: "from-blue-500/20 to-indigo-500/20",
+      color: "border-blue-500/30 text-blue-400 bg-blue-500/5",
     },
     {
       title: "3D Component Preview",
       desc: "Live interactive canvas rendering modular Tailwind primitives and Radix components.",
-      image: "/images/laptop_mockup.jpg",
+      previewText: "AST PARSER :: VERIFIED REACT 19 JSX",
       icon: Layers,
-      color: "from-purple-500/20 to-pink-500/20",
+      color: "border-purple-500/30 text-purple-400 bg-purple-500/5",
     },
     {
       title: "Global Edge CDN",
       desc: "One-click deployment to Vercel, Netlify, Cloudflare, and custom domain SSL.",
-      image: "/images/hero_ai_studio.jpg",
+      previewText: "ANYCAST ROUTER :: 320 EDGE LOCATIONS",
       icon: Globe,
-      color: "from-cyan-500/20 to-emerald-500/20",
+      color: "border-emerald-500/30 text-emerald-400 bg-emerald-500/5",
     },
   ];
 
@@ -44,27 +43,28 @@ export function HorizontalGallery() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {cards.map((card, i) => {
+        {cards.map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.title}
               className="group glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-2xl flex flex-col hover:border-primary/40 transition-all duration-500 hover:-translate-y-2"
             >
-              <div className="relative h-56 w-full overflow-hidden bg-slate-950">
-                <img
-                  src={card.image}
-                  alt={card.title}
-                  className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-700"
-                />
-                <div className={`absolute inset-0 bg-gradient-to-t ${card.color} to-transparent opacity-60`} />
+              {/* Handcrafted Pure UI Visual Header */}
+              <div className={`h-52 w-full p-6 border-b border-white/10 flex flex-col justify-between ${card.color} relative overflow-hidden`}>
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/10">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <div className="font-mono text-[10px] tracking-wider uppercase font-bold text-foreground/80">
+                  {card.previewText}
+                </div>
               </div>
 
               <div className="p-8 space-y-4 flex-1 flex flex-col justify-between">
                 <div className="space-y-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                    <Icon className="h-5 w-5" />
-                  </div>
                   <h3 className="text-xl font-bold text-foreground">{card.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{card.desc}</p>
                 </div>

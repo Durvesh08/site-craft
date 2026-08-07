@@ -1,23 +1,26 @@
-import { Sparkles, Star, Quote } from "lucide-react";
+import { Sparkles, Star, User } from "lucide-react";
 
 export function TestimonialsShowcase() {
   const testimonials = [
     {
       name: "Alex Rivera",
       role: "Head of Product, Veloce Labs",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+      initials: "AR",
+      color: "bg-gradient-to-tr from-blue-600 to-indigo-500",
       quote: "SiteCraft's 18-agent studio synthesized our entire product launch site in under 3 minutes. The Framer motion physics and WAI-ARIA accessibility blew our engineering team away.",
     },
     {
       name: "Elena Rostova",
       role: "Founding Engineer, Prism AI",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80",
+      initials: "ER",
+      color: "bg-gradient-to-tr from-purple-600 to-pink-500",
       quote: "The ability to export clean React components with zero legacy bloat makes SiteCraft a staple in our workflow. It feels like Apple's design team built an AI OS.",
     },
     {
       name: "Marcus Vance",
       role: "Design Director, Emergent Studio",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80",
+      initials: "MV",
+      color: "bg-gradient-to-tr from-cyan-600 to-emerald-500",
       quote: "The Vercel-grade custom domain verification and DNS diagrams allowed us to launch 12 client properties in a single afternoon.",
     },
   ];
@@ -49,7 +52,9 @@ export function TestimonialsShowcase() {
             </div>
 
             <div className="flex items-center gap-4 pt-8 border-t border-white/5 mt-6">
-              <img src={t.avatar} alt={t.name} className="h-12 w-12 rounded-full object-cover border-2 border-primary/30" />
+              <div className={`h-12 w-12 rounded-full ${t.color} text-white font-bold text-sm flex items-center justify-center shadow-lg border border-white/20`}>
+                {t.initials}
+              </div>
               <div>
                 <h4 className="text-sm font-bold text-foreground">{t.name}</h4>
                 <p className="text-xs text-muted-foreground">{t.role}</p>
