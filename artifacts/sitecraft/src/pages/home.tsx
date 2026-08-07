@@ -2,16 +2,20 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Zap, Sparkles, ArrowRight, CheckCircle2, Command, Cpu, Globe, Code2, Play, Layers, ShieldCheck, Terminal, Rocket, Star, Lock } from "lucide-react";
+import { Zap, Sparkles, ArrowRight, CheckCircle2, Command, Cpu, Globe, Code2, Play, Layers, ShieldCheck, Terminal, Rocket } from "lucide-react";
 import { CursorGlow } from "@/components/ui/cursor-glow";
 import { AICoreCanvas } from "@/components/canvas/ai-core-canvas";
 import { ChapterConstellation } from "@/components/narrative/chapter-constellation";
 import { ChapterSynthesis } from "@/components/narrative/chapter-synthesis";
-import { VisualShowcase } from "@/components/landing/visual-showcase";
-import { BeforeAfterSlider } from "@/components/landing/before-after";
 import { ChapterTopology } from "@/components/narrative/chapter-topology";
+import { ChapterDashboardPreview } from "@/components/narrative/chapter-dashboard-preview";
+import { ChapterIntegrations } from "@/components/narrative/chapter-integrations";
+import { LiveComponentSandbox } from "@/components/landing/live-component-sandbox";
+import { BeforeAfterSlider } from "@/components/landing/before-after";
 import { TestimonialsShowcase } from "@/components/landing/testimonials-showcase";
 import { InteractiveFAQ } from "@/components/landing/interactive-faq";
+import { ActivityStream } from "@/components/dashboard/activity-stream";
+import { BrowserMockup } from "@/components/ui/browser-mockup";
 import { soundEngine } from "@/lib/sound-effects";
 
 export default function Home() {
@@ -34,7 +38,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="min-h-screen flex items-center justify-center bg-[#030305]">
         <div className="animate-pulse flex flex-col items-center gap-4">
           <Sparkles className="h-8 w-8 text-primary animate-spin-slow" />
           <p className="text-muted-foreground font-mono text-sm tracking-widest">INITIALIZING SITECRAFT CORE</p>
@@ -50,15 +54,15 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#05050a] text-foreground font-sans overflow-x-hidden selection:bg-primary/30 relative">
+    <div className="min-h-screen flex flex-col bg-[#030305] text-foreground font-sans overflow-x-hidden selection:bg-primary/30 relative">
       
-      {/* 3D Ray-Marched AI Core Background Canvas */}
+      {/* 3D Ray-Marched Procedural AI Core Canvas */}
       <AICoreCanvas />
 
-      {/* Dynamic Cursor Light Trail */}
+      {/* Dynamic Cursor Light Glow */}
       <CursorGlow />
 
-      {/* Floating VisionOS Glass Dock Navigation Bar */}
+      {/* Floating VisionOS Glass Dock Navbar */}
       <header className="fixed top-6 left-1/2 -translate-x-1/2 h-16 px-6 glass rounded-2xl border border-white/10 flex items-center justify-between z-50 w-full max-w-4xl shadow-2xl backdrop-blur-2xl">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setLocation("/")}>
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
@@ -79,15 +83,15 @@ export default function Home() {
         </div>
       </header>
 
-      {/* CONTINUOUS SCROLL NARRATIVE */}
+      {/* 10-CHAPTER NARRATIVE */}
       <main className="flex-1 flex flex-col items-center w-full z-10 relative">
         
-        {/* CHAPTER I: THE AWAKENING & FULLSCREEN HERO */}
+        {/* CHAPTER 01: THE BEGINNING */}
         <section className="w-full min-h-screen pt-32 pb-24 px-6 flex flex-col items-center justify-center text-center relative z-10">
           
           <div className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs text-primary font-mono shadow-inner mb-8 font-semibold tracking-widest uppercase">
             <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-            CHAPTER I — AN OPERATING SYSTEM FOR WEBSITES
+            CHAPTER 01 — THE BEGINNING
           </div>
 
           <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter text-foreground leading-[1.02] max-w-6xl">
@@ -133,24 +137,50 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CHAPTER II: THE AGENT CONSTELLATION */}
+        {/* CHAPTER 02: THE SWARM AWAKENS */}
         <ChapterConstellation />
 
-        {/* CHAPTER III: PROCEDURAL SYNTHESIS MATRIX */}
+        {/* CHAPTER 03: EVERY AGENT STARTS WORKING */}
+        <section className="w-full max-w-5xl px-6 py-24 z-10">
+          <ActivityStream />
+        </section>
+
+        {/* CHAPTER 04: THOUGHT BECOMES INTERFACE */}
         <ChapterSynthesis />
 
-        {/* CHAPTER IV: SPATIAL STUDIO SHOWCASE */}
-        <VisualShowcase />
+        {/* CHAPTER 05: CODE MATERIALIZES */}
+        <LiveComponentSandbox />
 
-        {/* CHAPTER V: HOLOGRAPHIC BEFORE/AFTER TRANSFORMATION */}
-        <BeforeAfterSlider />
+        {/* CHAPTER 06: COMPONENTS ASSEMBLE */}
+        <section className="w-full max-w-5xl px-6 py-24 z-10">
+          <div className="text-center mb-8">
+            <h3 className="text-xs font-mono uppercase tracking-widest text-primary font-bold">CHAPTER 06 — COMPONENTS ASSEMBLE</h3>
+            <h2 className="text-4xl font-extrabold text-foreground mt-2">Handcrafted OS Frame</h2>
+          </div>
+          <BrowserMockup url={`https://app.sitecraft.ai/preview?preset=${encodeURIComponent(activeChip)}`}>
+            <div className="p-12 text-center space-y-6 bg-gradient-to-br from-slate-900 via-primary/10 to-purple-950 min-h-[360px] flex flex-col justify-center items-center">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-mono font-bold">
+                <Zap className="h-3.5 w-3.5" /> SYNTHESIZED OS INTERFACE
+              </div>
+              <h2 className="text-4xl font-extrabold text-foreground">{activeChip} Operating System</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                "{prompt}"
+              </p>
+            </div>
+          </BrowserMockup>
+        </section>
 
-        {/* CHAPTER VI: SPATIAL EDGE TOPOLOGY */}
+        {/* CHAPTER 07: DEPLOYMENT HAPPENS */}
         <ChapterTopology />
 
-        {/* CHAPTER VII: TESTIMONIALS & PRICING MATRIX */}
+        {/* CHAPTER 08: LIVE OPERATING SYSTEM */}
+        <ChapterDashboardPreview />
+
+        {/* CHAPTER 09: EVERYTHING IS CONNECTED */}
+        <ChapterIntegrations />
         <TestimonialsShowcase />
 
+        {/* CHAPTER 10: LAUNCH */}
         <InteractiveFAQ />
 
         {/* PRICING MATRIX */}
