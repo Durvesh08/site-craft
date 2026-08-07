@@ -2,17 +2,16 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Zap, Sparkles, ArrowRight, CheckCircle2, Command, Cpu, Globe, Code2, Play, Layers, ShieldCheck, Terminal, Rocket, Star } from "lucide-react";
+import { Zap, Sparkles, ArrowRight, CheckCircle2, Command, Cpu, Globe, Code2, Play, Layers, ShieldCheck, Terminal, Rocket, Star, Lock } from "lucide-react";
 import { CursorGlow } from "@/components/ui/cursor-glow";
-import { BrowserMockup } from "@/components/ui/browser-mockup";
+import { AICoreCanvas } from "@/components/canvas/ai-core-canvas";
+import { ChapterConstellation } from "@/components/narrative/chapter-constellation";
+import { ChapterSynthesis } from "@/components/narrative/chapter-synthesis";
 import { VisualShowcase } from "@/components/landing/visual-showcase";
-import { HorizontalGallery } from "@/components/landing/horizontal-gallery";
 import { BeforeAfterSlider } from "@/components/landing/before-after";
-import { AgentGraph3D } from "@/components/landing/agent-graph-3d";
-import { LiveComponentSandbox } from "@/components/landing/live-component-sandbox";
+import { ChapterTopology } from "@/components/narrative/chapter-topology";
 import { TestimonialsShowcase } from "@/components/landing/testimonials-showcase";
 import { InteractiveFAQ } from "@/components/landing/interactive-faq";
-import { Pipeline3D } from "@/components/landing/pipeline-3d";
 import { soundEngine } from "@/lib/sound-effects";
 
 export default function Home() {
@@ -35,10 +34,10 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="animate-pulse flex flex-col items-center gap-4">
           <Sparkles className="h-8 w-8 text-primary animate-spin-slow" />
-          <p className="text-muted-foreground font-mono text-sm tracking-widest">INITIALIZING SITECRAFT STUDIO OS</p>
+          <p className="text-muted-foreground font-mono text-sm tracking-widest">INITIALIZING SITECRAFT CORE</p>
         </div>
       </div>
     );
@@ -51,130 +50,107 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background font-sans overflow-hidden selection:bg-primary/30 relative">
+    <div className="min-h-screen flex flex-col bg-[#05050a] text-foreground font-sans overflow-x-hidden selection:bg-primary/30 relative">
       
-      {/* Interactive Cursor Lighting */}
+      {/* 3D Ray-Marched AI Core Background Canvas */}
+      <AICoreCanvas />
+
+      {/* Dynamic Cursor Light Trail */}
       <CursorGlow />
 
-      {/* Floating Navbar */}
-      <header className="container mx-auto px-6 h-24 flex items-center justify-between z-50 relative">
+      {/* Floating VisionOS Glass Dock Navigation Bar */}
+      <header className="fixed top-6 left-1/2 -translate-x-1/2 h-16 px-6 glass rounded-2xl border border-white/10 flex items-center justify-between z-50 w-full max-w-4xl shadow-2xl backdrop-blur-2xl">
         <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setLocation("/")}>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
-            <Sparkles className="h-6 w-6" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
+            <Sparkles className="h-5 w-5" />
           </div>
-          <span className="font-extrabold text-2xl tracking-tight text-foreground">
-            SiteCraft
+          <span className="font-black text-xl tracking-tight text-foreground">
+            SiteCraft OS
           </span>
         </div>
 
-        <div className="flex items-center gap-6">
-          <button onClick={goToLogin} className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors hidden md:block">
+        <div className="flex items-center gap-4">
+          <button onClick={goToLogin} className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors hidden md:block">
             Sign In
           </button>
-          <Button className="h-12 px-6 rounded-xl font-bold gap-2 shadow-xl shadow-primary/25 btn-magnetic" onClick={goToLogin}>
-            Launch Studio <ArrowRight className="h-4 w-4" />
+          <Button className="h-10 px-5 rounded-xl text-xs font-bold gap-2 shadow-xl shadow-primary/25 btn-magnetic" onClick={goToLogin}>
+            Launch Studio <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </div>
       </header>
 
+      {/* CONTINUOUS SCROLL NARRATIVE */}
       <main className="flex-1 flex flex-col items-center w-full z-10 relative">
         
-        {/* 100VH FULLSCREEN CINEMATIC HERO */}
-        <section className="w-full min-h-[calc(100vh-6rem)] pt-12 pb-24 px-6 flex flex-col items-center justify-center text-center animate-slide-up relative">
+        {/* CHAPTER I: THE AWAKENING & FULLSCREEN HERO */}
+        <section className="w-full min-h-screen pt-32 pb-24 px-6 flex flex-col items-center justify-center text-center relative z-10">
           
-          {/* Background 3D Abstract Sphere Image */}
-          <div className="absolute inset-0 z-0 pointer-events-none opacity-20 overflow-hidden flex items-center justify-center">
-            <img src="/images/hero_ai_studio.jpg" alt="3D Neural Sphere" className="w-full h-full object-cover blur-sm scale-110" />
+          <div className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs text-primary font-mono shadow-inner mb-8 font-semibold tracking-widest uppercase">
+            <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
+            CHAPTER I — AN OPERATING SYSTEM FOR WEBSITES
           </div>
 
-          <div className="relative z-10 space-y-8">
-            <div className="inline-flex items-center rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs text-primary font-mono shadow-inner font-semibold tracking-wider">
-              <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-              SITECRAFT V6 — ENTERPRISE AI OPERATING SYSTEM
+          <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter text-foreground leading-[1.02] max-w-6xl">
+            Don't build websites.<br />
+            <span className="text-gradient-primary">
+              Direct an AI Studio to synthesize them.
+            </span>
+          </h1>
+
+          <p className="mt-8 text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-normal">
+            18 specialized AI agents — UX strategists, copywriters, Framer motion designers, and React architects — build, optimize, and deploy your business website in seconds.
+          </p>
+
+          {/* Prompt Bar */}
+          <div className="w-full max-w-3xl mx-auto mt-12 space-y-4">
+            <div className="glass-panel p-2 rounded-2xl border border-primary/30 flex items-center gap-3 shadow-2xl">
+              <Sparkles className="h-6 w-6 text-primary shrink-0 ml-3" />
+              <input
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="flex-1 bg-transparent border-0 text-sm font-medium text-foreground focus:outline-none placeholder:text-muted-foreground"
+                placeholder="Describe the website you want to synthesize..."
+              />
+              <Button size="lg" className="h-12 px-8 font-bold gap-2 rounded-xl shadow-lg shadow-primary/30 btn-magnetic" onClick={goToLogin}>
+                Synthesize <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
 
-            <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter text-foreground leading-[1.02] max-w-6xl">
-              Don't build websites.<br />
-              <span className="text-gradient-primary">
-                Direct an AI Studio to synthesize them.
-              </span>
-            </h1>
-
-            <p className="mt-8 text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed font-normal">
-              18 specialized AI agents — UX strategists, copywriters, Framer motion designers, and React architects — build, optimize, and deploy your business website in seconds.
-            </p>
-
-            {/* Interactive Prompt Playground */}
-            <div className="w-full max-w-3xl mx-auto mt-12 space-y-4">
-              <div className="glass-panel p-2 rounded-2xl border border-primary/30 flex items-center gap-3 shadow-2xl">
-                <Sparkles className="h-6 w-6 text-primary shrink-0 ml-3" />
-                <input
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  className="flex-1 bg-transparent border-0 text-sm font-medium text-foreground focus:outline-none placeholder:text-muted-foreground"
-                  placeholder="Describe the website you want to synthesize..."
-                />
-                <Button size="lg" className="h-12 px-8 font-bold gap-2 rounded-xl shadow-lg shadow-primary/30 btn-magnetic" onClick={goToLogin}>
-                  Synthesize <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Preset Chips */}
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <span className="text-xs font-mono text-muted-foreground mr-2">Try Preset:</span>
-                {promptPresets.map((chip) => (
-                  <button
-                    key={chip.label}
-                    onClick={() => { setPrompt(chip.prompt); setActiveChip(chip.label); }}
-                    className={`px-3 py-1 rounded-full text-xs font-mono font-semibold transition-all ${
-                      activeChip === chip.label ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary/40 text-muted-foreground hover:bg-secondary"
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Live Floating Glass Browser Preview */}
-            <div className="w-full max-w-5xl mx-auto mt-16 animate-float">
-              <BrowserMockup url={`https://app.sitecraft.ai/preview?preset=${encodeURIComponent(activeChip)}`}>
-                <div className="p-12 text-center space-y-6 bg-gradient-to-br from-slate-900 via-primary/10 to-purple-950 min-h-[360px] flex flex-col justify-center items-center">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-mono font-bold">
-                    <Zap className="h-3.5 w-3.5" /> LIVE SYNTHESIZED PREVIEW
-                  </div>
-                  <h2 className="text-4xl font-extrabold text-foreground">{activeChip} Operating System</h2>
-                  <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                    "{prompt}"
-                  </p>
-                </div>
-              </BrowserMockup>
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <span className="text-xs font-mono text-muted-foreground mr-2">Try Preset:</span>
+              {promptPresets.map((chip) => (
+                <button
+                  key={chip.label}
+                  onClick={() => { setPrompt(chip.prompt); setActiveChip(chip.label); }}
+                  className={`px-3 py-1 rounded-full text-xs font-mono font-semibold transition-all ${
+                    activeChip === chip.label ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary/40 text-muted-foreground hover:bg-secondary"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* DARK STUDIO WORKSPACE VISUAL SHOWCASE */}
+        {/* CHAPTER II: THE AGENT CONSTELLATION */}
+        <ChapterConstellation />
+
+        {/* CHAPTER III: PROCEDURAL SYNTHESIS MATRIX */}
+        <ChapterSynthesis />
+
+        {/* CHAPTER IV: SPATIAL STUDIO SHOWCASE */}
         <VisualShowcase />
 
-        {/* 5-STEP PIPELINE VISUALIZER */}
-        <Pipeline3D />
-
-        {/* HORIZONTAL FEATURE GALLERY */}
-        <HorizontalGallery />
-
-        {/* INTERACTIVE BEFORE / AFTER SLIDER */}
+        {/* CHAPTER V: HOLOGRAPHIC BEFORE/AFTER TRANSFORMATION */}
         <BeforeAfterSlider />
 
-        {/* 18-AGENT NEURAL SWARM GRAPH */}
-        <AgentGraph3D />
+        {/* CHAPTER VI: SPATIAL EDGE TOPOLOGY */}
+        <ChapterTopology />
 
-        {/* LIVE COMPONENT SYNTHESIS SANDBOX */}
-        <LiveComponentSandbox />
-
-        {/* TESTIMONIALS SHOWCASE */}
+        {/* CHAPTER VII: TESTIMONIALS & PRICING MATRIX */}
         <TestimonialsShowcase />
 
-        {/* INTERACTIVE FAQ ACCORDION */}
         <InteractiveFAQ />
 
         {/* PRICING MATRIX */}
