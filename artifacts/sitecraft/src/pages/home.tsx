@@ -6,7 +6,6 @@ import { Zap, Sparkles, ArrowRight, CheckCircle2, Command } from "lucide-react";
 import { CursorGlow } from "@/components/ui/cursor-glow";
 import { AICoreCanvas } from "@/components/canvas/ai-core-canvas";
 import { ChapterConstellation } from "@/components/narrative/chapter-constellation";
-import { ChapterSynthesis } from "@/components/narrative/chapter-synthesis";
 import { ChapterTopology } from "@/components/narrative/chapter-topology";
 import { ChapterDashboardPreview } from "@/components/narrative/chapter-dashboard-preview";
 import { ChapterIntegrations } from "@/components/narrative/chapter-integrations";
@@ -149,26 +148,23 @@ export default function Home() {
           <ActivityStream />
         </section>
 
-        {/* CHAPTER 04: THOUGHT BECOMES INTERFACE */}
-        <ChapterSynthesis />
-
-        {/* CHAPTER 05: HOLOGRAPHIC BEFORE/AFTER TRANSFORMATION */}
+        {/* CHAPTER 04: HOLOGRAPHIC BEFORE/AFTER TRANSFORMATION */}
         <BeforeAfterSlider />
 
-        {/* CHAPTER 06: DEPLOYMENT HAPPENS */}
+        {/* CHAPTER 05: DEPLOYMENT HAPPENS */}
         <ChapterTopology />
 
-        {/* CHAPTER 07: LIVE OPERATING SYSTEM */}
+        {/* CHAPTER 06: LIVE OPERATING SYSTEM */}
         <ChapterDashboardPreview />
 
-        {/* CHAPTER 08: EVERYTHING IS CONNECTED */}
+        {/* CHAPTER 07: EVERYTHING IS CONNECTED */}
         <ChapterIntegrations />
         <TestimonialsShowcase />
 
-        {/* CHAPTER 09: FREQUENTLY ASKED QUESTIONS */}
+        {/* CHAPTER 08: FREQUENTLY ASKED QUESTIONS */}
         <InteractiveFAQ />
 
-        {/* CHAPTER 10: PRICING MATRIX */}
+        {/* CHAPTER 09: PRICING MATRIX */}
         <section className="w-full max-w-5xl mx-auto px-6 py-24">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">
