@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useLocation, Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { Sparkles, ArrowRight, Loader2, Command } from "lucide-react";
 
 export default function Login() {
   const { login, localLogin, localRegister } = useAuth();
@@ -22,7 +21,7 @@ export default function Login() {
   const oauthError = new URLSearchParams(window.location.search).get("error");
   const [error, setError] = useState<string | null>(
     oauthError === "oauth_not_configured"
-      ? "Google sign-in isn't set up on this deployment yet. Please use email/password instead."
+      ? "Google sign-in isn't set up yet. Please use email/password."
       : null
   );
 
@@ -32,9 +31,9 @@ export default function Login() {
     setSubmitting(true);
     try {
       if (mode === "login") {
-        await localLogin(email, password);
+        await localLogin({ email, password });
       } else {
-        await localRegister(email, password, firstName || undefined, lastName || undefined);
+        await localRegister({ email, password, firstName: firstName || undefined, lastName: lastName || undefined });
       }
       setLocation("/dashboard");
     } catch (err) {
@@ -45,30 +44,68 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6 relative overflow-hidden">
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[60%] rounded-full bg-blue-400/5 blur-[120px] pointer-events-none" />
+    <div className="flex min-h-screen bg-background text-foreground font-sans">
+      {/* Left Panel: Branding & Context (Hidden on small screens) */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-card relative overflow-hidden border-r border-border/50">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
+        
+        {/* Animated Background Mesh */}
+        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[100px] animate-pulse-slow pointer-events-none" />
+        <div className="absolute top-[40%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent/20 blur-[120px] animate-float pointer-events-none" />
 
-      <button
-        className="absolute top-6 left-6 flex items-center gap-2 z-10"
-        onClick={() => setLocation("/")}
-        data-testid="button-back-home"
-      >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Sparkles className="h-5 w-5" />
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <span className="font-bold text-2xl tracking-tight">SiteCraft</span>
         </div>
-        <span className="font-bold text-xl tracking-tight text-foreground">SiteCraft</span>
-      </button>
 
-      <Card className="w-full max-w-md glass-panel z-10 relative">
-        <CardHeader className="text-center space-y-1">
-          <CardTitle className="text-2xl">Welcome to SiteCraft</CardTitle>
-          <CardDescription>Sign in to start directing your AI agents</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <div className="relative z-10 space-y-6 max-w-lg">
+          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight leading-[1.1]">
+            Build the next generation of <span className="text-gradient-primary">web experiences.</span>
+          </h1>
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            Join thousands of creators building highly optimized, beautifully designed web applications with the power of Autonomous AI Agents.
+          </p>
+          
+          <div className="flex items-center gap-4 pt-8">
+            <div className="flex -space-x-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-10 w-10 rounded-full bg-secondary border-2 border-background overflow-hidden">
+                  <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${i}&backgroundColor=transparent`} alt="User" />
+                </div>
+              ))}
+            </div>
+            <div className="text-sm">
+              <p className="font-medium">Loved by builders</p>
+              <p className="text-muted-foreground">Over 10,000+ deployments</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex items-center text-sm text-muted-foreground gap-2 font-mono">
+          <Command className="h-4 w-4" /> Press <kbd className="px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs font-sans">⌘ K</kbd> to open command menu anytime
+        </div>
+      </div>
+
+      {/* Right Panel: Auth Form */}
+      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center p-8 sm:p-12 relative">
+        <Link href="/" className="absolute top-8 left-8 lg:hidden flex items-center gap-2 group">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <span className="font-bold text-lg tracking-tight">SiteCraft</span>
+        </Link>
+
+        <div className="w-full max-w-[420px] space-y-8 animate-slide-up">
+          <div className="space-y-2 text-center lg:text-left">
+            <h2 className="text-3xl font-bold tracking-tight">Welcome back</h2>
+            <p className="text-muted-foreground">Sign in to your account to continue</p>
+          </div>
+
           <Button
             variant="outline"
-            className="w-full h-11 gap-2 font-medium"
+            className="w-full h-12 gap-3 font-medium rounded-xl hover:bg-secondary/50 transition-colors"
             onClick={() => login()}
             data-testid="button-google-login"
           >
@@ -77,33 +114,36 @@ export default function Login() {
           </Button>
 
           <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground uppercase tracking-wide">or</span>
-            <div className="h-px flex-1 bg-border" />
+            <div className="h-px flex-1 bg-border/60" />
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">or continue with email</span>
+            <div className="h-px flex-1 bg-border/60" />
           </div>
 
-          <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "register"); setError(null); }}>
-            <TabsList className="w-full grid grid-cols-2">
-              <TabsTrigger value="login" data-testid="tab-login">Sign In</TabsTrigger>
-              <TabsTrigger value="register" data-testid="tab-register">Create Account</TabsTrigger>
+          <Tabs value={mode} onValueChange={(v) => { setMode(v as "login" | "register"); setError(null); }} className="w-full">
+            <TabsList className="w-full grid grid-cols-2 p-1 rounded-xl bg-secondary/30 border border-border/50">
+              <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Sign In</TabsTrigger>
+              <TabsTrigger value="register" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">Create Account</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="login" className="mt-4">
-              <form className="space-y-4" onSubmit={handleSubmit}>
+            <TabsContent value="login" className="mt-6 space-y-5 animate-fade-in">
+              <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email" className="text-sm font-medium">Email address</Label>
                   <Input
                     id="login-email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    data-testid="input-login-email"
+                    placeholder="name@example.com"
+                    className="h-11 rounded-xl bg-card border-border/60 focus:border-primary/50 focus:ring-primary/20"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password" className="text-sm font-medium">Password</Label>
+                    <a href="#" className="text-xs text-primary hover:underline font-medium">Forgot password?</a>
+                  </div>
                   <Input
                     id="login-password"
                     type="password"
@@ -111,54 +151,54 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    data-testid="input-login-password"
+                    className="h-11 rounded-xl bg-card border-border/60 focus:border-primary/50 focus:ring-primary/20"
                   />
                 </div>
-                {error && <p className="text-sm text-destructive" data-testid="text-login-error">{error}</p>}
-                <Button type="submit" className="w-full gap-2" disabled={submitting} data-testid="button-submit-login">
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Sign In <ArrowRight className="h-4 w-4" /></>}
+                {error && <p className="text-sm text-destructive font-medium p-3 bg-destructive/10 rounded-lg">{error}</p>}
+                <Button type="submit" className="w-full h-11 gap-2 rounded-xl text-base btn-magnetic" disabled={submitting}>
+                  {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Sign In <ArrowRight className="h-4 w-4" /></>}
                 </Button>
               </form>
             </TabsContent>
 
-            <TabsContent value="register" className="mt-4">
-              <form className="space-y-4" onSubmit={handleSubmit}>
-                <div className="grid grid-cols-2 gap-3">
+            <TabsContent value="register" className="mt-6 space-y-5 animate-fade-in">
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="register-first-name">First name</Label>
+                    <Label htmlFor="register-first-name" className="text-sm font-medium">First name</Label>
                     <Input
                       id="register-first-name"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="Ada"
-                      data-testid="input-register-first-name"
+                      className="h-11 rounded-xl bg-card border-border/60 focus:border-primary/50 focus:ring-primary/20"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="register-last-name">Last name</Label>
+                    <Label htmlFor="register-last-name" className="text-sm font-medium">Last name</Label>
                     <Input
                       id="register-last-name"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Lovelace"
-                      data-testid="input-register-last-name"
+                      className="h-11 rounded-xl bg-card border-border/60 focus:border-primary/50 focus:ring-primary/20"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-email">Email</Label>
+                  <Label htmlFor="register-email" className="text-sm font-medium">Email address</Label>
                   <Input
                     id="register-email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    data-testid="input-register-email"
+                    placeholder="name@example.com"
+                    className="h-11 rounded-xl bg-card border-border/60 focus:border-primary/50 focus:ring-primary/20"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-password">Password</Label>
+                  <Label htmlFor="register-password" className="text-sm font-medium">Password</Label>
                   <Input
                     id="register-password"
                     type="password"
@@ -167,25 +207,32 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 6 characters"
-                    data-testid="input-register-password"
+                    className="h-11 rounded-xl bg-card border-border/60 focus:border-primary/50 focus:ring-primary/20"
                   />
                 </div>
-                {error && <p className="text-sm text-destructive" data-testid="text-register-error">{error}</p>}
-                <Button type="submit" className="w-full gap-2" disabled={submitting} data-testid="button-submit-register">
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Create Account <ArrowRight className="h-4 w-4" /></>}
+                {error && <p className="text-sm text-destructive font-medium p-3 bg-destructive/10 rounded-lg">{error}</p>}
+                <Button type="submit" className="w-full h-11 gap-2 rounded-xl text-base btn-magnetic" disabled={submitting}>
+                  {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <>Create Account <ArrowRight className="h-4 w-4" /></>}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+
+          <p className="text-center text-xs text-muted-foreground">
+            By clicking continue, you agree to our{" "}
+            <a href="#" className="underline underline-offset-4 hover:text-primary transition-colors">Terms of Service</a>{" "}
+            and{" "}
+            <a href="#" className="underline underline-offset-4 hover:text-primary transition-colors">Privacy Policy</a>.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
 
 function GoogleIcon() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24">
+    <svg className="h-5 w-5" viewBox="0 0 24 24">
       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />

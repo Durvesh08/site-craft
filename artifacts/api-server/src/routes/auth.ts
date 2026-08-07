@@ -10,20 +10,12 @@ import * as oidc from 'openid-client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
+import { signJwt, type JwtPayload } from '../lib/jwt';
+import { getOidcConfig, ISSUER_URL } from '../lib/auth'; // kept for oidc config if needed
 
-import {
-  clearSession,
-  createSession,
-  deleteSession,
-  getOidcConfig,
-  getSessionId,
-  ISSUER_URL,
-  SESSION_COOKIE,
-  SESSION_TTL,
-  type SessionData,
-} from '../lib/auth';
-
+const TOKEN_COOKIE = 'token';
 const OIDC_COOKIE_TTL = 10 * 60 * 1000;
+const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
 
 const router: IRouter = Router();
 
@@ -34,15 +26,11 @@ function getOrigin(req: Request): string {
   return `${proto}://${host}`;
 }
 
-function setSessionCookie(res: Response, sid: string) {
-  // SameSite=None + Secure=true is required so the session cookie is sent
-  // inside cross-site iframes (e.g. Replit's preview pane, embedded widgets).
-  // SameSite=Lax silently blocks cookies when the top-level context differs
-  // from the cookie's origin, which breaks login in Replit's preview frame.
-  res.cookie(SESSION_COOKIE, sid, {
+function setJwtCookie(res: Response, token: string) {
+  res.cookie(TOKEN_COOKIE, token, {
     httpOnly: true,
-    secure: true,           // required by all browsers when SameSite=None
-    sameSite: 'none',       // allows cookie in cross-site iframe contexts
+    secure: true,
+    sameSite: 'none',
     path: '/',
     maxAge: SESSION_TTL,
   });
@@ -94,8 +82,6 @@ async function upsertUser(claims: Record<string, unknown>) {
 }
 
 router.get('/auth/user', (req: Request, res: Response) => {
-  // Never cache — the browser must not replay a stale {"user":null} response
-  // after login (304 from a cached unauthenticated response breaks auth flow).
   res.setHeader('Cache-Control', 'no-store');
   res.json(
     GetCurrentAuthUserResponse.parse({
@@ -137,19 +123,17 @@ router.post('/auth/register', async (req: Request, res: Response) => {
       lastName: lastName || null,
     }).returning();
 
-    const sessionData: SessionData = {
-      user: {
-        id: dbUser.id,
-        email: dbUser.email,
-        firstName: dbUser.firstName,
-        lastName: dbUser.lastName,
-        profileImageUrl: dbUser.profileImageUrl,
-      },
+    const payload: JwtPayload = {
+      id: dbUser.id,
+      email: dbUser.email,
+      firstName: dbUser.firstName,
+      lastName: dbUser.lastName,
+      profileImageUrl: dbUser.profileImageUrl,
     };
 
-    const sid = await createSession(sessionData);
-    setSessionCookie(res, sid);
-    res.status(201).json({ user: sessionData.user });
+    const token = signJwt(payload);
+    setJwtCookie(res, token);
+    res.status(201).json({ user: payload });
   } catch (err) {
     req.log.error(err, 'Local registration error');
     res.status(500).json({ error: 'Failed to register user' });
@@ -184,19 +168,17 @@ router.post('/auth/login', async (req: Request, res: Response) => {
       return;
     }
 
-    const sessionData: SessionData = {
-      user: {
-        id: dbUser.id,
-        email: dbUser.email,
-        firstName: dbUser.firstName,
-        lastName: dbUser.lastName,
-        profileImageUrl: dbUser.profileImageUrl,
-      },
+    const payload: JwtPayload = {
+      id: dbUser.id,
+      email: dbUser.email,
+      firstName: dbUser.firstName,
+      lastName: dbUser.lastName,
+      profileImageUrl: dbUser.profileImageUrl,
     };
 
-    const sid = await createSession(sessionData);
-    setSessionCookie(res, sid);
-    res.json({ user: sessionData.user });
+    const token = signJwt(payload);
+    setJwtCookie(res, token);
+    res.json({ user: payload });
   } catch (err) {
     req.log.error(err, 'Local login error');
     res.status(500).json({ error: 'Failed to log in' });
@@ -280,28 +262,21 @@ router.get('/callback', async (req: Request, res: Response) => {
 
   const dbUser = await upsertUser(claims as unknown as Record<string, unknown>);
 
-  const now = Math.floor(Date.now() / 1000);
-  const sessionData: SessionData = {
-    user: {
-      id: dbUser.id,
-      email: dbUser.email,
-      firstName: dbUser.firstName,
-      lastName: dbUser.lastName,
-      profileImageUrl: dbUser.profileImageUrl,
-    },
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expires_at: tokens.expiresIn() ? now + tokens.expiresIn()! : claims.exp,
+  const payload: JwtPayload = {
+    id: dbUser.id,
+    email: dbUser.email,
+    firstName: dbUser.firstName,
+    lastName: dbUser.lastName,
+    profileImageUrl: dbUser.profileImageUrl,
   };
 
-  const sid = await createSession(sessionData);
-  setSessionCookie(res, sid);
+  const token = signJwt(payload);
+  setJwtCookie(res, token);
   res.redirect(returnTo);
 });
 
 router.get('/logout', async (req: Request, res: Response) => {
-  const sid = getSessionId(req);
-  await clearSession(res, sid);
+  res.clearCookie(TOKEN_COOKIE, { path: '/' });
   const returnTo = getSafeReturnTo(req.query.returnTo);
   res.redirect(returnTo);
 });
@@ -342,22 +317,16 @@ router.post(
         claims as unknown as Record<string, unknown>,
       );
 
-      const now = Math.floor(Date.now() / 1000);
-      const sessionData: SessionData = {
-        user: {
-          id: dbUser.id,
-          email: dbUser.email,
-          firstName: dbUser.firstName,
-          lastName: dbUser.lastName,
-          profileImageUrl: dbUser.profileImageUrl,
-        },
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_at: tokens.expiresIn() ? now + tokens.expiresIn()! : claims.exp,
+      const payload: JwtPayload = {
+        id: dbUser.id,
+        email: dbUser.email,
+        firstName: dbUser.firstName,
+        lastName: dbUser.lastName,
+        profileImageUrl: dbUser.profileImageUrl,
       };
 
-      const sid = await createSession(sessionData);
-      res.json(ExchangeMobileAuthorizationCodeResponse.parse({ token: sid }));
+      const token = signJwt(payload);
+      res.json(ExchangeMobileAuthorizationCodeResponse.parse({ token: token }));
     } catch (err) {
       res.status(500).json({ error: 'Token exchange failed' });
     }
@@ -365,10 +334,7 @@ router.post(
 );
 
 router.post('/mobile-auth/logout', async (req: Request, res: Response) => {
-  const sid = getSessionId(req);
-  if (sid) {
-    await deleteSession(sid);
-  }
+  res.clearCookie(TOKEN_COOKIE, { path: '/' });
   res.json(LogoutMobileSessionResponse.parse({ success: true }));
 });
 

@@ -2,7 +2,7 @@ import { Route, Switch, Router as WouterRouter, Redirect } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth, AuthProvider } from "@/hooks/use-auth";
 import { AppLayout } from '@/components/layout/app-layout';
 import { ErrorBoundary } from '@/components/error-boundary';
 
@@ -86,14 +86,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </ErrorBoundary>
+      <AuthProvider>
+        <ErrorBoundary>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </ErrorBoundary>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

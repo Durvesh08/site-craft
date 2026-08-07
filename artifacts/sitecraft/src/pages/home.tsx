@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight, Code, Zap, Layers } from "lucide-react";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from "@/hooks/use-auth";
+import { Zap, Layout, Code2, Rocket, ArrowRight, CheckCircle2, Sparkles, Command, Cpu, Globe, Boxes } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
@@ -20,182 +20,186 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse flex flex-col items-center gap-4">
-          <Sparkles className="h-8 w-8 text-primary animate-spin" />
-          <p className="text-muted-foreground font-mono text-sm">INITIALIZING</p>
+          <Sparkles className="h-8 w-8 text-primary animate-spin-slow" />
+          <p className="text-muted-foreground font-mono text-sm tracking-widest">SYSTEM INITIALIZING</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background font-sans overflow-hidden">
-      {/* Background accents */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[60%] rounded-full bg-blue-400/5 blur-[120px] pointer-events-none" />
+    <div className="min-h-screen flex flex-col bg-background font-sans overflow-hidden selection:bg-primary/20">
+      {/* Ambient Animated Background */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] animate-pulse-slow" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[60%] rounded-full bg-accent/10 blur-[120px] animate-float" />
+        <div className="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-purple-500/5 blur-[100px] animate-pulse-slow" style={{ animationDelay: "2s" }} />
+      </div>
 
-      <header className="container mx-auto px-6 h-20 flex items-center justify-between z-10 relative">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      {/* Navigation */}
+      <header className="container mx-auto px-6 h-24 flex items-center justify-between z-50 relative">
+        <div className="flex items-center gap-3 group">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 transition-all group-hover:scale-105">
             <Sparkles className="h-5 w-5" />
           </div>
-          <span className="font-bold text-xl tracking-tight text-foreground">
+          <span className="font-bold text-2xl tracking-tight text-foreground">
             SiteCraft
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" className="font-medium" onClick={goToLogin} data-testid="button-nav-sign-in">
+        <div className="flex items-center gap-6">
+          <button onClick={goToLogin} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden md:block">
             Sign In
-          </Button>
-          <Button className="font-medium gap-2 shadow-lg shadow-primary/25" onClick={goToLogin} data-testid="button-nav-get-started">
+          </button>
+          <Button className="h-11 px-6 rounded-xl font-medium gap-2 shadow-lg shadow-primary/25 btn-magnetic" onClick={goToLogin}>
             Get Started
             <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col justify-center items-center text-center px-6 z-10 relative space-y-24 py-16">
+      <main className="flex-1 flex flex-col items-center w-full z-10 relative">
         {/* HERO SECTION */}
-        <div className="max-w-4xl mx-auto space-y-8 animate-fade-in pt-8">
-          <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs text-primary font-mono shadow-inner">
+        <section className="w-full pt-20 pb-32 px-6 flex flex-col items-center text-center animate-slide-up">
+          <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs text-primary font-mono shadow-inner mb-8">
             <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse" />
-            SITE CRAFT V5 — THE AI OPERATING SYSTEM FOR WEBSITES
+            SITECRAFT V6 — ENTERPRISE AI OS
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground leading-[1.1]">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-foreground leading-[1.1] max-w-5xl">
             Don't build websites.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-purple-500">
+            <span className="text-gradient-primary">
               Direct an AI Studio to synthesize them.
             </span>
           </h1>
           
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-normal">
+          <p className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-normal">
             18 specialized AI agents — UX strategists, copywriters, Framer motion designers, and React architects — build, optimize, and deploy your business website in seconds.
           </p>
 
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="h-14 px-8 text-base font-bold gap-3 shadow-2xl shadow-primary/30 bg-gradient-to-r from-primary via-accent to-purple-600 hover:opacity-90 text-primary-foreground rounded-xl" onClick={goToLogin}>
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
+            <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-base font-bold gap-3 shadow-2xl shadow-primary/30 rounded-xl btn-magnetic" onClick={goToLogin}>
               Launch AI OS Free <Sparkles className="h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="h-14 px-8 text-base font-semibold border-border bg-background/50 backdrop-blur-xl rounded-xl" onClick={goToLogin}>
-              View Live Demo <ArrowRight className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground font-mono bg-secondary/50 backdrop-blur-sm px-6 h-14 rounded-xl border border-border/50">
+              <Command className="h-4 w-4" /> <span>NPM INSTALL SITECRAFT</span>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* 18-AGENT ANIMATED WORKFLOW PIPELINE */}
-        <div className="w-full max-w-5xl mx-auto space-y-6">
-          <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">The 18-Agent Autonomous Pipeline</h2>
-          <div className="grid grid-cols-2 md:grid-cols-9 gap-2 text-xs font-mono">
-            {["Idea", "Planning", "Wireframe", "Copy", "Design", "Animations", "Coding", "Testing", "Deploy"].map((step, i) => (
-              <div key={step} className="p-3 rounded-xl border border-primary/20 bg-card/40 backdrop-blur-xl text-center space-y-1 hover:border-primary/50 transition-all">
-                <span className="text-[10px] text-muted-foreground">0{i + 1}</span>
-                <p className="font-bold text-foreground truncate">{step}</p>
+        {/* FEATURE BLOCKS */}
+        <section className="w-full max-w-7xl mx-auto px-6 py-24 border-t border-white/5 relative">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="glow-card p-8 rounded-3xl flex flex-col gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                <Cpu className="h-6 w-6" />
               </div>
-            ))}
+              <h3 className="text-xl font-bold">18-Agent Swarm</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                A localized pipeline of specialized agents (UX, Design, Code, QA) working concurrently to generate production-ready code.
+              </p>
+            </div>
+            <div className="glow-card p-8 rounded-3xl flex flex-col gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center mb-4">
+                <Boxes className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-bold">Component Architecture</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Generates modular React/Next.js components using Tailwind CSS and Radix UI primitives. Fully extensible.
+              </p>
+            </div>
+            <div className="glow-card p-8 rounded-3xl flex flex-col gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-green-500/10 text-green-500 flex items-center justify-center mb-4">
+                <Globe className="h-6 w-6" />
+              </div>
+              <h3 className="text-xl font-bold">Global Edge Edge</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Deploy instantly to Vercel, Netlify, or custom domains with automated SSL and global CDN distribution.
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* PSYCHOLOGICAL PRICING SCARCITY BANNER */}
-        <div className="w-full max-w-4xl mx-auto p-8 rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-purple-900/10 backdrop-blur-2xl shadow-2xl space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 text-xs font-mono">
-            <Zap className="h-3.5 w-3.5" /> Limited Launch Offer — Only 237 Lifetime Licenses Remaining
+        {/* PIPELINE ANIMATION */}
+        <section className="w-full max-w-6xl mx-auto px-6 py-24 text-center">
+          <h2 className="text-3xl font-bold mb-16">The Autonomous Pipeline</h2>
+          <div className="relative">
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary/50 to-transparent -translate-y-1/2 hidden md:block" />
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
+              {["Ideation", "Architecture", "Design System", "Component Synth", "Deployment"].map((step, i) => (
+                <div key={step} className="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-transform hover:-translate-y-2">
+                  <div className="h-10 w-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-mono text-sm shadow-inner">
+                    0{i + 1}
+                  </div>
+                  <span className="font-semibold text-sm">{step}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          
-          <h3 className="text-3xl font-extrabold text-foreground">Own SiteCraft V5 Forever</h3>
-          <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-            Unlimited AI generations, custom domain deployments, multi-model router access (Gemini, GPT-4o, Claude, DeepSeek), and full React/Next.js code exports.
-          </p>
+        </section>
 
-          <div className="pt-2">
-            <Button size="lg" className="h-12 px-8 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl" onClick={goToLogin}>
-              Claim Lifetime License Now <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Pricing */}
-        <div className="mt-24 max-w-4xl mx-auto w-full pb-24">
-          <div className="text-center mb-10">
-            <p className="text-sm font-mono text-primary mb-2 tracking-wider">SIMPLE PRICING</p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
-              Your site. Your way. No monthly traps.
+        {/* PRICING */}
+        <section className="w-full max-w-5xl mx-auto px-6 py-32">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+              Simple, transparent pricing.
             </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              Pick a plan. Get your landing page built by AI, hosted, and live. No hidden costs, no upsells.
+            <p className="text-xl text-muted-foreground">
+              Start building for free, upgrade when you need to scale.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Starter plan */}
-            <div className="glass-panel rounded-2xl p-8 flex flex-col gap-6 border border-border relative">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Starter</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">₹249</span>
-                  <span className="text-muted-foreground text-sm">/ 3 months</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Developer Plan */}
+            <div className="glass-panel rounded-3xl p-10 flex flex-col">
+              <div className="mb-8">
+                <h3 className="text-2xl font-semibold mb-2">Developer</h3>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-5xl font-bold">₹499</span>
+                  <span className="text-muted-foreground">/ month</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">Best for trying out, seasonal businesses, or events</p>
+                <p className="text-muted-foreground">Perfect for indie hackers and small projects.</p>
               </div>
-              <ul className="space-y-3 flex-1">
-                {[
-                  "1 AI-generated landing page",
-                  "2 AI-powered edits included",
-                  "Hosting for 3 months",
-                  "FTP · Netlify · GitHub Pages deploy",
-                  "Export HTML / ZIP",
-                  "Custom tracking pixel support",
-                ].map((f) => (
-                  <li key={f} className="flex items-center gap-2.5 text-sm">
-                    <span className="h-5 w-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 text-xs">✓</span>
-                    {f}
+              <ul className="space-y-4 flex-1 mb-10">
+                {["5 AI Agents", "3 Projects", "Community Support", "Basic Analytics", "Standard Generation Speed"].map((feature) => (
+                  <li key={feature} className="flex items-center gap-3 text-muted-foreground">
+                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                    <span>{feature}</span>
                   </li>
                 ))}
               </ul>
-              <Button size="lg" variant="outline" className="w-full" onClick={goToLogin} data-testid="button-plan-starter">
-                Get Started
+              <Button size="lg" variant="outline" className="w-full h-14 rounded-xl text-base font-semibold" onClick={goToLogin}>
+                Start Building
               </Button>
             </div>
 
-            {/* Pro plan */}
-            <div className="glass-panel rounded-2xl p-8 flex flex-col gap-6 border-2 border-primary relative overflow-hidden">
-              <div className="absolute top-4 right-4 text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-semibold tracking-wide">
-                BEST VALUE
+            {/* Enterprise Plan */}
+            <div className="glow-card rounded-3xl p-10 flex flex-col border-primary/50 relative">
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-accent" />
+              <div className="absolute top-6 right-6 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase">
+                Most Popular
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-1">Pro</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">₹499</span>
-                  <span className="text-muted-foreground text-sm">/ lifetime</span>
+              <div className="mb-8">
+                <h3 className="text-2xl font-semibold mb-2 text-foreground">Enterprise</h3>
+                <div className="flex items-baseline gap-2 mb-4">
+                  <span className="text-5xl font-bold text-foreground">₹999</span>
+                  <span className="text-muted-foreground">/ month</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">Best for new businesses, agencies, and permanent online presence</p>
+                <p className="text-muted-foreground">For scaling teams and serious businesses.</p>
               </div>
-              <ul className="space-y-3 flex-1">
-                {[
-                  "1 AI-generated landing page",
-                  "2 AI-powered edits included",
-                  "Lifetime hosting — pay once, never again",
-                  "FTP · Netlify · GitHub Pages deploy",
-                  "Export HTML / ZIP",
-                  "Custom tracking pixel support",
-                  "Priority support",
-                ].map((f) => (
-                  <li key={f} className="flex items-center gap-2.5 text-sm">
-                    <span className="h-5 w-5 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0 text-xs">✓</span>
-                    {f}
+              <ul className="space-y-4 flex-1 mb-10">
+                {["18-Agent Swarm Access", "Unlimited Projects", "Priority Support", "Advanced Analytics", "Turbo Generation Speed", "Custom Domains", "Code Export"].map((feature) => (
+                  <li key={feature} className="flex items-center gap-3 text-foreground font-medium">
+                    <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                    <span>{feature}</span>
                   </li>
                 ))}
               </ul>
-              <Button size="lg" className="w-full shadow-lg shadow-primary/20" onClick={goToLogin} data-testid="button-plan-pro">
-                Get Lifetime Access
-                <ArrowRight className="h-4 w-4 ml-2" />
+              <Button size="lg" className="w-full h-14 rounded-xl text-base font-bold shadow-xl shadow-primary/20 btn-magnetic" onClick={goToLogin}>
+                Get Enterprise Access
               </Button>
             </div>
           </div>
-
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            All plans include a 1-time AI generation. B2B agencies can create multiple projects — contact us for agency pricing.
-          </p>
-        </div>
+        </section>
       </main>
     </div>
   );

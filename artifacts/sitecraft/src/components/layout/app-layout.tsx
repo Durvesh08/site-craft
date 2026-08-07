@@ -1,16 +1,21 @@
 import { ReactNode, useState } from "react";
 import { Sidebar } from "./sidebar";
-import { Menu, X, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Menu, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans relative">
+      {/* Absolute Ambient Background */}
+      <div className="absolute inset-0 pointer-events-none -z-10 flex justify-center overflow-hidden">
+        <div className="absolute -top-1/2 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-primary/20 rounded-full blur-[120px] opacity-50 dark:opacity-20 animate-pulse-slow"></div>
+        <div className="absolute top-1/4 -left-1/4 w-[600px] h-[600px] bg-accent/30 rounded-full blur-[100px] opacity-40 dark:opacity-10 animate-float"></div>
+      </div>
+
       {/* Desktop Sidebar */}
-      <Sidebar className="hidden md:flex shrink-0" />
+      <Sidebar className="hidden md:flex shrink-0 z-20" />
 
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
@@ -20,21 +25,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
         >
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-background/80 backdrop-blur-md transition-opacity"
             onClick={() => setIsMobileOpen(false)}
           />
           {/* Drawer */}
           <div
             className={cn(
-              "absolute left-0 top-0 h-full w-72 z-50",
-              "animate-[slideInLeft_0.25s_ease-out]"
+              "absolute left-0 top-0 h-full w-[280px] z-50 shadow-2xl",
+              "animate-slide-in-right"
             )}
-            style={{
-              animation: "slideInLeft 0.25s ease-out",
-            }}
           >
             <Sidebar
-              className="flex h-full w-72"
+              className="flex h-full w-full"
               onNavigate={() => setIsMobileOpen(false)}
             />
           </div>
@@ -42,16 +44,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main content area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        {/* Subtle radial gradient background effect */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background to-background -z-10 pointer-events-none" />
-
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         {/* Mobile Top Bar */}
-        <header className="md:hidden flex items-center justify-between h-14 px-4 border-b border-border/60 bg-card/80 backdrop-blur-sm shrink-0 z-30">
+        <header className="md:hidden flex items-center justify-between h-16 px-4 glass-nav z-30 shrink-0">
           <button
             id="mobile-menu-toggle"
             onClick={() => setIsMobileOpen(true)}
-            className="h-9 w-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+            className="h-10 w-10 flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors btn-magnetic"
             aria-label="Open navigation menu"
           >
             <Menu className="h-5 w-5" />
@@ -59,28 +58,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
           {/* Mobile brand */}
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 flex items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <div className="h-8 w-8 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/20">
               <Sparkles className="h-4 w-4" />
             </div>
-            <span className="font-bold text-lg tracking-tight">SiteCraft</span>
+            <span className="font-semibold text-lg tracking-tight">SiteCraft</span>
           </div>
 
-          {/* Spacer to center the brand */}
-          <div className="h-9 w-9" />
+          <div className="h-10 w-10" />
         </header>
 
-        <div className="flex-1 overflow-y-auto">
-          {children}
+        <div className="flex-1 overflow-y-auto page-transition-enter-active p-4 md:p-8">
+          <div className="mx-auto max-w-7xl h-full">
+            {children}
+          </div>
         </div>
       </main>
-
-      {/* Inline keyframe for the slide-in animation (avoids Tailwind plugin dependency) */}
-      <style>{`
-        @keyframes slideInLeft {
-          from { transform: translateX(-100%); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }

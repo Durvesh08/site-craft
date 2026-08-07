@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlusCircle, Globe, Activity, Clock, AlertTriangle, ArrowRight, Settings, Trash2 } from "lucide-react";
+import { PlusCircle, Globe, Activity, Clock, AlertTriangle, ArrowRight, Settings, Trash2, Zap, Rocket, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -41,7 +41,6 @@ export default function Dashboard() {
     if (!selectedProject) return;
     setIsSaving(true);
     try {
-      // 1. Save name + description via the general PATCH endpoint
       await updateProjectMutation.mutateAsync({
         id: selectedProject.id,
         data: {
@@ -50,7 +49,6 @@ export default function Dashboard() {
         },
       });
 
-      // 2. Save pixel code via the dedicated /pixel endpoint (no AI, no credits)
       const pixelRes = await fetch(`/api/projects/${selectedProject.id}/pixel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,323 +93,286 @@ export default function Dashboard() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "ready":
-        return <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border border-emerald-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 shrink-0">Ready</Badge>;
+        return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 font-medium text-[10px] rounded-full px-2 py-0.5 shadow-sm">Ready</Badge>;
       case "deployed":
-        return <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border border-indigo-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 shrink-0">Deployed</Badge>;
+        return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-medium text-[10px] rounded-full px-2 py-0.5 shadow-sm">Deployed</Badge>;
       case "generating":
-        return <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 animate-pulse shrink-0">Generating</Badge>;
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 font-medium text-[10px] rounded-full px-2 py-0.5 animate-pulse shadow-sm">Generating</Badge>;
       case "failed":
-        return <Badge className="bg-rose-50 text-rose-700 hover:bg-rose-50 border border-rose-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 shrink-0">Failed</Badge>;
+        return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 font-medium text-[10px] rounded-full px-2 py-0.5 shadow-sm">Failed</Badge>;
       default:
-        return <Badge className="bg-slate-50 text-slate-700 hover:bg-slate-50 border border-slate-200/40 font-medium text-[10px] rounded-full px-2 py-0.5 shrink-0">Draft</Badge>;
+        return <Badge variant="outline" className="bg-muted text-muted-foreground border-border font-medium text-[10px] rounded-full px-2 py-0.5 shadow-sm">Draft</Badge>;
     }
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-10 animate-fade-in bg-background min-h-screen">
-      <div className="flex items-center justify-between border-b border-border/40 pb-6">
+    <div className="p-8 lg:p-12 max-w-[1600px] mx-auto space-y-12 animate-fade-in relative z-10">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/5 pb-8 relative">
+        <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+        
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Command Center</h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage and deploy your premium generated web properties.</p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-mono mb-4 font-semibold tracking-wider shadow-inner">
+            <Zap className="h-3 w-3" /> COMMAND CENTER
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Overview</h1>
+          <p className="text-muted-foreground mt-2 font-medium">Manage your autonomous AI projects and deployments.</p>
         </div>
-        <Button asChild className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/10 h-10 px-5 rounded-lg font-medium transition-all">
+        <Button asChild className="gap-2 h-11 px-6 rounded-xl font-bold shadow-lg shadow-primary/20 btn-magnetic">
           <Link href="/new">
-            <PlusCircle className="h-4 w-4" />
+            <PlusCircle className="h-5 w-5" />
             New Project
           </Link>
         </Button>
       </div>
 
-      {/* Analytics Row */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="glass-panel hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Projects</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 border border-slate-100">
-              <Activity className="h-4 w-4" />
+      {/* Analytics Timeline/Metrics Grid */}
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "Active Projects", value: analytics?.totalProjects ?? projects.length, icon: Terminal, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+          { label: "Live Deployments", value: (analytics as any)?.deployedProjects ?? projects.filter(p => p.status === 'deployed').length, icon: Globe, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+          { label: "Total Deploys", value: analytics?.totalDeployments ?? 0, icon: Rocket, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+          { label: "AI Operations", value: (analytics as any)?.totalAiJobs ?? (analytics as any)?.totalGenerations ?? 0, icon: Activity, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+        ].map((metric, i) => (
+          <div key={i} className="glass-panel p-6 rounded-3xl border border-white/5 relative overflow-hidden group hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[40px] -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
+            
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <span className="text-sm font-semibold tracking-wide text-muted-foreground">{metric.label}</span>
+              <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${metric.bg} ${metric.border} border shadow-inner`}>
+                <metric.icon className={`h-5 w-5 ${metric.color}`} />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {isLoadingAnalytics ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-3xl font-bold text-slate-900 tracking-tight">{analytics?.totalProjects ?? projects.length}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">Active site properties</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="glass-panel hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">Deployed Sites</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100/60">
-              <Globe className="h-4 w-4" />
+            
+            <div className="relative z-10">
+              {isLoadingAnalytics ? (
+                <Skeleton className="h-10 w-20" />
+              ) : (
+                <div className="text-4xl font-black tracking-tighter text-foreground">{metric.value}</div>
+              )}
             </div>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {isLoadingAnalytics ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-3xl font-bold text-indigo-600 tracking-tight">{(analytics as any)?.deployedProjects ?? projects.filter(p => p.status === 'deployed').length}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">Live on custom domains</p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-panel hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">Deployments</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100/60">
-              <Clock className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {isLoadingAnalytics ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-3xl font-bold text-slate-900 tracking-tight">{analytics?.totalDeployments ?? 0}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">Total deployment actions</p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-panel hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">AI Generation Jobs</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 border border-purple-100/60">
-              <Activity className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-2">
-            {isLoadingAnalytics ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <div className="text-3xl font-bold text-slate-900 tracking-tight">{(analytics as any)?.totalAiJobs ?? (analytics as any)?.totalGenerations ?? 0}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">Completed agent workflows</p>
-          </CardContent>
-        </Card>
+          </div>
+        ))}
       </div>
 
-      {/* Projects List */}
+      {/* Projects Grid */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between border-b border-border/40 pb-3">
-          <h2 className="text-lg font-semibold tracking-tight text-slate-900">Recent Projects</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            Recent Workspaces
+            <Badge variant="secondary" className="font-mono text-xs ml-2 bg-secondary/50 text-secondary-foreground">{projects.length}</Badge>
+          </h2>
         </div>
         
         {isLoadingProjects ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="glass-panel">
-                <CardHeader className="gap-2">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-20 w-full mb-4" />
-                  <Skeleton className="h-10 w-full" />
-                </CardContent>
-              </Card>
+              <div key={i} className="glass-panel h-[320px] rounded-3xl p-6">
+                <div className="flex justify-between">
+                  <Skeleton className="h-6 w-1/2" />
+                  <Skeleton className="h-6 w-16" />
+                </div>
+                <Skeleton className="h-16 w-full mt-6" />
+                <div className="mt-auto pt-6 flex gap-3">
+                  <Skeleton className="h-10 w-1/2" />
+                  <Skeleton className="h-10 w-1/2" />
+                </div>
+              </div>
             ))}
           </div>
         ) : projects.length === 0 ? (
-          <Card className="flex flex-col items-center justify-center p-16 text-center border-dashed border-2 border-border/80 bg-card rounded-2xl shadow-sm">
-            <div className="h-14 w-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-5 text-indigo-600">
-              <Globe className="h-6 w-6" />
+          <div className="flex flex-col items-center justify-center p-20 text-center rounded-3xl border border-dashed border-primary/20 bg-primary/5">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 text-primary shadow-inner">
+              <Terminal className="h-8 w-8" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">No projects yet</h3>
-            <p className="text-muted-foreground text-sm max-w-sm mb-6 leading-relaxed">
-              Start your first AI-directed web project. The agents will build and design everything.
+            <h3 className="text-xl font-bold mb-2">No active workspaces</h3>
+            <p className="text-muted-foreground text-sm max-w-sm mb-8 leading-relaxed">
+              Start your first AI-directed web project. The agents will build and design everything automatically.
             </p>
-            <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-6">
-              <Link href="/new">Create Project</Link>
+            <Button asChild className="h-12 px-8 rounded-xl font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+              <Link href="/new">Initialize Workspace</Link>
             </Button>
-          </Card>
+          </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {projects.map((project) => (
-              <Card key={project.id} className="group glass-panel border-border/60 hover:border-primary/50 hover:shadow-2xl transition-all duration-300 flex flex-col rounded-2xl overflow-hidden bg-card/40 backdrop-blur-xl">
-                <CardHeader className="pb-3 flex-none bg-muted/20 border-b border-border/40 px-5 py-4">
-                  <div className="flex justify-between items-center gap-2 mb-1">
-                    <CardTitle className="text-base font-bold text-foreground truncate" title={project.name}>
+              <div key={project.id} className="group glow-card rounded-3xl flex flex-col overflow-hidden transition-all duration-300 hover:-translate-y-1 bg-card">
+                
+                {/* Card Header with Status Accent */}
+                <div className="relative p-6 pb-4 border-b border-border/50 bg-secondary/10">
+                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  
+                  <div className="flex justify-between items-start gap-4 mb-2">
+                    <h3 className="text-xl font-bold text-foreground truncate" title={project.name}>
                       {project.name}
-                    </CardTitle>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {getStatusBadge(project.status)}
+                    </h3>
+                    <div className="flex items-center gap-2 shrink-0 bg-background/50 backdrop-blur-md rounded-full p-1 border border-border/50">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md transition-all"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          openSettings(project);
-                        }}
-                        title="Settings"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full transition-all"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openSettings(project); }}
                       >
                         <Settings className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-md transition-all"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleDeleteProject(project.id, project.name);
-                        }}
-                        title="Delete project"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteProject(project.id, project.name); }}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
-                  <CardDescription className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-                    <Clock className="h-3 w-3 text-muted-foreground/60" />
-                    Updated {project.updatedAt ? format(new Date(project.updatedAt), "MMM d, yyyy") : "Recently"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col p-5 space-y-4">
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {project.businessDescription || "No description provided."}
+                  
+                  <div className="flex items-center justify-between mt-4">
+                    {getStatusBadge(project.status)}
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
+                      <Clock className="h-3 w-3" />
+                      {project.updatedAt ? format(new Date(project.updatedAt), "MMM d") : "Recently"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex-1 p-6 flex flex-col gap-6">
+                  <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed min-h-[4.5rem]">
+                    {project.businessDescription || "No architectural description provided for this workspace."}
                   </p>
                   
-                  {/* Quality Audit Badges */}
-                  <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-border/30 text-[10px] font-mono">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-center">
-                      <span className="block text-[9px] text-muted-foreground">SEO</span>
-                      <span className="font-bold">98</span>
-                    </div>
-                    <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20 text-center">
-                      <span className="block text-[9px] text-muted-foreground">A11Y</span>
-                      <span className="font-bold">96</span>
-                    </div>
-                    <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20 text-center">
-                      <span className="block text-[9px] text-muted-foreground">PERF</span>
-                      <span className="font-bold">94</span>
-                    </div>
-                    <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-500 border border-purple-500/20 text-center">
-                      <span className="block text-[9px] text-muted-foreground">CRO</span>
-                      <span className="font-bold">95</span>
-                    </div>
+                  {/* Quality Audit Badges (Mock UI) */}
+                  <div className="grid grid-cols-4 gap-2 text-center mt-auto">
+                    {[
+                      { label: "SEO", score: 98, color: "text-emerald-500" },
+                      { label: "A11Y", score: 96, color: "text-blue-500" },
+                      { label: "PERF", score: 94, color: "text-amber-500" },
+                      { label: "CRO", score: 95, color: "text-purple-500" },
+                    ].map((badge) => (
+                      <div key={badge.label} className="flex flex-col bg-secondary/30 rounded-lg p-2 border border-border/50 group-hover:bg-secondary/50 transition-colors">
+                        <span className="text-[9px] font-mono text-muted-foreground mb-1">{badge.label}</span>
+                        <span className={`text-xs font-bold ${badge.color}`}>{badge.score}</span>
+                      </div>
+                    ))}
                   </div>
-
+                  
                   {project.status === "generating" ? (
-                    <Button variant="secondary" className="w-full gap-2 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg h-9 text-xs font-semibold" asChild>
+                    <Button variant="outline" className="w-full gap-2 border-amber-500/30 text-amber-500 hover:bg-amber-500/10 rounded-xl h-11 text-sm font-bold" asChild>
                       <Link href={`/projects/${project.id}/generate`}>
-                        <Activity className="h-3.5 w-3.5 animate-pulse" />
-                        View 18-Agent Studio
+                        <Activity className="h-4 w-4 animate-pulse" />
+                        Enter Swarm Monitor
                       </Link>
                     </Button>
                   ) : project.status === "failed" ? (
-                    <Button variant="destructive" className="w-full gap-2 rounded-lg h-9 text-xs font-semibold" asChild>
+                    <Button variant="destructive" className="w-full gap-2 rounded-xl h-11 text-sm font-bold" asChild>
                       <Link href={`/projects/${project.id}/generate`}>
-                        <AlertTriangle className="h-3.5 w-3.5" />
-                        View Error
+                        <AlertTriangle className="h-4 w-4" />
+                        Review Failure Logs
                       </Link>
                     </Button>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2 mt-auto pt-2">
-                      <Button variant="outline" size="sm" className="rounded-lg h-9 text-xs font-semibold border-border hover:bg-primary/10 hover:text-primary" asChild>
+                    <div className="grid grid-cols-2 gap-3 mt-auto">
+                      <Button variant="secondary" className="rounded-xl h-11 text-sm font-bold border border-border/50 hover:bg-primary/10 hover:text-primary transition-all group-hover:border-primary/20" asChild>
                         <Link href={`/projects/${project.id}/editor`}>
-                          Open Studio Editor
+                          Open IDE
                         </Link>
                       </Button>
                       {project.liveUrl ? (
-                        <Button size="sm" className="gap-1.5 rounded-lg h-9 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm" asChild>
+                        <Button className="gap-2 rounded-xl h-11 text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform" asChild>
                           <a href={project.liveUrl} target="_blank" rel="noreferrer">
-                            View Live
-                            <ArrowRight className="h-3 w-3" />
+                            View Live <ArrowRight className="h-3.5 w-3.5" />
                           </a>
                         </Button>
                       ) : (
-                        <Button size="sm" variant="outline" disabled className="gap-1.5 opacity-40 cursor-not-allowed rounded-lg h-9 text-xs font-semibold bg-slate-50 text-slate-400 border-slate-100">
-                          Not Deployed
+                        <Button variant="outline" disabled className="gap-2 rounded-xl h-11 text-sm font-bold opacity-50 cursor-not-allowed border-border/50">
+                          Pending Deploy
                         </Button>
                       )}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Project Settings Dialog */}
+      {/* Settings Modal - Styled to match OS theme */}
       <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="sm:max-w-[550px] bg-card border border-border">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-primary" />
-              Project Settings
+        <DialogContent className="sm:max-w-md md:max-w-[600px] glass border border-white/10 rounded-2xl p-0 overflow-hidden">
+          <div className="p-6 border-b border-border/50 bg-secondary/30">
+            <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                <Settings className="h-5 w-5" />
+              </div>
+              Project Configuration
             </DialogTitle>
-            <DialogDescription>
-              Update name, details, and inject tracking codes for this landing page.
+            <DialogDescription className="mt-2 text-muted-foreground font-medium">
+              Update routing details, metadata, and custom scripts.
             </DialogDescription>
-          </DialogHeader>
+          </div>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Project Name</Label>
+          <div className="p-6 space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="name" className="text-sm font-semibold tracking-wide">Namespace / Title</Label>
               <Input
                 id="name"
                 value={projName}
                 onChange={(e) => setProjName(e.target.value)}
-                placeholder="Project name"
-                className="bg-background/50"
+                placeholder="Project namespace"
+                className="h-11 rounded-xl bg-secondary/20 border-border/50 focus:border-primary"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Short Description / Subtitle</Label>
+            <div className="space-y-3">
+              <Label htmlFor="description" className="text-sm font-semibold tracking-wide">Architectural Brief</Label>
               <Input
                 id="description"
                 value={projDesc}
                 onChange={(e) => setProjDesc(e.target.value)}
-                placeholder="A short description for your records"
-                className="bg-background/50"
+                placeholder="Short description for internal tracking"
+                className="h-11 rounded-xl bg-secondary/20 border-border/50 focus:border-primary"
               />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-sm text-primary">&lt;/&gt;</span>
-                <Label htmlFor="pixelCode">Pixel Code / Custom Header Script</Label>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="pixelCode" className="text-sm font-semibold tracking-wide flex items-center gap-2">
+                  <Terminal className="h-4 w-4 text-primary" /> Head Scripts Injection
+                </Label>
+                <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">Advanced</Badge>
               </div>
               <Textarea
                 id="pixelCode"
                 value={projPixel}
                 onChange={(e) => setProjPixel(e.target.value)}
-                placeholder="<!-- Meta Pixel Code -->&#10;<script>&#10;  !fbc(f,b,e,v,n,t,s)...&#10;</script>"
-                className="font-mono text-xs min-h-[140px] bg-background/50 leading-relaxed"
+                placeholder="<!-- Paste analytics tags, GTM, or meta pixels here -->"
+                className="font-mono text-xs min-h-[160px] rounded-xl bg-secondary/20 border-border/50 focus:border-primary leading-relaxed resize-y p-4"
               />
-              <p className="text-xs text-muted-foreground">
-                Paste Meta Pixel, Google Analytics, or other custom header codes. They will be injected exactly as-is into the index.html &lt;head&gt; element.
+              <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                Injected into <code className="bg-secondary/50 px-1 py-0.5 rounded text-foreground font-mono">{'<head>'}</code>. Evaluated at runtime across all deployment zones.
               </p>
             </div>
           </div>
 
-          <DialogFooter className="flex items-center justify-between sm:justify-between">
+          <div className="p-6 border-t border-border/50 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 bg-background">
             <Button
               variant="destructive"
-              size="sm"
-              className="gap-1.5"
+              className="w-full sm:w-auto h-11 px-6 rounded-xl font-bold bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
               disabled={isDeleting}
               onClick={() => selectedProject && handleDeleteProject(selectedProject.id, selectedProject.name)}
             >
-              <Trash2 className="h-4 w-4" />
-              {isDeleting ? "Deleting..." : "Delete Project"}
+              {isDeleting ? "Deleting..." : "Terminate Project"}
             </Button>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto h-11 px-6 rounded-xl font-bold border-border/50 hover:bg-secondary" onClick={() => setIsSettingsOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveSettings} disabled={isSaving || !projName}>
-                {isSaving ? "Saving..." : "Save Changes"}
+              <Button className="w-full sm:w-auto h-11 px-8 rounded-xl font-bold shadow-lg shadow-primary/20 btn-magnetic" onClick={handleSaveSettings} disabled={isSaving || !projName}>
+                {isSaving ? "Syncing..." : "Apply Config"}
               </Button>
             </div>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

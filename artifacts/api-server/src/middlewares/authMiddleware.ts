@@ -1,14 +1,5 @@
-import type { AuthUser } from '@workspace/api-zod';
 import { type NextFunction, type Request, type Response } from 'express';
-import { db, usersTable } from '@workspace/db';
-import { eq } from 'drizzle-orm';
-
-import {
-  clearSession,
-  getSession,
-  getSessionId,
-  type SessionData,
-} from '../lib/auth';
+import { verifyJwt } from '../lib/jwt';
 
 declare global {
   namespace Express {
@@ -18,13 +9,10 @@ declare global {
       firstName: string | null;
       lastName: string | null;
       profileImageUrl: string | null;
-      createdAt: Date;
-      updatedAt: Date;
     }
 
     interface Request {
       isAuthenticated(): this is AuthedRequest;
-
       user?: User | undefined;
     }
 
@@ -43,36 +31,32 @@ export async function authMiddleware(
     return this.user != null;
   } as Request['isAuthenticated'];
 
-  const sid = getSessionId(req);
-  if (!sid) {
-    next();
-    return;
+  // 1. Check for token in cookies
+  let token = req.cookies?.token;
+
+  // 2. Fallback to Authorization header
+  if (!token && req.headers['authorization']?.startsWith('Bearer ')) {
+    token = req.headers['authorization'].slice(7);
   }
 
-  const session = await getSession(sid);
-  if (!session?.user?.id) {
-    await clearSession(res, sid);
+  if (!token) {
     next();
     return;
   }
 
   try {
-    const [dbUser] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, session.user.id))
-      .limit(1);
-
-    if (!dbUser) {
-      await clearSession(res, sid);
+    const decoded = verifyJwt(token);
+    if (!decoded) {
+      res.clearCookie('token', { path: '/' });
       next();
       return;
     }
 
-    req.user = dbUser;
+    req.user = decoded;
     next();
   } catch (err) {
-    req.log.error(err, 'Error in auth middleware fetching user');
+    req.log.error(err, 'Error in auth middleware parsing JWT');
+    res.clearCookie('token', { path: '/' });
     next();
   }
 }

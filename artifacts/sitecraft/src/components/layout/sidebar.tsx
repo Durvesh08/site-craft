@@ -1,10 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@workspace/replit-auth-web";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   PlusCircle,
-  History,
   Rocket,
   MessageSquare,
   Settings,
@@ -13,7 +12,6 @@ import {
   FolderKanban,
   FileCode2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface SidebarProps {
   className?: string;
@@ -25,32 +23,36 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   const { user, logout } = useAuth();
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Command Center", href: "/dashboard", icon: LayoutDashboard },
     { name: "New Project", href: "/new", icon: PlusCircle },
     { name: "Deployments", href: "/deployments", icon: Rocket },
-    { name: "Prompts", href: "/prompts", icon: MessageSquare },
+    { name: "AI Prompts", href: "/prompts", icon: MessageSquare },
   ];
 
   return (
     <div
       className={cn(
-        "flex h-full w-64 flex-col border-r border-border bg-card shadow-sm",
+        "flex h-full w-[280px] flex-col glass border-r shadow-2xl relative",
         className
       )}
     >
-      <div className="flex h-16 shrink-0 items-center px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-transform group-hover:scale-105 group-hover:rotate-3 group-active:scale-95">
+      {/* Top Brand Logo */}
+      <div className="flex h-20 shrink-0 items-center px-8 border-b border-white/5">
+        <Link href="/dashboard" className="flex items-center gap-3 group w-full outline-none">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/40 group-active:scale-95">
             <Sparkles className="h-5 w-5" />
           </div>
-          <span className="font-bold text-xl tracking-tight text-foreground">
+          <span className="font-bold text-xl tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">
             SiteCraft
           </span>
         </Link>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto pt-6 px-4 pb-4">
-        <div className="space-y-1 mb-8">
+      <div className="flex flex-1 flex-col overflow-y-auto px-4 py-8">
+        <div className="space-y-1.5 mb-8">
+          <div className="px-4 mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+            Platform
+          </div>
           {navigation.map((item) => {
             const isActive = location === item.href || location.startsWith(item.href + "/");
             return (
@@ -59,15 +61,15 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
                 href={item.href}
                 onClick={onNavigate}
                 className={cn(
-                  "group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  "group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 outline-none",
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                    ? "bg-primary/10 text-primary shadow-inner"
+                    : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground hover:shadow-sm"
                 )}
               >
                 <item.icon
                   className={cn(
-                    "h-5 w-5 shrink-0",
+                    "h-5 w-5 shrink-0 transition-colors duration-300",
                     isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                   )}
                   aria-hidden="true"
@@ -77,49 +79,60 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
             );
           })}
         </div>
-
-        <div className="mt-auto flex flex-col gap-2 border-t pt-4">
-          <Link
-            href="/settings"
-            onClick={onNavigate}
-            className={cn(
-              "group flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all",
-              location === "/settings"
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-            )}
-          >
-            <Settings className="h-5 w-5 shrink-0" />
-            Settings
-          </Link>
-          
-          <button
-            onClick={() => { logout(); onNavigate?.(); }}
-            className="group flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="h-5 w-5 shrink-0" />
-            Sign Out
-          </button>
-        </div>
       </div>
       
-      {user && (
-        <div className="p-4 border-t border-border/50 bg-muted/20">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold overflow-hidden">
-              {user.profileImageUrl ? (
-                <img src={user.profileImageUrl} alt={`${user.firstName} ${user.lastName}`} className="h-full w-full object-cover" />
-              ) : (
-                (user.firstName || user.email || "?").charAt(0).toUpperCase()
-              )}
+      {/* Bottom Actions & User */}
+      <div className="flex flex-col gap-2 p-4 border-t border-white/5">
+        <Link
+          href="/settings"
+          onClick={onNavigate}
+          className={cn(
+            "group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-300 outline-none",
+            location === "/settings"
+              ? "bg-primary/10 text-primary shadow-inner"
+              : "text-muted-foreground hover:bg-secondary/40 hover:text-foreground hover:shadow-sm"
+          )}
+        >
+          <Settings className="h-5 w-5 shrink-0" />
+          Settings
+        </Link>
+        
+        {user ? (
+          <div className="mt-2 rounded-xl border border-border/50 bg-secondary/20 p-3 flex items-center justify-between group">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-tr from-primary/30 to-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold overflow-hidden shadow-inner">
+                {user.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  (user.firstName || user.email || "?").charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className="flex flex-col truncate">
+                <span className="text-sm font-semibold truncate text-foreground">
+                  {user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : "User"}
+                </span>
+                <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+              </div>
             </div>
-            <div className="flex flex-col truncate">
-              <span className="text-sm font-semibold truncate text-foreground">{user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : "User"}</span>
-              <span className="text-xs text-muted-foreground truncate">{user.email}</span>
-            </div>
+            
+            <button
+              onClick={() => { logout(); onNavigate?.(); }}
+              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors shrink-0"
+              title="Sign Out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <button
+            onClick={() => { logout(); onNavigate?.(); }}
+            className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition-all duration-300 hover:bg-destructive/10 hover:text-destructive outline-none mt-2"
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            Sign In / Out
+          </button>
+        )}
+      </div>
     </div>
   );
 }
