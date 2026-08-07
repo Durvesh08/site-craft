@@ -15,7 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Rocket, Globe, Server, CheckCircle, XCircle, Clock,
   ExternalLink, Link2, RefreshCw, ChevronDown, ChevronUp,
-  Terminal, AlertTriangle, Trash2, Code2, Cloud, Github,
+  Terminal, AlertTriangle, Trash2, Code2, Cloud, Github, Shield,
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -30,15 +30,13 @@ import { Switch } from "@/components/ui/switch";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-// ── Deployment log viewer ────────────────────────────────────────────────────
+import { DnsManager } from "@/components/deployments/dns-manager";
 
 function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
   const isActive = deployment.status === "pending" || deployment.status === "uploading";
 
-  // Poll for progress while active
-  const { data: live, refetch } = useGetDeployment(deployment.id, {
+  const { data: live } = useGetDeployment(deployment.id, {
     query: { enabled: isActive, queryKey: getGetDeploymentQueryKey(deployment.id), refetchInterval: isActive ? 1500 : false },
   });
 
@@ -48,14 +46,11 @@ function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete:
 
   return (
     <>
-      <TableRow
-        key={deployment.id}
-        className={`hover:bg-muted/30 transition-colors ${isActive ? "bg-primary/5" : ""}`}
-      >
+      <TableRow key={deployment.id} className={`hover:bg-secondary/20 transition-colors ${isActive ? "bg-primary/5" : ""}`}>
         <TableCell className="font-medium">
           <div className="flex items-center gap-2">
             <StatusIcon status={current.status} />
-            <span className="truncate max-w-[180px]">{deployment._projectName}</span>
+            <span className="truncate max-w-[180px] text-foreground font-bold">{deployment._projectName}</span>
           </div>
           {isActive && (
             <div className="mt-2 space-y-1">
@@ -68,77 +63,38 @@ function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete:
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Server className="h-3.5 w-3.5" />
             <span className="capitalize">{current.protocol ?? "ftp"}</span>
-            {current.ftpHost && (
-              <span className="text-[10px] truncate max-w-[120px] opacity-60">· {current.ftpHost}</span>
-            )}
           </div>
         </TableCell>
         <TableCell><StatusBadge status={current.status} /></TableCell>
         <TableCell className="text-sm text-muted-foreground font-mono">
-          {deployment.createdAt ? format(new Date(deployment.createdAt), "MMM d, yyyy HH:mm") : "—"}
+          {deployment.createdAt ? format(new Date(deployment.createdAt), "MMM d, HH:mm") : "—"}
         </TableCell>
         <TableCell className="text-right">
-          <div className="flex items-center justify-end gap-1 flex-wrap">
-            {/* Log toggle */}
+          <div className="flex items-center justify-end gap-1">
             {log && (
-              <Button
-                variant="ghost" size="sm"
-                className="gap-1.5 text-muted-foreground hover:text-foreground"
-                onClick={() => setExpanded(e => !e)}
-              >
+              <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-foreground" onClick={() => setExpanded(e => !e)}>
                 <Terminal className="h-3.5 w-3.5" />
                 {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </Button>
             )}
-            {/* Retry for failed */}
-            {current.status === "failed" && (
-              <RetryButton deploymentId={deployment.id} />
-            )}
-            {/* Visit link for live */}
             {current.status === "live" && current.liveUrl && (
-              <Button variant="ghost" size="sm" className="gap-2 hover:text-primary hover:bg-primary/10" asChild>
+              <Button variant="ghost" size="sm" className="gap-1 text-primary hover:bg-primary/10" asChild>
                 <a href={current.liveUrl} target="_blank" rel="noreferrer">
                   Visit <ExternalLink className="h-3 w-3" />
                 </a>
               </Button>
             )}
-            {/* Delete button */}
-            <Button
-              variant="ghost" size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-              onClick={() => onDelete(deployment.id)}
-              title="Delete deployment record"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => onDelete(deployment.id)}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </TableCell>
       </TableRow>
 
-      {/* Expanded log */}
       {expanded && log && (
-        <TableRow className="hover:bg-transparent bg-[#0d1117]">
-          <TableCell colSpan={5} className="p-0">
-            <div className="relative">
-              <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 bg-[#0d1117]">
-                <Terminal className="h-3.5 w-3.5 text-emerald-400" />
-                <span className="text-[11px] font-mono text-muted-foreground">Deployment Log</span>
-                {current.filesUploaded != null && (
-                  <span className="ml-auto text-[10px] text-muted-foreground font-mono">
-                    {current.filesUploaded} files uploaded
-                  </span>
-                )}
-              </div>
-              <pre className="p-4 text-[11px] font-mono text-emerald-300 whitespace-pre-wrap max-h-64 overflow-y-auto leading-5">
-                {log}
-              </pre>
-              {current.error && (
-                <div className="px-4 pb-3 flex items-start gap-2 text-[11px] text-destructive font-mono">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  {current.error}
-                </div>
-              )}
-            </div>
+        <TableRow className="bg-black/60">
+          <TableCell colSpan={5} className="p-4 font-mono text-xs text-emerald-400">
+            <pre className="whitespace-pre-wrap max-h-48 overflow-y-auto">{log}</pre>
           </TableCell>
         </TableRow>
       )}
@@ -146,105 +102,29 @@ function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete:
   );
 }
 
-function RetryButton({ deploymentId }: { deploymentId: string }) {
-  const retry = useRetryDeployment();
-  const handleRetry = async () => {
-    try {
-      await retry.mutateAsync({ id: deploymentId, data: { overwriteExisting: true } });
-      toast.success("Retry started — watch the progress above");
-    } catch {
-      toast.error("Failed to start retry");
-    }
-  };
-  return (
-    <Button
-      variant="outline" size="sm"
-      className="gap-1.5 text-amber-600 border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-500"
-      onClick={handleRetry}
-      disabled={retry.isPending}
-    >
-      {retry.isPending
-        ? <Clock className="h-3.5 w-3.5 animate-spin" />
-        : <RefreshCw className="h-3.5 w-3.5" />}
-      Retry
-    </Button>
-  );
-}
-
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "live": return <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />;
     case "failed": return <XCircle className="h-4 w-4 text-destructive shrink-0" />;
-    case "pending":
-    case "uploading":
-    case "verifying": return <Clock className="h-4 w-4 text-amber-500 animate-pulse shrink-0" />;
-    default: return <Server className="h-4 w-4 text-muted-foreground shrink-0" />;
+    default: return <Clock className="h-4 w-4 text-amber-500 animate-pulse shrink-0" />;
   }
 }
 
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "live":
-      return (
-        <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-200">
-          Live
-        </Badge>
-      );
+      return <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-medium">Live</Badge>;
     case "failed":
-      return (
-        <Badge variant="destructive" className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-200">
-          Failed
-        </Badge>
-      );
-    case "uploading":
-      return (
-        <Badge className="bg-blue-500/10 text-blue-600 border-blue-200 uppercase tracking-wider text-[10px]">
-          Uploading…
-        </Badge>
-      );
+      return <Badge variant="destructive" className="bg-destructive/10 text-destructive border border-destructive/20 font-medium">Failed</Badge>;
     default:
-      return (
-        <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-200 uppercase tracking-wider text-[10px]">
-          {status}
-        </Badge>
-      );
+      return <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border border-amber-500/20 font-medium">{status}</Badge>;
   }
 }
 
-// ── Protocol → default port ──────────────────────────────────────────────────
-const DEFAULT_PORTS: Record<string, string> = { ftp: "21", ftps: "21", sftp: "22" };
-
-// ── Main page ────────────────────────────────────────────────────────────────
-
 export default function Deployments() {
   const { data: projectsData } = useListProjects();
-  const deployProject = useDeployProject();
-
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"history" | "dns">("history");
   const [viewProjectId, setViewProjectId] = useState("");
-
-  // Deploy form
-  const [protocol, setProtocol] = useState<"ftp" | "ftps" | "sftp">("ftp");
-  const [ftpHost, setFtpHost] = useState("");
-  const [ftpPort, setFtpPort] = useState("21");
-  const [ftpUsername, setFtpUsername] = useState("");
-  const [ftpPassword, setFtpPassword] = useState("");
-  const [ftpPath, setFtpPath] = useState("/public_html/");
-  // Base path loaded from saved settings — used to auto-build project subdirectory
-  const [savedBasePath, setSavedBasePath] = useState("/public_html/");
-  const [siteUrl, setSiteUrl] = useState("");
-  const [overwriteExisting, setOverwriteExisting] = useState(true);
-
-  // Test connection state (per deploy modal)
-  const [testStatus, setTestStatus] = useState<"none" | "testing" | "ok" | "fail">("none");
-  const [testError, setTestError] = useState("");
-
-  // Platform choice and third party deploy state
-  const [deployTab, setDeployTab] = useState<"ftp" | "netlify" | "github">("ftp");
-  const [netlifyToken, setNetlifyToken] = useState(() => localStorage.getItem("sc_netlify_token") || "");
-  const [githubToken, setGithubToken] = useState(() => localStorage.getItem("sc_github_token") || "");
-  const [isDeployingThirdParty, setIsDeployingThirdParty] = useState(false);
 
   const projects = projectsData?.projects ?? [];
   const activeProjectId = viewProjectId || projects[0]?.id || "";
@@ -253,736 +133,83 @@ export default function Deployments() {
     query: { enabled: !!activeProjectId, queryKey: getListProjectDeploymentsQueryKey(activeProjectId) },
   });
 
-  // Decorate deployments with project name
   const deployments = (deploymentsData?.deployments ?? []).map(d => ({
     ...d,
     _projectName: projects.find(p => p.id === d.projectId)?.name ?? "Unknown Project",
   }));
 
-  // Auto-refresh list while any deployment is active
-  const hasActive = deployments.some(
-    d => d.status === "pending" || d.status === "uploading" || d.status === "verifying"
-  );
-  useEffect(() => {
-    if (!hasActive) return;
-    const id = setInterval(refetch, 3000);
-    return () => clearInterval(id);
-  }, [hasActive, refetch]);
-
-  // Track whether we're loading settings so the protocol-change effect
-  // doesn't overwrite the port that was just loaded from saved settings.
-  const [loadingSettings, setLoadingSettings] = useState(false);
-
-  // Auto-adjust port when protocol changes — but not while settings are loading
-  // (the load effect sets both port and protocol atomically).
-  useEffect(() => {
-    if (loadingSettings) return;
-    setFtpPort(DEFAULT_PORTS[protocol] ?? "21");
-    setTestStatus("none");
-  }, [protocol]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Load saved FTP settings into the modal on open
-  useEffect(() => {
-    if (!isDeployModalOpen) return;
-    setLoadingSettings(true);
-    fetch("/api/settings/deployment", { credentials: "include" })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(data => {
-        const s = data.settings ?? {};
-        // Resolve protocol first so port default is correct
-        const proto: "ftp" | "ftps" | "sftp" =
-          s.ftp_protocol === "sftp" ? "sftp"
-          : s.ftp_protocol === "ftps" || s.ftp_secure === "true" ? "ftps"
-          : "ftp";
-        // Save base path for project-slug auto-fill
-        const base: string = s.ftp_path || "/public_html/";
-        setSavedBasePath(base);
-        // Set all fields atomically before releasing the loadingSettings guard
-        if (s.ftp_host) setFtpHost(s.ftp_host);
-        if (s.ftp_username) setFtpUsername(s.ftp_username);
-        // Pre-fill password as the masked sentinel so the server can look up the
-        // real password from DB when Test Connection or Deploy is called.
-        // The settings API always returns "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" for sensitive fields.
-        if (s.ftp_password) setFtpPassword(s.ftp_password);
-        // Port: use saved value, else derive from protocol
-        setFtpPort(s.ftp_port || DEFAULT_PORTS[proto] || "21");
-        setProtocol(proto);
-        // Path will be auto-set by the project-selection effect once a project is chosen
-      })
-      .catch(() => { /* settings not saved yet — keep form defaults */ })
-      .finally(() => setLoadingSettings(false));
-  }, [isDeployModalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Default to the hosting public root (Hostinger/cPanel: /public_html/).
-  // Users can still type a subfolder when they intentionally want /project-name/.
-  useEffect(() => {
-    if (!selectedProjectId) return;
-    const base = savedBasePath.endsWith("/") ? savedBasePath : savedBasePath + "/";
-    setFtpPath(base);
-  }, [selectedProjectId, savedBasePath]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleTestConnection = async () => {
-    if (!ftpHost || !ftpUsername || !ftpPassword) {
-      toast.error("Fill in host, username, and password first");
-      return;
-    }
-    setTestStatus("testing");
-    setTestError("");
-    try {
-      const res = await fetch("/api/settings/deployment/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          ftp_host: ftpHost,
-          ftp_port: ftpPort,
-          ftp_username: ftpUsername,
-          ftp_password: ftpPassword,
-          ftp_protocol: protocol,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTestStatus("ok");
-        toast.success("Connection verified ✓");
-      } else {
-        setTestStatus("fail");
-        setTestError(data.error || "Connection refused");
-        toast.error("Connection failed");
-      }
-    } catch (err: any) {
-      setTestStatus("fail");
-      setTestError(err.message || "Network error");
-      toast.error("Connection test failed");
-    }
-  };
-
-  const handleDeploy = async () => {
-    if (!selectedProjectId) { toast.error("Select a project first"); return; }
-    try {
-      await deployProject.mutateAsync({
-        id: selectedProjectId,
-        data: {
-          environment: "production",
-          protocol,
-          ftpHost,
-          ftpPort: Number(ftpPort),
-          ftpUsername,
-          ftpPassword,
-          ftpPath,
-          siteUrl: siteUrl || undefined,
-          overwriteExisting,
-        } as any,
-      });
-      toast.success("Deployment started — uploading files…");
-      setIsDeployModalOpen(false);
-      setTimeout(refetch, 800);
-    } catch {
-      toast.error("Failed to start deployment. Check credentials.");
-    }
-  };
-
-  const handleDeployNetlify = async () => {
-    if (!selectedProjectId) { toast.error("Select a project first"); return; }
-    if (!netlifyToken.trim()) { toast.error("Please enter a Netlify token"); return; }
-    
-    setIsDeployingThirdParty(true);
-    localStorage.setItem("sc_netlify_token", netlifyToken.trim());
-    try {
-      const res = await fetch(`/api/projects/${selectedProjectId}/deploy/netlify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ netlifyToken: netlifyToken.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Netlify deployment failed");
-      
-      toast.success("Successfully deployed to Netlify! 🎉");
-      setIsDeployModalOpen(false);
-      setTimeout(refetch, 1000);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to deploy to Netlify");
-    } finally {
-      setIsDeployingThirdParty(false);
-    }
-  };
-
-  const handleDeployGithub = async () => {
-    if (!selectedProjectId) { toast.error("Select a project first"); return; }
-    if (!githubToken.trim()) { toast.error("Please enter a GitHub token"); return; }
-    
-    setIsDeployingThirdParty(true);
-    localStorage.setItem("sc_github_token", githubToken.trim());
-    try {
-      const res = await fetch(`/api/projects/${selectedProjectId}/deploy/github-pages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ githubToken: githubToken.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "GitHub Pages deployment failed");
-      
-      toast.success("Successfully deployed to GitHub Pages! 🎉 Site will be live in 1-2 minutes.");
-      setIsDeployModalOpen(false);
-      setTimeout(refetch, 1000);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to deploy to GitHub Pages");
-    } finally {
-      setIsDeployingThirdParty(false);
-    }
-  };
-
-
-  // Connection status indicator chip
-  const ConnectionStatus = () => {
-    if (testStatus === "none") return null;
-    if (testStatus === "testing") return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Clock className="h-4 w-4 animate-spin" /> Testing…
-      </div>
-    );
-    if (testStatus === "ok") return (
-      <div className="flex items-center gap-2 text-sm text-emerald-500">
-        <CheckCircle className="h-4 w-4" /> Connected
-      </div>
-    );
-    return (
-      <div className="flex items-start gap-2 text-sm text-destructive">
-        <XCircle className="h-4 w-4 shrink-0 mt-0.5" />
-        <span className="truncate max-w-[220px]">{testError || "Connection failed"}</span>
-      </div>
-    );
-  };
-
   const handleDeleteDeployment = async (deployId: string) => {
-    if (!confirm("Are you sure you want to delete this deployment log?")) return;
+    if (!confirm("Remove this deployment record?")) return;
     try {
-      const res = await fetch(`/api/deployments/${deployId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to delete deployment");
+      await fetch(`/api/deployments/${deployId}`, { method: "DELETE" });
       toast.success("Deployment record removed.");
       refetch();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete deployment");
+    } catch {
+      toast.error("Failed to delete record.");
     }
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in relative z-10">
+      
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <Rocket className="h-8 w-8 text-primary" />
-            Deployments
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Upload to FTP, FTPS, SFTP, Netlify, or GitHub Pages — track progress and manage deployments.
-          </p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-semibold mb-3">
+            <Rocket className="h-3.5 w-3.5" /> ENTERPRISE DEPLOYMENT HUB
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Global Distribution & Domains</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage edge deployments, GitHub Pages sync, FTP servers, and custom DNS routing.</p>
         </div>
 
-        <Dialog open={isDeployModalOpen} onOpenChange={setIsDeployModalOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-md shadow-primary/20">
-              <Globe className="h-4 w-4" />
-              Deploy Website
-            </Button>
-          </DialogTrigger>
-
-          <DialogContent className="glass-panel sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Deploy Website</DialogTitle>
-              <DialogDescription>
-                Choose your hosting target to publish your generated site live.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="py-4 space-y-5">
-              {/* Project selector */}
-              <div className="space-y-2">
-                <Label>Project</Label>
-                <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select a ready project…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects
-                      .filter(p => p.status === "ready" || p.status === "deployed")
-                      .map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Platform Tabs */}
-              <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-lg border border-border/50">
-                <button
-                  type="button"
-                  onClick={() => setDeployTab("ftp")}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
-                    deployTab === "ftp"
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <Server className="h-3.5 w-3.5" />
-                  FTP / SFTP
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeployTab("netlify")}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
-                    deployTab === "netlify"
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <Cloud className="h-3.5 w-3.5 text-cyan-500" />
-                  Netlify
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDeployTab("github")}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200",
-                    deployTab === "github"
-                      ? "bg-background shadow-sm text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <Github className="h-3.5 w-3.5" />
-                  GitHub Pages
-                </button>
-              </div>
-
-              {/* ── FTP FORM ── */}
-              {deployTab === "ftp" && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="border-t border-border/40 pt-4 space-y-4">
-                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <Server className="h-4 w-4 text-primary" />
-                      Server Connection
-                    </p>
-
-                    {/* Protocol + Host + Port */}
-                    <div className="grid grid-cols-[120px_1fr_90px] gap-2">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Protocol</Label>
-                        <Select value={protocol} onValueChange={v => setProtocol(v as any)}>
-                          <SelectTrigger className="bg-background/50 h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ftp">FTP</SelectItem>
-                            <SelectItem value="ftps">FTPS</SelectItem>
-                            <SelectItem value="sftp">SFTP</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="d-host" className="text-xs">Host</Label>
-                        <Input
-                          id="d-host"
-                          value={ftpHost}
-                          onChange={e => setFtpHost(e.target.value)}
-                          placeholder="ftp.yourdomain.com"
-                          className="bg-background/50 h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="d-port" className="text-xs">Port</Label>
-                        <Input
-                          id="d-port"
-                          value={ftpPort}
-                          onChange={e => setFtpPort(e.target.value)}
-                          className="bg-background/50 h-9"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Username + Password */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="d-user" className="text-xs">Username</Label>
-                        <Input
-                          id="d-user"
-                          value={ftpUsername}
-                          onChange={e => setFtpUsername(e.target.value)}
-                          placeholder="ftpuser"
-                          className="bg-background/50 h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="d-pass" className="text-xs">Password</Label>
-                        <Input
-                          id="d-pass"
-                          type="password"
-                          value={ftpPassword}
-                          onChange={e => setFtpPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="bg-background/50 h-9"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Remote path */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="d-path" className="text-xs">Remote Path</Label>
-                      <Input
-                        id="d-path"
-                        value={ftpPath}
-                        onChange={e => setFtpPath(e.target.value)}
-                        placeholder="/public_html/"
-                        className="bg-background/50 h-9 font-mono text-sm"
-                      />
-                      <p className="text-[10px] text-muted-foreground">
-                        Use /public_html/ for your main domain, or add a subfolder if you want a separate path.
-                      </p>
-                    </div>
-
-                    {/* Test connection row */}
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <Button
-                        variant="outline" size="sm"
-                        className="gap-2 shrink-0"
-                        onClick={handleTestConnection}
-                        disabled={testStatus === "testing" || !ftpHost || !ftpUsername}
-                      >
-                        {testStatus === "testing"
-                          ? <Clock className="h-3.5 w-3.5 animate-spin" />
-                          : <CheckCircle className="h-3.5 w-3.5" />}
-                        Test Connection
-                      </Button>
-                      <ConnectionStatus />
-                    </div>
-                  </div>
-
-                  <div className="border-t border-border/40 pt-4 space-y-4">
-                    {/* Site URL */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="d-url" className="text-xs flex items-center gap-1.5">
-                        <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        Live Site URL <span className="text-muted-foreground font-normal">(optional)</span>
-                      </Label>
-                      <Input
-                        id="d-url"
-                        value={siteUrl}
-                        onChange={e => setSiteUrl(e.target.value)}
-                        placeholder="https://yoursite.com"
-                        className="bg-background/50 h-9 font-mono text-sm"
-                      />
-                    </div>
-
-                    {/* Do not overwrite toggle */}
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/30">
-                      <div>
-                        <p className="text-sm font-medium">Overwrite existing files</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          Disable to skip files that already exist on the server
-                        </p>
-                      </div>
-                      <Switch
-                        checked={overwriteExisting}
-                        onCheckedChange={setOverwriteExisting}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ── NETLIFY FORM ── */}
-              {deployTab === "netlify" && (
-                <div className="space-y-4 animate-fade-in pt-2">
-                  <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-muted-foreground leading-relaxed">
-                    <span className="font-semibold text-cyan-600 dark:text-cyan-400">Netlify Deployment:</span> We will automatically create a new site under your Netlify account and deploy your landing page live.
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="netlify-token" className="text-xs">Netlify Personal Access Token</Label>
-                    <Input
-                      id="netlify-token"
-                      type="password"
-                      value={netlifyToken}
-                      onChange={e => setNetlifyToken(e.target.value)}
-                      placeholder="e.g. nlf_abc123xyz..."
-                      className="bg-background/50 h-9"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Get one in User Settings &gt; Applications &gt; Personal access tokens.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── GITHUB FORM ── */}
-              {deployTab === "github" && (
-                <div className="space-y-4 animate-fade-in pt-2">
-                  <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3 text-xs text-muted-foreground leading-relaxed">
-                    <span className="font-semibold text-violet-600 dark:text-violet-400">GitHub Pages Deployment:</span> We will create a public GitHub repository, push your code, and enable GitHub Pages hosting automatically.
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="github-token" className="text-xs">GitHub Personal Access Token</Label>
-                    <Input
-                      id="github-token"
-                      type="password"
-                      value={githubToken}
-                      onChange={e => setGithubToken(e.target.value)}
-                      placeholder="e.g. ghp_abc123xyz..."
-                      className="bg-background/50 h-9"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Token must have <code className="bg-muted px-1 py-0.5 rounded text-[9px]">public_repo</code> and <code className="bg-muted px-1 py-0.5 rounded text-[9px]">workflow</code> permissions.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2 border-t border-border/40">
-              <Button variant="outline" onClick={() => setIsDeployModalOpen(false)}>Cancel</Button>
-              {deployTab === "ftp" ? (
-                <Button
-                  onClick={handleDeploy}
-                  disabled={!selectedProjectId || !ftpHost || !ftpUsername || !ftpPassword || deployProject.isPending}
-                  className="gap-2 animate-fade-in"
-                >
-                  {deployProject.isPending
-                    ? <Clock className="h-4 w-4 animate-spin" />
-                    : <Rocket className="h-4 w-4" />}
-                  Deploy Website
-                </Button>
-              ) : deployTab === "netlify" ? (
-                <Button
-                  onClick={handleDeployNetlify}
-                  disabled={!selectedProjectId || !netlifyToken.trim() || isDeployingThirdParty}
-                  className="gap-2 animate-fade-in bg-cyan-600 hover:bg-cyan-700 text-white"
-                >
-                  {isDeployingThirdParty ? (
-                    <><Clock className="h-4 w-4 animate-spin" /> Deploying...</>
-                  ) : (
-                    <><Cloud className="h-4 w-4" /> Deploy to Netlify</>
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleDeployGithub}
-                  disabled={!selectedProjectId || !githubToken.trim() || isDeployingThirdParty}
-                  className="gap-2 animate-fade-in bg-violet-600 hover:bg-violet-700 text-white"
-                >
-                  {isDeployingThirdParty ? (
-                    <><Clock className="h-4 w-4 animate-spin" /> Deploying...</>
-                  ) : (
-                    <><Github className="h-4 w-4" /> Deploy to GitHub Pages</>
-                  )}
-                </Button>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Project filter tabs */}
-      {projects.length > 1 && (
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            size="sm" variant={!viewProjectId ? "secondary" : "ghost"}
-            onClick={() => setViewProjectId("")}
+        <div className="flex items-center gap-2 p-1 rounded-xl bg-secondary/30 border border-border/50">
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "history" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
           >
-            All projects
-          </Button>
-          {projects.map(p => (
-            <Button
-              key={p.id} size="sm"
-              variant={viewProjectId === p.id ? "secondary" : "ghost"}
-              onClick={() => setViewProjectId(p.id)}
-            >
-              {p.name}
-            </Button>
-          ))}
+            Deployment History
+          </button>
+          <button
+            onClick={() => setActiveTab("dns")}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "dns" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            DNS & Domains
+          </button>
         </div>
-      )}
-
-      {/* Deployments table */}
-      <Card className="glass-panel border-border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[280px]">Project</TableHead>
-                <TableHead>Protocol · Host</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!activeProjectId ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Globe className="h-8 w-8 opacity-20" />
-                      <p>Create a project first, then deploy it here.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : deployments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Server className="h-8 w-8 opacity-20" />
-                      <p>No deployments yet.</p>
-                      <p className="text-xs">Click "Deploy Website" to upload your first site.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                deployments.map(deployment => (
-                  <DeploymentLogRow key={deployment.id} deployment={deployment} onDelete={handleDeleteDeployment} />
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      {/* ── SiteCraft V4 Goal 7: Custom Domains & Real-Time DNS Verification ── */}
-      <Card className="glass-panel border-primary/20 shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-primary/10 via-accent/5 to-transparent pb-6 border-b border-border/50">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-inner">
-                <Globe className="h-6 w-6" />
-              </div>
-              <div>
-                <CardTitle className="text-xl font-bold">Custom Domains & Automated DNS Verifier</CardTitle>
-                <CardDescription className="text-sm">
-                  Connect your custom domain and run real-time automated CNAME & A record verification.
-                </CardDescription>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
-          <DomainVerifierSection />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ── Domain Verifier Component ──────────────────────────────────────────────
-
-function DomainVerifierSection() {
-  const [domainInput, setDomainInput] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [dnsResult, setDnsResult] = useState<any>(null);
-
-  const handleVerifyDns = async () => {
-    if (!domainInput.trim()) {
-      toast.error("Please enter a domain name");
-      return;
-    }
-    setIsVerifying(true);
-    setDnsResult(null);
-    try {
-      const res = await fetch("/api/domains/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain: domainInput.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "DNS verification failed");
-      setDnsResult(data);
-      if (data.verified) {
-        toast.success("DNS Verified! Domain is ready.");
-      } else {
-        toast.info("DNS pending propagation. Check records below.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to verify DNS");
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-end gap-3 flex-wrap">
-        <div className="space-y-2 flex-1 min-w-[280px]">
-          <Label htmlFor="custom-domain-input" className="text-sm font-medium">Domain Name</Label>
-          <Input
-            id="custom-domain-input"
-            value={domainInput}
-            onChange={(e) => setDomainInput(e.target.value)}
-            placeholder="e.g. app.yourbrand.com or yourbrand.com"
-            className="bg-background/60 h-10 font-mono text-sm"
-          />
-        </div>
-        <Button
-          onClick={handleVerifyDns}
-          disabled={isVerifying || !domainInput.trim()}
-          className="h-10 px-5 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-        >
-          {isVerifying ? (
-            <><Clock className="h-4 w-4 animate-spin" /> Resolving DNS...</>
-          ) : (
-            <><CheckCircle className="h-4 w-4" /> Run Real-Time DNS Verification</>
-          )}
-        </Button>
       </div>
 
-      {/* Verification Status Banner */}
-      {dnsResult && (
-        <div className={cn(
-          "p-4 rounded-xl border flex items-start gap-3 transition-all animate-fade-in",
-          dnsResult.verified
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
-            : "bg-amber-500/10 border-amber-500/30 text-amber-500"
-        )}>
-          {dnsResult.verified ? (
-            <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          ) : (
-            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-          )}
-          <div className="space-y-1">
-            <p className="font-semibold text-sm">
-              {dnsResult.verified ? "DNS Verified Successfully!" : "DNS Propagation Pending"}
-            </p>
-            <p className="text-xs opacity-90">{dnsResult.note}</p>
+      {activeTab === "dns" ? (
+        <DnsManager />
+      ) : (
+        <div className="space-y-6">
+          <div className="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-xl">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-white/10 font-mono text-xs text-muted-foreground uppercase">
+                  <TableHead>Project</TableHead>
+                  <TableHead>Target Host</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {deployments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
+                      No deployments recorded yet. Initialize a deployment from the Command Center.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  deployments.map((d) => (
+                    <DeploymentLogRow key={d.id} deployment={d} onDelete={handleDeleteDeployment} />
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
       )}
-
-      {/* Copyable DNS Records Setup Instructions */}
-      <div className="grid gap-4 md:grid-cols-2 pt-2">
-        <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-2">
-          <div className="flex items-center justify-between">
-            <Badge variant="outline" className="font-mono text-xs bg-primary/10 text-primary border-primary/20">CNAME Record</Badge>
-            <span className="text-[10px] text-muted-foreground">For Subdomains (e.g. www)</span>
-          </div>
-          <div className="space-y-1 pt-1 font-mono text-xs text-foreground">
-            <p><span className="text-muted-foreground">Host/Name:</span> @ or www</p>
-            <p><span className="text-muted-foreground">Target Value:</span> <code className="bg-background px-2 py-0.5 rounded border border-border">cname.sitecraft.app</code></p>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-2">
-          <div className="flex items-center justify-between">
-            <Badge variant="outline" className="font-mono text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/20">A Record</Badge>
-            <span className="text-[10px] text-muted-foreground">For Apex Domains (e.g. domain.com)</span>
-          </div>
-          <div className="space-y-1 pt-1 font-mono text-xs text-foreground">
-            <p><span className="text-muted-foreground">Host/Name:</span> @</p>
-            <p><span className="text-muted-foreground">IPv4 Address:</span> <code className="bg-background px-2 py-0.5 rounded border border-border">76.76.21.21</code></p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
