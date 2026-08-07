@@ -8,8 +8,8 @@ import {
   Monitor, Tablet, Smartphone, Sparkles, Send, Zap,
   ExternalLink, Rocket, Loader2, Share2, Code, Moon, Sun,
   Check, Copy, Eye, Sliders, MessageSquare, FileText, ShieldCheck,
-  BarChart3, AlertTriangle, CheckCircle2, Layers, Grid, ZoomIn, ZoomOut,
-  Maximize2, Cpu, Activity, Play, Terminal, Wand2, RefreshCw, Palette, Box, CornerDownRight
+  BarChart3, AlertTriangle, CheckCircle2, Wand2, RefreshCw, Palette, Box, CornerDownRight,
+  Maximize2, ArrowRight
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -18,33 +18,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { soundEngine } from "@/lib/sound-effects";
 import { CommandPalette } from "@/components/ui/command-palette";
 
-type Viewport = "desktop" | "laptop" | "tablet" | "mobile";
+type Viewport = "desktop" | "tablet" | "mobile";
 
-const QUICK_EDITS = [
-  { label: "Make colors darker", icon: "🎨" },
-  { label: "Simplify copy", icon: "✍️" },
-  { label: "Add glassmorphism", icon: "💎" },
-  { label: "Add Framer animations", icon: "⚡" },
-  { label: "Improve mobile layout", icon: "📱" },
+const PROACTIVE_SUGGESTIONS = [
+  { label: "Boost Conversions", desc: "Enhance CTAs & add social proof badges", prompt: "Make the CTAs more high-converting and add trust logos." },
+  { label: "Apply Glassmorphism", desc: "Add frosted glass tokens & Framer physics", prompt: "Convert cards to dark glassmorphism with subtle borders." },
+  { label: "Polish Copywriting", desc: "Make headlines bold & high-impact", prompt: "Rewrite headlines to sound like Apple Vision Pro launch copy." },
+  { label: "Upgrade Accessibility", desc: "Verify contrast & ARIA labels", prompt: "Optimize WCAG 2.1 AAA contrast and keyboard focus rings." },
 ];
 
 const THEME_PRESETS = [
-  { id: "original", label: "Original", icon: RotateCcw, bg: "bg-violet-950/60 text-violet-200 border border-violet-800/40" },
-  { id: "dark", label: "Obsidian Dark", icon: Moon, bg: "bg-slate-900 text-white" },
-  { id: "emerald", label: "Emerald Cyber", icon: Sparkles, bg: "bg-emerald-900 text-emerald-100" },
-  { id: "cyberpunk", label: "Neon Pulse", icon: Zap, bg: "bg-rose-900 text-cyan-200" },
+  { id: "original", label: "Original", bg: "bg-slate-900 border border-white/10 text-white" },
+  { id: "dark", label: "Obsidian", bg: "bg-[#030305] border border-indigo-500/30 text-indigo-200" },
+  { id: "emerald", label: "Emerald", bg: "bg-emerald-950/80 border border-emerald-500/30 text-emerald-200" },
+  { id: "cyberpunk", label: "Neon", bg: "bg-rose-950/80 border border-cyan-500/30 text-cyan-200" },
 ];
 
 interface ChatMessage {
@@ -52,20 +44,6 @@ interface ChatMessage {
   sender: "user" | "ai";
   text: string;
   timestamp: string;
-}
-
-interface AuditIssue {
-  category: string;
-  severity: string;
-  element: string;
-  description: string;
-  recommendation: string;
-}
-
-interface AuditData {
-  scores: { visual: number; seo: number; accessibility: number; performance: number };
-  issues: AuditIssue[];
-  suggestions: string[];
 }
 
 export default function ProjectEditor() {
@@ -77,48 +55,27 @@ export default function ProjectEditor() {
   });
 
   const [viewport, setViewport] = useState<Viewport>("desktop");
-  const [zoomLevel, setZoomLevel] = useState<number>(100);
-  const [showSnapGrid, setShowSnapGrid] = useState(true);
-  const [selectedSection, setSelectedSection] = useState<string | null>("HeroSection");
+  const [selectedSection, setSelectedSection] = useState<string | null>("Hero Section");
   const [isCommandOpen, setIsCommandOpen] = useState(false);
 
   const [editInstruction, setEditInstruction] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [editCount, setEditCount] = useState(0);
   const [iframeKey, setIframeKey] = useState(0);
-  const MAX_EDITS = 5;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // Multi-page state
   const [pages, setPages] = useState<string[]>(["index.html"]);
   const [currentPage, setCurrentPage] = useState<string>("index.html");
 
-  // Modal dialog states
-  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
-  const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
-
-  // Right Inspector Tab: AI Swarm | Inspector | Layers | Audit | Code
-  const [rightTab, setRightTab] = useState<"swarm" | "inspector" | "layers" | "critique" | "code">("swarm");
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const [auditData, setAuditData] = useState<AuditData | null>(null);
-  const [isAuditLoading, setIsAuditLoading] = useState(false);
-
-  // Live Swarm Telemetry State
-  const [activeAgents, setActiveAgents] = useState([
-    { name: "UX Strategist", progress: 95, color: "bg-blue-500", status: "Active" },
-    { name: "Copywriter AI", progress: 88, color: "bg-indigo-500", status: "Active" },
-    { name: "Motion Designer", progress: 92, color: "bg-purple-500", status: "Active" },
-    { name: "A11y Auditor", progress: 99, color: "bg-emerald-500", status: "Verified" },
-    { name: "React 19 Compiler", progress: 100, color: "bg-cyan-500", status: "Idle" },
-  ]);
+  // Right Panel Sub-View: "studio" (AI Creative Workspace) | "audit" | "code"
+  const [activeRightPanel, setActiveRightPanel] = useState<"studio" | "audit" | "code">("studio");
 
   // Chat message history
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "init",
       sender: "ai",
-      text: "👋 Welcome to SiteCraft Spatial OS. What component or section would you like to direct?",
+      text: "✨ AI Design Assistant ready. Select a section or click a suggestion below to refine your design.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -129,9 +86,7 @@ export default function ProjectEditor() {
       fetch(`/api/projects/${id}/pages`, { credentials: "include" })
         .then((r) => r.json())
         .then((data) => {
-          if (data && Array.isArray(data.pages)) {
-            setPages(data.pages);
-          }
+          if (data && Array.isArray(data.pages)) setPages(data.pages);
         })
         .catch(() => {});
     }
@@ -160,41 +115,14 @@ export default function ProjectEditor() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Fetch audit data on tab change
-  useEffect(() => {
-    if (rightTab === "critique" && id && !auditData) {
-      setIsAuditLoading(true);
-      fetch(`/api/projects/${id}/audit`, { credentials: "include" })
-        .then((r) => r.json())
-        .then((data) => setAuditData(data))
-        .catch(() => {})
-        .finally(() => setIsAuditLoading(false));
-    }
-  }, [rightTab, id, auditData]);
-
   const iframeUrl = project?.id
     ? `/api/projects/${project.id}/preview?page=${currentPage}&t=${new Date(project.updatedAt).getTime()}&k=${iframeKey}`
     : null;
 
-  const triggerDownload = (url: string) => {
-    soundEngine.playPrimaryClick();
-    if (!project?.generatedHtml) {
-      toast.error("No site generated yet.");
-      return;
-    }
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  };
-
-  const getViewportDimensions = () => {
-    if (viewport === "mobile") return "w-[375px] h-[812px]";
-    if (viewport === "tablet") return "w-[768px] h-[1024px]";
-    if (viewport === "laptop") return "w-[1024px] h-[768px]";
-    return "w-[1440px] h-[900px]";
+  const getViewportWidth = () => {
+    if (viewport === "mobile") return "w-[375px]";
+    if (viewport === "tablet") return "w-[768px]";
+    return "w-full max-w-7xl";
   };
 
   const handleSwapTheme = async (presetId: string) => {
@@ -216,14 +144,10 @@ export default function ProjectEditor() {
     }
   };
 
-  const handleRegenerate = async () => {
-    const messageText = editInstruction.trim();
-    if (!messageText) {
-      toast.error("Tell the AI what to change first.");
-      return;
-    }
-    if (editCount >= MAX_EDITS) {
-      toast.error("Standard edit limit reached. Upgrade to Enterprise.");
+  const handlePromptSubmit = async (customPrompt?: string) => {
+    const promptText = (customPrompt || editInstruction).trim();
+    if (!promptText) {
+      toast.error("Tell the AI what to design first.");
       return;
     }
     if (!id) return;
@@ -233,7 +157,7 @@ export default function ProjectEditor() {
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       sender: "user",
-      text: messageText,
+      text: promptText,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
     setMessages((prev) => [...prev, userMsg]);
@@ -245,33 +169,32 @@ export default function ProjectEditor() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ message: messageText }),
+        body: JSON.stringify({ message: promptText }),
       });
 
-      if (!res.ok) throw new Error("Edit request failed");
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          sender: "ai",
-          text: `⚡ Swarm agents updating component: "${messageText}"…`,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
+      if (!res.ok) throw new Error("Design update failed");
 
       setTimeout(async () => {
         soundEngine.playSuccess();
         await refetch();
         setIframeKey((k) => k + 1);
         setIsRegenerating(false);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            sender: "ai",
+            text: `✨ Applied: "${promptText}". Preview updated.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
         toast.success("Design update synthesized!");
-      }, 2000);
+      }, 1800);
 
     } catch {
       soundEngine.playError();
       setIsRegenerating(false);
-      toast.error("Edit failed. Try rephrasing your prompt.");
+      toast.error("Design update failed.");
     }
   };
 
@@ -294,23 +217,23 @@ export default function ProjectEditor() {
       
       <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} />
 
-      {/* ── TOP SPATIAL TOOLBAR ── */}
+      {/* ── TOP MINIMALIST STUDIO BAR ── */}
       <header className="absolute top-0 inset-x-0 h-14 border-b border-white/10 glass flex items-center justify-between px-6 z-40 shadow-2xl backdrop-blur-2xl">
         
-        {/* Left: Brand & Page Switcher */}
+        {/* Left: Project Branding & Pages */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setLocation("/dashboard")}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
+          <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => setLocation("/dashboard")}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
               <Sparkles className="h-4 w-4" />
             </div>
-            <span className="font-black text-sm tracking-tight text-foreground hidden sm:block">
-              SiteCraft OS
+            <span className="font-extrabold text-sm tracking-tight text-foreground">
+              {project?.name || "SiteCraft Studio"}
             </span>
           </div>
 
           <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />
 
-          {/* Page Switcher */}
+          {/* Page Tabs */}
           {pages.length > 0 && (
             <div className="flex items-center gap-1 bg-secondary/30 rounded-xl p-1 border border-white/10">
               {pages.map((p) => (
@@ -329,48 +252,28 @@ export default function ProjectEditor() {
           )}
         </div>
 
-        {/* Center: Viewport & Zoom Controls */}
-        <div className="flex items-center gap-3">
-          
-          {/* Viewport Selector */}
-          <div className="flex items-center gap-1 bg-secondary/40 rounded-xl p-1 border border-white/10">
-            {(["desktop", "laptop", "tablet", "mobile"] as Viewport[]).map((v) => {
-              const Icon = v === "desktop" ? Monitor : v === "laptop" ? Monitor : v === "tablet" ? Tablet : Smartphone;
-              return (
-                <button
-                  key={v}
-                  onClick={() => { soundEngine.playTabSwitch(); setViewport(v); }}
-                  className={cn(
-                    "h-8 px-2.5 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 transition-all",
-                    viewport === v ? "bg-primary/20 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  <span className="capitalize hidden lg:inline">{v}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Zoom Controls */}
-          <div className="hidden md:flex items-center gap-1 bg-secondary/40 rounded-xl px-2 py-1 border border-white/10 text-xs font-mono text-muted-foreground">
-            <button onClick={() => setZoomLevel((z) => Math.max(50, z - 10))} className="p-1 hover:text-foreground">
-              <ZoomOut className="h-3.5 w-3.5" />
-            </button>
-            <span className="w-10 text-center font-bold text-foreground">{zoomLevel}%</span>
-            <button onClick={() => setZoomLevel((z) => Math.min(150, z + 10))} className="p-1 hover:text-foreground">
-              <ZoomIn className="h-3.5 w-3.5" />
-            </button>
-            <button onClick={() => setShowSnapGrid(!showSnapGrid)} className={cn("p-1 ml-1 rounded", showSnapGrid && "text-primary")}>
-              <Grid className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
+        {/* Center: Viewport Switcher */}
+        <div className="flex items-center gap-1 bg-secondary/40 rounded-xl p-1 border border-white/10">
+          {(["desktop", "tablet", "mobile"] as Viewport[]).map((v) => {
+            const Icon = v === "desktop" ? Monitor : v === "tablet" ? Tablet : Smartphone;
+            return (
+              <button
+                key={v}
+                onClick={() => { soundEngine.playTabSwitch(); setViewport(v); }}
+                className={cn(
+                  "h-8 px-3 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 transition-all",
+                  viewport === v ? "bg-primary/20 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span className="capitalize hidden md:inline">{v}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
-          
           <button
             onClick={() => setIsCommandOpen(true)}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/40 border border-white/10 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
@@ -390,89 +293,56 @@ export default function ProjectEditor() {
 
       </header>
 
-      {/* ── SPATIAL CANVAS WORKSPACE ── */}
+      {/* ── MAIN STUDIO WORKSPACE ── */}
       <div className="flex-1 flex pt-14 h-full relative overflow-hidden">
         
-        {/* LEFT PANEL: FIGMA-STYLE AST LAYERS TREE */}
-        <aside className={cn("w-64 border-r border-white/10 glass flex flex-col transition-all z-30", !leftPanelOpen && "-ml-64")}>
-          <div className="p-4 border-b border-white/10 flex items-center justify-between font-mono text-xs font-bold text-foreground">
-            <span className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" /> DOM AST LAYERS
-            </span>
-            <span className="text-[10px] text-muted-foreground">5 Nodes</span>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-3 space-y-1 font-mono text-xs">
-            {[
-              { id: "HeaderNav", label: "<HeaderNav />", type: "Header Navigation" },
-              { id: "HeroSection", label: "<HeroSection />", type: "Hero Component" },
-              { id: "SwarmConstellation", label: "<SwarmConstellation />", type: "3D Particle Canvas" },
-              { id: "TelemetryConsole", label: "<TelemetryConsole />", type: "Agent Telemetry" },
-              { id: "FooterSection", label: "<FooterSection />", type: "Global Footer" },
-            ].map((node) => (
-              <button
-                key={node.id}
-                onClick={() => { soundEngine.playTabSwitch(); setSelectedSection(node.id); }}
-                className={cn(
-                  "w-full p-2.5 rounded-xl text-left flex flex-col transition-all",
-                  selectedSection === node.id ? "bg-primary/20 border border-primary/40 text-primary shadow-md" : "hover:bg-secondary/30 text-muted-foreground"
-                )}
-              >
-                <span className="font-bold text-foreground">{node.label}</span>
-                <span className="text-[10px] text-muted-foreground mt-0.5">{node.type}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="p-4 border-t border-white/10 bg-black/40 text-xs font-mono text-muted-foreground space-y-2">
-            <div className="flex justify-between">
-              <span>Selected:</span>
-              <span className="text-primary font-bold">{selectedSection}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>WAI-ARIA:</span>
-              <span className="text-emerald-400 font-bold">99/100</span>
-            </div>
-          </div>
-        </aside>
-
-        {/* CENTER SPATIAL CANVAS PREVIEW */}
-        <main className="flex-1 relative flex items-center justify-center p-8 bg-[#05050a] overflow-auto">
+        {/* ── LEFT HERO PREVIEW CANVAS (70% Visual Dominance) ── */}
+        <main className="flex-1 relative flex flex-col items-center justify-center p-6 md:p-10 bg-[#05050a] overflow-auto">
           
-          {/* Spatial Perspective Grid */}
-          <div
-            className={cn(
-              "absolute inset-0 opacity-20 pointer-events-none",
-              showSnapGrid && "bg-[radial-gradient(#818cf8_1px,transparent_1px)] [background-size:24px_24px]"
-            )}
-          />
+          {/* Subtle Ambient Radial Lighting */}
+          <div className="absolute inset-0 bg-[radial-gradient(#818cf8_1px,transparent_1px)] [background-size:32px_32px] opacity-15 pointer-events-none" />
 
-          {/* Floating Bounding Frame */}
+          {/* Floating Contextual Toolbar when a section is active */}
+          {selectedSection && (
+            <div className="mb-4 glass px-4 py-2 rounded-2xl border border-white/15 shadow-2xl flex items-center gap-3 z-30 animate-fade-in">
+              <span className="text-xs font-mono font-bold text-primary flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" /> {selectedSection}
+              </span>
+              <div className="h-3 w-[1px] bg-white/10" />
+              <button
+                onClick={() => handlePromptSubmit(`Improve the ${selectedSection} with bold typography and dark glass tokens.`)}
+                className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ✨ AI Polish
+              </button>
+              <button
+                onClick={() => handlePromptSubmit(`Add subtle Framer Motion scroll animations to the ${selectedSection}.`)}
+                className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ⚡ Animate
+              </button>
+            </div>
+          )}
+
+          {/* Floating Luxury Preview Object */}
           <div
-            style={{ transform: `scale(${zoomLevel / 100})` }}
             className={cn(
-              "transition-all duration-500 rounded-3xl glass border border-white/20 shadow-2xl overflow-hidden relative flex flex-col backdrop-blur-2xl",
-              getViewportDimensions()
+              "transition-all duration-500 rounded-3xl glass border border-white/20 shadow-2xl overflow-hidden relative flex flex-col backdrop-blur-2xl h-full max-h-[880px]",
+              getViewportWidth()
             )}
           >
-            {/* Top Window Bar */}
-            <div className="h-9 px-4 border-b border-white/10 bg-secondary/40 flex items-center justify-between font-mono text-[10px] text-muted-foreground shrink-0">
+            {/* Top Browser Bar */}
+            <div className="h-10 px-5 border-b border-white/10 bg-secondary/40 flex items-center justify-between font-mono text-xs text-muted-foreground shrink-0">
               <div className="flex items-center gap-2">
-                <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
-                <div className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
-                <span className="ml-2 font-bold text-foreground">app.sitecraft.ai / {currentPage}</span>
+                <div className="h-3 w-3 rounded-full bg-red-500/80" />
+                <div className="h-3 w-3 rounded-full bg-amber-500/80" />
+                <div className="h-3 w-3 rounded-full bg-emerald-500/80" />
+                <span className="ml-3 font-bold text-foreground">https://app.sitecraft.ai/live/{currentPage}</span>
               </div>
-              <span>{getViewportDimensions().split(" ")[0]}</span>
+              <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> LIVE CANVA
+              </span>
             </div>
-
-            {/* Selection Overlay Ribbon */}
-            {selectedSection && (
-              <div className="absolute top-12 left-4 z-20 glass px-3 py-1.5 rounded-xl border border-primary/40 text-xs font-mono font-bold text-primary flex items-center gap-2 shadow-xl">
-                <Sparkles className="h-3.5 w-3.5" /> Active: {selectedSection}
-                <button onClick={() => setSelectedSection(null)} className="ml-2 text-muted-foreground hover:text-foreground">✕</button>
-              </div>
-            )}
 
             {/* Preview Iframe */}
             {iframeUrl ? (
@@ -481,12 +351,12 @@ export default function ProjectEditor() {
                 src={iframeUrl}
                 className="w-full flex-1 bg-white animate-fade-in"
                 sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation"
-                title="Spatial Preview Canvas"
+                title="AI Studio Visual Preview"
               />
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                <p className="text-xs font-mono text-muted-foreground">Synthesizing Spatial Canvas...</p>
+                <p className="text-xs font-mono text-muted-foreground">Synthesizing Visual Preview...</p>
               </div>
             )}
 
@@ -494,101 +364,64 @@ export default function ProjectEditor() {
 
         </main>
 
-        {/* RIGHT PANEL: FIGMA / LINEAR MULTI-TAB INSPECTOR */}
+        {/* ── RIGHT AI CREATIVE WORKSPACE (30% Width) ── */}
         <aside className="w-96 border-l border-white/10 glass flex flex-col z-30 shadow-2xl backdrop-blur-2xl">
           
-          {/* Tab Header */}
+          {/* Header Panel Switcher */}
           <div className="flex border-b border-white/10 bg-secondary/30 text-xs font-mono font-bold">
-            {(["swarm", "inspector", "critique", "code"] as const).map((tab) => (
+            {(["studio", "audit", "code"] as const).map((panel) => (
               <button
-                key={tab}
-                onClick={() => { soundEngine.playTabSwitch(); setRightTab(tab); }}
+                key={panel}
+                onClick={() => { soundEngine.playTabSwitch(); setActiveRightPanel(panel); }}
                 className={cn(
                   "flex-1 py-3 text-center capitalize transition-all border-b-2",
-                  rightTab === tab ? "border-primary text-primary bg-primary/10" : "border-transparent text-muted-foreground hover:text-foreground"
+                  activeRightPanel === panel ? "border-primary text-primary bg-primary/10" : "border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
-                {tab}
+                {panel === "studio" ? "AI Workspace" : panel}
               </button>
             ))}
           </div>
 
-          {/* TAB 1: AI SWARM WORKSPACE */}
-          {rightTab === "swarm" && (
-            <div className="flex-1 flex flex-col p-4 space-y-6 overflow-y-auto">
+          {/* PANEL 1: AI CREATIVE WORKSPACE */}
+          {activeRightPanel === "studio" && (
+            <div className="flex-1 flex flex-col p-5 space-y-6 overflow-y-auto">
               
-              {/* Swarm Telemetry Bars */}
+              {/* Proactive AI Suggestion Cards */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs font-mono font-bold text-foreground">
-                  <span className="flex items-center gap-2"><Cpu className="h-4 w-4 text-primary" /> SWARM AGENTS</span>
-                  <span className="text-emerald-400">100% HEALTH</span>
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-foreground">
+                  <Wand2 className="h-4 w-4 text-primary" /> PROACTIVE SUGGESTIONS
                 </div>
 
                 <div className="space-y-2">
-                  {activeAgents.map((agent) => (
-                    <div key={agent.name} className="p-3 rounded-xl bg-secondary/20 border border-white/5 space-y-1.5">
-                      <div className="flex justify-between text-xs font-mono">
-                        <span className="font-bold text-foreground">{agent.name}</span>
-                        <span className="text-muted-foreground">{agent.status}</span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-black/40 overflow-hidden">
-                        <div className={`h-full rounded-full ${agent.color}`} style={{ width: `${agent.progress}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Chat & Instruction Stream */}
-              <div className="space-y-3 flex-1 flex flex-col justify-between border-t border-white/10 pt-4">
-                <div className="space-y-2 max-h-48 overflow-y-auto font-mono text-xs">
-                  {messages.map((m) => (
-                    <div key={m.id} className={cn("p-3 rounded-xl leading-relaxed", m.sender === "user" ? "bg-primary/20 text-primary border border-primary/30 ml-4" : "bg-secondary/30 text-foreground border border-white/5 mr-4")}>
-                      {m.text}
-                    </div>
-                  ))}
-                  {isRegenerating && (
-                    <div className="p-3 rounded-xl bg-purple-500/20 text-purple-300 font-mono text-xs flex items-center gap-2">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Synthesizing design tokens...
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3 pt-2">
-                  <div className="relative">
-                    <Textarea
-                      ref={textareaRef}
-                      value={editInstruction}
-                      onChange={(e) => setEditInstruction(e.target.value)}
-                      onFocus={() => soundEngine.playInputFocus()}
-                      placeholder="Instruct the AI Swarm to modify this page..."
-                      className="min-h-[80px] bg-secondary/30 border border-white/10 text-xs font-medium rounded-xl p-3 pr-10 focus:outline-none focus:border-primary"
-                    />
+                  {PROACTIVE_SUGGESTIONS.map((sug) => (
                     <button
-                      onClick={handleRegenerate}
-                      disabled={isRegenerating || !editInstruction.trim()}
-                      className="absolute right-2 bottom-2 p-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+                      key={sug.label}
+                      onClick={() => handlePromptSubmit(sug.prompt)}
+                      disabled={isRegenerating}
+                      className="w-full p-3.5 rounded-2xl bg-secondary/20 border border-white/10 hover:border-primary/40 text-left transition-all hover:-translate-y-0.5 group space-y-1"
                     >
-                      <Send className="h-3.5 w-3.5" />
+                      <div className="flex items-center justify-between text-xs font-bold text-foreground group-hover:text-primary">
+                        <span>{sug.label}</span>
+                        <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">{sug.desc}</p>
                     </button>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-            </div>
-          )}
-
-          {/* TAB 2: STYLE INSPECTOR */}
-          {rightTab === "inspector" && (
-            <div className="flex-1 p-4 space-y-6 overflow-y-auto font-mono text-xs">
-              <div className="space-y-3">
-                <h4 className="font-bold text-foreground uppercase tracking-wider text-[10px] text-muted-foreground">THEME PRESETS</h4>
-                <div className="grid grid-cols-2 gap-2">
+              {/* Instant Theme Chips */}
+              <div className="space-y-3 border-t border-white/10 pt-4">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-foreground">
+                  <Palette className="h-4 w-4 text-purple-400" /> INSTANT THEME SWAP
+                </div>
+                <div className="grid grid-cols-2 gap-2 font-mono text-xs">
                   {THEME_PRESETS.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => handleSwapTheme(t.id)}
-                      className={cn("p-3 rounded-xl text-left font-bold border transition-all", t.bg)}
+                      className={cn("p-2.5 rounded-xl text-left font-bold transition-transform hover:scale-105", t.bg)}
                     >
                       {t.label}
                     </button>
@@ -596,31 +429,68 @@ export default function ProjectEditor() {
                 </div>
               </div>
 
-              <div className="space-y-3 border-t border-white/10 pt-4">
-                <h4 className="font-bold text-foreground uppercase tracking-wider text-[10px] text-muted-foreground">SPACING & RADIUS</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between"><span>Corner Radius:</span><span className="text-primary font-bold">24px</span></div>
-                  <div className="flex justify-between"><span>Backdrop Blur:</span><span className="text-primary font-bold">24px</span></div>
+              {/* Recent Activity & Prompt Bar */}
+              <div className="space-y-3 flex-1 flex flex-col justify-between border-t border-white/10 pt-4">
+                
+                <div className="space-y-2 max-h-40 overflow-y-auto font-mono text-xs">
+                  {messages.map((m) => (
+                    <div key={m.id} className={cn("p-3 rounded-xl leading-relaxed", m.sender === "user" ? "bg-primary/20 text-primary border border-primary/30 ml-4" : "bg-secondary/30 text-foreground border border-white/5 mr-4")}>
+                      {m.text}
+                    </div>
+                  ))}
+                  {isRegenerating && (
+                    <div className="p-3 rounded-xl bg-purple-500/20 text-purple-300 font-mono text-xs flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Synthesizing AI design update...
+                    </div>
+                  )}
                 </div>
+
+                <div className="space-y-2 pt-2">
+                  <div className="relative">
+                    <Textarea
+                      ref={textareaRef}
+                      value={editInstruction}
+                      onChange={(e) => setEditInstruction(e.target.value)}
+                      onFocus={() => soundEngine.playInputFocus()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handlePromptSubmit();
+                        }
+                      }}
+                      placeholder="Describe what to design or edit..."
+                      className="min-h-[75px] bg-secondary/30 border border-white/10 text-xs font-medium rounded-xl p-3 pr-10 focus:outline-none focus:border-primary"
+                    />
+                    <button
+                      onClick={() => handlePromptSubmit()}
+                      disabled={isRegenerating || !editInstruction.trim()}
+                      className="absolute right-2 bottom-2 p-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-40"
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
               </div>
+
             </div>
           )}
 
-          {/* TAB 3: CRITIQUE */}
-          {rightTab === "critique" && (
-            <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-              <div className="p-3 rounded-xl bg-secondary/30 border border-white/10 space-y-2 font-mono text-xs">
-                <div className="flex justify-between"><span className="text-muted-foreground">Visual Quality</span><span className="text-purple-400 font-bold">98/100</span></div>
+          {/* PANEL 2: DESIGN AUDIT & CRITIQUE */}
+          {activeRightPanel === "audit" && (
+            <div className="flex-1 p-5 space-y-4 overflow-y-auto font-mono text-xs">
+              <div className="p-4 rounded-2xl bg-secondary/30 border border-white/10 space-y-3">
+                <div className="flex justify-between"><span className="text-muted-foreground">Visual Polish</span><span className="text-purple-400 font-bold">98/100</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">SEO Structure</span><span className="text-emerald-400 font-bold">99/100</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">WAI-ARIA Accessibility</span><span className="text-cyan-400 font-bold">99/100</span></div>
               </div>
             </div>
           )}
 
-          {/* TAB 4: CODE */}
-          {rightTab === "code" && (
-            <div className="flex-1 p-4 space-y-4 overflow-y-auto font-mono text-xs">
-              <pre className="p-4 rounded-xl bg-black/80 border border-white/10 text-emerald-400 overflow-x-auto text-[11px] leading-relaxed">
+          {/* PANEL 3: CODE VIEW */}
+          {activeRightPanel === "code" && (
+            <div className="flex-1 p-4 overflow-y-auto font-mono text-xs">
+              <pre className="p-4 rounded-2xl bg-black/80 border border-white/10 text-emerald-400 overflow-x-auto text-[11px] leading-relaxed">
                 {getPageCode()}
               </pre>
             </div>
