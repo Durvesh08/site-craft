@@ -30,6 +30,8 @@ async function buildAll() {
     external: [
       "*.node",
       "esbuild",
+      "jsonwebtoken",
+      "bcryptjs",
       "sharp",
       "better-sqlite3",
       "sqlite3",
