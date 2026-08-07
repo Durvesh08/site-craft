@@ -850,6 +850,139 @@ export default function Deployments() {
           </Table>
         </div>
       </Card>
+
+      {/* ── SiteCraft V4 Goal 7: Custom Domains & Real-Time DNS Verification ── */}
+      <Card className="glass-panel border-primary/20 shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-primary/10 via-accent/5 to-transparent pb-6 border-b border-border/50">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-inner">
+                <Globe className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-bold">Custom Domains & Automated DNS Verifier</CardTitle>
+                <CardDescription className="text-sm">
+                  Connect your custom domain and run real-time automated CNAME & A record verification.
+                </CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6 pt-6">
+          <DomainVerifierSection />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Domain Verifier Component ──────────────────────────────────────────────
+
+function DomainVerifierSection() {
+  const [domainInput, setDomainInput] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [dnsResult, setDnsResult] = useState<any>(null);
+
+  const handleVerifyDns = async () => {
+    if (!domainInput.trim()) {
+      toast.error("Please enter a domain name");
+      return;
+    }
+    setIsVerifying(true);
+    setDnsResult(null);
+    try {
+      const res = await fetch("/api/domains/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain: domainInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "DNS verification failed");
+      setDnsResult(data);
+      if (data.verified) {
+        toast.success("DNS Verified! Domain is ready.");
+      } else {
+        toast.info("DNS pending propagation. Check records below.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to verify DNS");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-end gap-3 flex-wrap">
+        <div className="space-y-2 flex-1 min-w-[280px]">
+          <Label htmlFor="custom-domain-input" className="text-sm font-medium">Domain Name</Label>
+          <Input
+            id="custom-domain-input"
+            value={domainInput}
+            onChange={(e) => setDomainInput(e.target.value)}
+            placeholder="e.g. app.yourbrand.com or yourbrand.com"
+            className="bg-background/60 h-10 font-mono text-sm"
+          />
+        </div>
+        <Button
+          onClick={handleVerifyDns}
+          disabled={isVerifying || !domainInput.trim()}
+          className="h-10 px-5 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+        >
+          {isVerifying ? (
+            <><Clock className="h-4 w-4 animate-spin" /> Resolving DNS...</>
+          ) : (
+            <><CheckCircle className="h-4 w-4" /> Run Real-Time DNS Verification</>
+          )}
+        </Button>
+      </div>
+
+      {/* Verification Status Banner */}
+      {dnsResult && (
+        <div className={cn(
+          "p-4 rounded-xl border flex items-start gap-3 transition-all animate-fade-in",
+          dnsResult.verified
+            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-500"
+            : "bg-amber-500/10 border-amber-500/30 text-amber-500"
+        )}>
+          {dnsResult.verified ? (
+            <CheckCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          ) : (
+            <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+          )}
+          <div className="space-y-1">
+            <p className="font-semibold text-sm">
+              {dnsResult.verified ? "DNS Verified Successfully!" : "DNS Propagation Pending"}
+            </p>
+            <p className="text-xs opacity-90">{dnsResult.note}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Copyable DNS Records Setup Instructions */}
+      <div className="grid gap-4 md:grid-cols-2 pt-2">
+        <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-2">
+          <div className="flex items-center justify-between">
+            <Badge variant="outline" className="font-mono text-xs bg-primary/10 text-primary border-primary/20">CNAME Record</Badge>
+            <span className="text-[10px] text-muted-foreground">For Subdomains (e.g. www)</span>
+          </div>
+          <div className="space-y-1 pt-1 font-mono text-xs text-foreground">
+            <p><span className="text-muted-foreground">Host/Name:</span> @ or www</p>
+            <p><span className="text-muted-foreground">Target Value:</span> <code className="bg-background px-2 py-0.5 rounded border border-border">cname.sitecraft.app</code></p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl border border-border/60 bg-muted/20 space-y-2">
+          <div className="flex items-center justify-between">
+            <Badge variant="outline" className="font-mono text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/20">A Record</Badge>
+            <span className="text-[10px] text-muted-foreground">For Apex Domains (e.g. domain.com)</span>
+          </div>
+          <div className="space-y-1 pt-1 font-mono text-xs text-foreground">
+            <p><span className="text-muted-foreground">Host/Name:</span> @</p>
+            <p><span className="text-muted-foreground">IPv4 Address:</span> <code className="bg-background px-2 py-0.5 rounded border border-border">76.76.21.21</code></p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

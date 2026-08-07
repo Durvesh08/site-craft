@@ -38,6 +38,11 @@ export default function SettingsPage() {
 
   // AI State
   const [geminiKey, setGeminiKey] = useState("");
+  const [openaiKey, setOpenaiKey] = useState("");
+  const [claudeKey, setClaudeKey] = useState("");
+  const [deepseekKey, setDeepseekKey] = useState("");
+  const [openrouterKey, setOpenrouterKey] = useState("");
+  const [preferredEngine, setPreferredEngine] = useState("gemini");
   const [isSavingAi, setIsSavingAi] = useState(false);
 
   // Branding State
@@ -85,6 +90,11 @@ export default function SettingsPage() {
         // AI Settings
         if (settings.ai) {
           setGeminiKey(settings.ai.gemini_api_key || "");
+          setOpenaiKey(settings.ai.openai_api_key || "");
+          setClaudeKey(settings.ai.claude_api_key || "");
+          setDeepseekKey(settings.ai.deepseek_api_key || "");
+          setOpenrouterKey(settings.ai.openrouter_api_key || "");
+          setPreferredEngine(settings.ai.preferred_ai_engine || "gemini");
         }
 
         // Branding
@@ -208,11 +218,16 @@ export default function SettingsPage() {
         credentials: "include",
         body: JSON.stringify({
           gemini_api_key: geminiKey,
+          openai_api_key: openaiKey,
+          claude_api_key: claudeKey,
+          deepseek_api_key: deepseekKey,
+          openrouter_api_key: openrouterKey,
+          preferred_ai_engine: preferredEngine,
         }),
       });
 
       if (!res.ok) throw new Error("Failed to update AI configurations");
-      toast.success("Gemini API key saved successfully");
+      toast.success("AI model engine configurations saved successfully");
     } catch (err: any) {
       toast.error(err.message || "Failed to save AI configurations");
     } finally {
@@ -539,32 +554,130 @@ export default function SettingsPage() {
 
           {/* TAB 3: AI ENGINE */}
           {activeTab === "ai" && (
-            <Card className="glass-panel">
-              <CardHeader>
-                <CardTitle>Gemini API Key</CardTitle>
-                <CardDescription>
-                  SiteCraft's AI pipeline runs 13 specialized agent steps, each already tuned to the right Gemini model
-                  and settings for its job — there's no single "default model" to pick. Add your own API key here to use
-                  your own Gemini quota instead of the shared server key.
-                </CardDescription>
+            <Card className="glass-panel border-primary/20 shadow-xl">
+              <CardHeader className="bg-gradient-to-r from-primary/10 via-accent/5 to-transparent pb-6 border-b border-border/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-inner">
+                    <Cpu className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-bold">Multi-LLM Intelligence Suite</CardTitle>
+                    <CardDescription className="text-sm">
+                      Configure your preferred AI model engines. SiteCraft supports Google Gemini, OpenAI (GPT-4o), Anthropic Claude 3.5, DeepSeek Coder, and Free GLM / OpenRouter endpoints.
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6 pt-6">
+                {/* Engine Selector */}
                 <div className="space-y-2">
-                  <Label htmlFor="gemini-key">Gemini API Key</Label>
-                  <Input
-                    id="gemini-key"
-                    type="password"
-                    value={geminiKey}
-                    onChange={(e) => setGeminiKey(e.target.value)}
-                    placeholder="••••••••"
-                    className="bg-background/50"
-                  />
-                  <p className="text-[10px] text-muted-foreground font-mono">Stores key locally/encrypted. If left blank, uses global server variable.</p>
+                  <Label htmlFor="preferred-engine" className="font-semibold text-sm">Primary AI Generation Engine</Label>
+                  <select
+                    id="preferred-engine"
+                    value={preferredEngine}
+                    onChange={(e) => setPreferredEngine(e.target.value)}
+                    className="w-full h-10 px-3 rounded-lg border border-border bg-background/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <option value="gemini">Google Gemini 1.5 Pro / Flash (Default High-Speed Engine)</option>
+                    <option value="openai">OpenAI GPT-4o / GPT-4 Turbo (High Reasoning Engine)</option>
+                    <option value="claude">Anthropic Claude 3.5 Sonnet (Senior Creative Director Engine)</option>
+                    <option value="deepseek">DeepSeek Coder V2 (Advanced Code Generation Engine)</option>
+                    <option value="openrouter">OpenRouter / Free GLM-4 (Free Open LLM Engine)</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">Selects which AI model engine powers website planning, copywriting, and code synthesis.</p>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2 pt-4 border-t border-border/50">
+                  {/* Gemini Key */}
+                  <div className="space-y-2">
+                    <Label htmlFor="gemini-key" className="text-xs font-medium flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
+                      Google Gemini API Key
+                    </Label>
+                    <Input
+                      id="gemini-key"
+                      type="password"
+                      value={geminiKey}
+                      onChange={(e) => setGeminiKey(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="bg-background/50 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Used for Gemini 1.5 Pro / Flash. Free quota available at aistudio.google.com</p>
+                  </div>
+
+                  {/* OpenAI Key */}
+                  <div className="space-y-2">
+                    <Label htmlFor="openai-key" className="text-xs font-medium flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                      OpenAI (ChatGPT / GPT-4o) API Key
+                    </Label>
+                    <Input
+                      id="openai-key"
+                      type="password"
+                      value={openaiKey}
+                      onChange={(e) => setOpenaiKey(e.target.value)}
+                      placeholder="sk-proj-..."
+                      className="bg-background/50 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Used for GPT-4o & GPT-4 Turbo synthesis. platform.openai.com</p>
+                  </div>
+
+                  {/* Claude Key */}
+                  <div className="space-y-2">
+                    <Label htmlFor="claude-key" className="text-xs font-medium flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                      Anthropic Claude API Key
+                    </Label>
+                    <Input
+                      id="claude-key"
+                      type="password"
+                      value={claudeKey}
+                      onChange={(e) => setClaudeKey(e.target.value)}
+                      placeholder="sk-ant-..."
+                      className="bg-background/50 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Used for Claude 3.5 Sonnet Creative Director synthesis. console.anthropic.com</p>
+                  </div>
+
+                  {/* DeepSeek Key */}
+                  <div className="space-y-2">
+                    <Label htmlFor="deepseek-key" className="text-xs font-medium flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-purple-500"></span>
+                      DeepSeek Coder API Key
+                    </Label>
+                    <Input
+                      id="deepseek-key"
+                      type="password"
+                      value={deepseekKey}
+                      onChange={(e) => setDeepseekKey(e.target.value)}
+                      placeholder="sk-..."
+                      className="bg-background/50 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Used for DeepSeek V2 code generation. platform.deepseek.com</p>
+                  </div>
+
+                  {/* OpenRouter / GLM Key */}
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="openrouter-key" className="text-xs font-medium flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-pink-500"></span>
+                      OpenRouter / Free GLM API Key
+                    </Label>
+                    <Input
+                      id="openrouter-key"
+                      type="password"
+                      value={openrouterKey}
+                      onChange={(e) => setOpenrouterKey(e.target.value)}
+                      placeholder="sk-or-v1-..."
+                      className="bg-background/50 text-xs font-mono"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Access free & open-source LLMs (GLM-4, Llama 3, Mistral) via OpenRouter. openrouter.ai</p>
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30">
-                <Button onClick={handleSaveAi} disabled={isSavingAi}>
-                  {isSavingAi ? "Saving..." : "Save API Key"}
+              <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30 flex justify-between items-center">
+                <p className="text-xs text-muted-foreground">API keys are stored securely & encrypted locally for your account.</p>
+                <Button onClick={handleSaveAi} disabled={isSavingAi} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                  {isSavingAi ? "Saving AI Configurations..." : "Save AI Configurations"}
                 </Button>
               </CardFooter>
             </Card>

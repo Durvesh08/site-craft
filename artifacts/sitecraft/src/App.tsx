@@ -68,6 +68,9 @@ function Router() {
       <Route path="/deployments">
         {() => <ProtectedRoute component={Deployments} />}
       </Route>
+      <Route path="/projects/:id/deployments">
+        {() => <ProtectedRoute component={Deployments} />}
+      </Route>
       <Route path="/prompts">
         {() => <ProtectedRoute component={Prompts} />}
       </Route>
