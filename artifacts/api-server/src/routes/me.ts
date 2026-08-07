@@ -18,7 +18,7 @@ router.get("/auth/me", (req: Request, res: Response) => {
     name: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email || "User",
     email: u.email ?? null,
     profileImage: u.profileImageUrl ?? null,
-    createdAt: u.createdAt.toISOString(),
+    createdAt: new Date().toISOString(), // Fallback since it's not in the JWT
   });
 });
 
