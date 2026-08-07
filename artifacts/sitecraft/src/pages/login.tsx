@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, ArrowRight, Loader2, Command } from "lucide-react";
+import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 
 export default function Login() {
   const { login, localLogin, localRegister } = useAuth();
@@ -53,11 +54,8 @@ export default function Login() {
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[100px] animate-pulse-slow pointer-events-none" />
         <div className="absolute top-[40%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent/20 blur-[120px] animate-float pointer-events-none" />
 
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <span className="font-bold text-2xl tracking-tight">SiteCraft</span>
+        <div className="relative z-10">
+          <ZovaixLogo size="lg" />
         </div>
 
         <div className="relative z-10 space-y-6 max-w-lg">

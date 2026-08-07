@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
+import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 import {
   LayoutDashboard,
   PlusCircle,
@@ -37,14 +38,9 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       )}
     >
       {/* Top Brand Logo */}
-      <div className="flex h-20 shrink-0 items-center px-8 border-b border-white/5">
+      <div className="flex h-20 shrink-0 items-center px-6 border-b border-white/5">
         <Link href="/dashboard" className="flex items-center gap-3 group w-full outline-none">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/40 group-active:scale-95">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <span className="font-bold text-xl tracking-tight text-foreground/90 group-hover:text-foreground transition-colors">
-            SiteCraft
-          </span>
+          <ZovaixLogo size="sm" />
         </Link>
       </div>
 

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { soundEngine } from "@/lib/sound-effects";
 import { CommandPalette } from "@/components/ui/command-palette";
+import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 
 type Viewport = "desktop" | "tablet" | "mobile";
 
@@ -57,7 +58,7 @@ export default function ProjectEditor() {
     {
       id: "init",
       sender: "ai",
-      text: "I'm your AI Design Partner. Select any section on the canvas or type what you want to transform.",
+      text: "I'm your AI Design Partner. Direct what you want to edit on the page.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -189,11 +190,9 @@ export default function ProjectEditor() {
         {/* Left: Project & Page Switcher */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => setLocation("/dashboard")}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
-              <Sparkles className="h-4 w-4" />
-            </div>
+            <ZovaixLogo size="sm" showLabel={false} />
             <span className="font-extrabold text-sm tracking-tight text-foreground">
-              {project?.name || "SiteCraft Studio"}
+              {project?.name || "ZOVAIX SITES Studio"}
             </span>
           </div>
 

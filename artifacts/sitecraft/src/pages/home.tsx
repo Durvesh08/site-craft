@@ -14,6 +14,7 @@ import { TestimonialsShowcase } from "@/components/landing/testimonials-showcase
 import { InteractiveFAQ } from "@/components/landing/interactive-faq";
 import { ActivityStream } from "@/components/dashboard/activity-stream";
 import { soundEngine } from "@/lib/sound-effects";
+import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -37,8 +38,8 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#030305]">
         <div className="animate-pulse flex flex-col items-center gap-4">
-          <Sparkles className="h-8 w-8 text-primary animate-spin-slow" />
-          <p className="text-muted-foreground font-mono text-sm tracking-widest">INITIALIZING SITECRAFT CORE</p>
+          <ZovaixLogo size="lg" showLabel={false} />
+          <p className="text-muted-foreground font-mono text-sm tracking-widest">INITIALIZING ZOVAIX SITES CORE</p>
         </div>
       </div>
     );
@@ -61,13 +62,8 @@ export default function Home() {
 
       {/* Floating VisionOS Glass Dock Navbar */}
       <header className="fixed top-6 left-1/2 -translate-x-1/2 h-16 px-6 glass rounded-2xl border border-white/10 flex items-center justify-between z-50 w-full max-w-4xl shadow-2xl backdrop-blur-2xl">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setLocation("/")}>
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-indigo-500 to-accent text-primary-foreground shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <span className="font-black text-xl tracking-tight text-foreground">
-            SiteCraft OS
-          </span>
+        <div className="cursor-pointer" onClick={() => setLocation("/")}>
+          <ZovaixLogo size="sm" />
         </div>
 
         <div className="flex items-center gap-4">

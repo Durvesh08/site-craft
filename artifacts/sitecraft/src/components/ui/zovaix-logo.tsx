@@ -45,7 +45,7 @@ export function ZovaixLogo({ className, size = "md", showLabel = true }: ZovaixL
 
       {/* Brand Text */}
       {showLabel && (
-        <span className={cn("font-extrabold tracking-tight text-foreground font-display flex items-center gap-1", textSizeClass)}>
+        <span className={cn("font-extrabold tracking-tight text-foreground flex items-center gap-1", textSizeClass)}>
           ZOVAIX<span className="text-primary font-mono text-[0.85em] font-semibold">SITES</span>
         </span>
       )}
