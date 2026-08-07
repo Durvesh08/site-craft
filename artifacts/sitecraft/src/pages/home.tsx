@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { Zap, Sparkles, ArrowRight, CheckCircle2, Command, Cpu, Globe, Code2, Play, Layers, ShieldCheck, Terminal, Rocket } from "lucide-react";
+import { Zap, Sparkles, ArrowRight, CheckCircle2, Command } from "lucide-react";
 import { CursorGlow } from "@/components/ui/cursor-glow";
 import { AICoreCanvas } from "@/components/canvas/ai-core-canvas";
 import { ChapterConstellation } from "@/components/narrative/chapter-constellation";
@@ -10,12 +10,10 @@ import { ChapterSynthesis } from "@/components/narrative/chapter-synthesis";
 import { ChapterTopology } from "@/components/narrative/chapter-topology";
 import { ChapterDashboardPreview } from "@/components/narrative/chapter-dashboard-preview";
 import { ChapterIntegrations } from "@/components/narrative/chapter-integrations";
-import { LiveComponentSandbox } from "@/components/landing/live-component-sandbox";
 import { BeforeAfterSlider } from "@/components/landing/before-after";
 import { TestimonialsShowcase } from "@/components/landing/testimonials-showcase";
 import { InteractiveFAQ } from "@/components/landing/interactive-faq";
 import { ActivityStream } from "@/components/dashboard/activity-stream";
-import { BrowserMockup } from "@/components/ui/browser-mockup";
 import { soundEngine } from "@/lib/sound-effects";
 
 export default function Home() {
@@ -83,7 +81,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* 10-CHAPTER NARRATIVE */}
+      {/* CONTINUOUS SCROLL NARRATIVE */}
       <main className="flex-1 flex flex-col items-center w-full z-10 relative">
         
         {/* CHAPTER 01: THE BEGINNING */}
@@ -148,42 +146,23 @@ export default function Home() {
         {/* CHAPTER 04: THOUGHT BECOMES INTERFACE */}
         <ChapterSynthesis />
 
-        {/* CHAPTER 05: CODE MATERIALIZES */}
-        <LiveComponentSandbox />
+        {/* CHAPTER 05: HOLOGRAPHIC BEFORE/AFTER TRANSFORMATION */}
+        <BeforeAfterSlider />
 
-        {/* CHAPTER 06: COMPONENTS ASSEMBLE */}
-        <section className="w-full max-w-5xl px-6 py-24 z-10">
-          <div className="text-center mb-8">
-            <h3 className="text-xs font-mono uppercase tracking-widest text-primary font-bold">CHAPTER 06 — COMPONENTS ASSEMBLE</h3>
-            <h2 className="text-4xl font-extrabold text-foreground mt-2">Handcrafted OS Frame</h2>
-          </div>
-          <BrowserMockup url={`https://app.sitecraft.ai/preview?preset=${encodeURIComponent(activeChip)}`}>
-            <div className="p-12 text-center space-y-6 bg-gradient-to-br from-slate-900 via-primary/10 to-purple-950 min-h-[360px] flex flex-col justify-center items-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-mono font-bold">
-                <Zap className="h-3.5 w-3.5" /> SYNTHESIZED OS INTERFACE
-              </div>
-              <h2 className="text-4xl font-extrabold text-foreground">{activeChip} Operating System</h2>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                "{prompt}"
-              </p>
-            </div>
-          </BrowserMockup>
-        </section>
-
-        {/* CHAPTER 07: DEPLOYMENT HAPPENS */}
+        {/* CHAPTER 06: DEPLOYMENT HAPPENS */}
         <ChapterTopology />
 
-        {/* CHAPTER 08: LIVE OPERATING SYSTEM */}
+        {/* CHAPTER 07: LIVE OPERATING SYSTEM */}
         <ChapterDashboardPreview />
 
-        {/* CHAPTER 09: EVERYTHING IS CONNECTED */}
+        {/* CHAPTER 08: EVERYTHING IS CONNECTED */}
         <ChapterIntegrations />
         <TestimonialsShowcase />
 
-        {/* CHAPTER 10: LAUNCH */}
+        {/* CHAPTER 09: FREQUENTLY ASKED QUESTIONS */}
         <InteractiveFAQ />
 
-        {/* PRICING MATRIX */}
+        {/* CHAPTER 10: PRICING MATRIX */}
         <section className="w-full max-w-5xl mx-auto px-6 py-24">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">
