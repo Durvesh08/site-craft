@@ -18,7 +18,7 @@ const cinematicTimeline: SceneConfig[] = [
     frameCount: 91,
     padLength: 3, // 001 - 091
     extension: 'jpg',
-    scrollRange: [0, 0.6], // First 60% of scroll
+    scrollRange: [0, 0.45], // First 45% of scroll
     resolution: [3840, 1920],
   },
   {
@@ -27,8 +27,17 @@ const cinematicTimeline: SceneConfig[] = [
     frameCount: 25,
     padLength: 3, // 001 - 025
     extension: 'jpg',
-    scrollRange: [0.6, 1.0], // Remaining scroll
+    scrollRange: [0.45, 0.70], // Middle 25% of scroll
     resolution: [1920, 1080],
+  },
+  {
+    id: 'scene_1',
+    pathPrefix: '/cinematic/scene_1/videoplayback_',
+    frameCount: 81,
+    padLength: 3, // 001 - 081
+    extension: 'jpg',
+    scrollRange: [0.70, 1.0], // Final 30% of scroll (Pricing/Footer)
+    resolution: [3840, 1920],
   },
 ];
 

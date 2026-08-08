@@ -18,29 +18,34 @@ const PREVIEWS = [
 ];
 
 function FloatingPreview({ index, src, meta, scrollProgress }: { index: number, src: string, meta: string, scrollProgress: MotionValue<number> }) {
-  // Story phases mapped across [0.10, 0.85] global scroll range
-  const rangePerItem = 0.75 / PREVIEWS.length; // 0.15 per item
+  // Story phases mapped across [0.10, 0.70] global scroll range (so it finishes before Pricing)
+  const rangePerItem = 0.60 / PREVIEWS.length; // 0.12 per item
   
-  // We want overlapping! Next item starts fading in BEFORE current item fully fades out.
-  // Overlap by 0.05
-  const start = 0.10 + (index * (rangePerItem - 0.03)); 
+  // Overlap so the next item starts before the current one finishes
+  const start = 0.10 + (index * (rangePerItem - 0.04)); 
   const center = start + (rangePerItem / 2);
   const end = start + rangePerItem;
 
-  const opacity = useTransform(scrollProgress, [start, start + 0.05, end - 0.05, end], [0, 1, 1, 0]);
-  const scale = useTransform(scrollProgress, [start, end], [0.85, 1.15]);
+  const opacity = useTransform(scrollProgress, [start, start + 0.04, end - 0.04, end], [0, 1, 1, 0]);
+  const scale = useTransform(scrollProgress, [start, center, end], [0.8, 1.05, 0.85]);
   const y = useTransform(scrollProgress, [start, center, end], [100, 0, -100]);
+  
+  // Sweeping 3D parallax alternating by index
+  const isEven = index % 2 === 0;
+  const x = useTransform(scrollProgress, [start, center, end], [isEven ? 100 : -100, 0, isEven ? -100 : 100]);
+  const rotateY = useTransform(scrollProgress, [start, center, end], [isEven ? 15 : -15, 0, isEven ? -15 : 15]);
+  const rotateZ = useTransform(scrollProgress, [start, center, end], [isEven ? -5 : 5, 0, isEven ? 5 : -5]);
 
   return (
     <motion.div 
-      className="absolute inset-0 flex items-center justify-center pointer-events-none"
-      style={{ opacity, scale, y }}
+      className="absolute inset-0 flex items-center justify-center pointer-events-none perspective-[2000px]"
+      style={{ opacity, scale, y, x, rotateY, rotateZ }}
     >
       <div className="relative w-[85vw] max-w-[1100px] aspect-[16/10] sm:aspect-video rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.6)] border border-white/10 pointer-events-auto">
         <img src={src} alt="Website Preview" className="w-full h-full object-cover" />
         
         {/* Floating Metadata */}
-        <div className="absolute left-6 sm:left-10 bottom-6 sm:bottom-10 p-4 sm:p-5 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl">
+        <div className="absolute left-6 sm:left-10 bottom-6 sm:bottom-10 p-4 sm:p-5 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl" style={{ transform: "translateZ(50px)" }}>
           <p className="text-xs sm:text-sm font-mono text-[#F5F3EE] tracking-[0.2em]">{meta}</p>
         </div>
       </div>
@@ -175,23 +180,21 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── PRICING & CTA (Opaque sections at the very end to cover the canvas) ── */}
-        <section id="pricing" className="w-full py-32 px-6 relative z-20 bg-[#070707] border-t border-white/5">
-          <div className="max-w-4xl mx-auto space-y-16">
+        {/* ── PRICING & CTA ── */}
+        <section id="pricing" className="w-full py-24 px-6 relative z-20 bg-black/40 backdrop-blur-3xl border-t border-white/10">
+          <div className="max-w-4xl mx-auto space-y-12">
             <div className="text-center space-y-3">
               <span className="text-xs font-mono text-white/50 tracking-widest uppercase">TRANSPARENT VALUE</span>
               <h2 className="text-3xl font-extrabold tracking-tight">Simple Pricing</h2>
-              <p className="text-sm text-white/60">Start building for free, upgrade when you need to connect domains.</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="p-8 rounded-3xl border border-white/10 flex flex-col justify-between bg-white/[0.02]">
+              <div className="p-8 rounded-3xl border border-white/10 flex flex-col justify-between bg-white/[0.02] backdrop-blur-md">
                 <div>
                   <h3 className="text-lg font-bold text-white mb-2">Free</h3>
                   <div className="flex items-baseline gap-2 mb-4">
                     <span className="text-4xl font-extrabold text-white">₹0</span>
                   </div>
-                  <p className="text-sm text-white/50 mb-6 pb-6 border-b border-white/10">Perfect for exploring the creative studio.</p>
                   <ul className="space-y-4 text-sm text-white/70">
                     <li className="flex items-center gap-3">
                       <CheckCircle2 className="h-4 w-4 text-white/40 shrink-0" />
@@ -203,12 +206,12 @@ export default function Home() {
                     </li>
                   </ul>
                 </div>
-                <Button variant="outline" className="w-full h-12 rounded-xl text-xs font-semibold mt-8 border-white/10 hover:bg-white/5 text-white" onClick={goToLogin}>
+                <Button variant="outline" className="w-full h-12 rounded-xl text-xs font-semibold mt-8 border-white/10 hover:bg-white/5 text-white bg-transparent" onClick={goToLogin}>
                   Start for Free
                 </Button>
               </div>
 
-              <div className="p-8 rounded-3xl border border-white/20 flex flex-col justify-between relative shadow-2xl bg-white/[0.04]">
+              <div className="p-8 rounded-3xl border border-white/20 flex flex-col justify-between relative shadow-2xl bg-white/[0.06] backdrop-blur-md">
                 <div className="absolute top-0 inset-x-0 h-1 bg-white rounded-t-3xl" />
                 <div>
                   <h3 className="text-lg font-bold text-white mb-2">Pro</h3>
@@ -216,7 +219,6 @@ export default function Home() {
                     <span className="text-4xl font-extrabold text-white">₹499</span>
                     <span className="text-xs text-white/50">/ month</span>
                   </div>
-                  <p className="text-sm text-white/50 mb-6 pb-6 border-b border-white/10">For professionals and serious creators.</p>
                   <ul className="space-y-4 text-sm text-white/90 font-medium">
                     <li className="flex items-center gap-3">
                       <CheckCircle2 className="h-4 w-4 text-white shrink-0" />
@@ -241,9 +243,9 @@ export default function Home() {
         </section>
 
         {/* ── CTA & FOOTER ── */}
-        <section className="w-full py-32 px-6 text-center relative z-20 bg-[#070707]">
+        <section className="w-full py-24 px-6 text-center relative z-20 bg-transparent">
           <div className="max-w-2xl mx-auto space-y-8">
-            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white">Your next website starts with an idea.</h2>
+            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white drop-shadow-2xl">Your next website starts with an idea.</h2>
             <Button size="lg" className="h-14 px-10 rounded-xl text-sm font-semibold gap-2 bg-white text-black hover:bg-white/90 shadow-2xl shadow-white/10" onClick={goToLogin}>
               Start Creating <ArrowRight className="h-4 w-4" />
             </Button>
@@ -251,7 +253,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="w-full py-12 px-6 bg-[#070707] border-t border-white/5 z-20 relative">
+      <footer className="w-full py-12 px-6 bg-black/60 backdrop-blur-3xl border-t border-white/10 z-20 relative">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
             <ZovaixLogo size="sm" showLabel={true} />
