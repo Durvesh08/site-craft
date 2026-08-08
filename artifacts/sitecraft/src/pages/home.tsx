@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, CheckCircle2, Sparkles, ArrowUpRight, Check, Monitor, Tablet, Smartphone, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, CheckCircle2, Sparkles, ArrowUpRight, Check, Monitor, Tablet, Smartphone, Volume2, VolumeX, ShieldCheck, Cpu } from "lucide-react";
 import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 import { soundEngine } from "@/lib/sound-effects";
 import { ZovaixFabric } from "@/components/ui/creative/zovaix-fabric";
@@ -17,7 +17,7 @@ interface Zovaix3DObjectProps {
 }
 
 function Zovaix3DObject({ scrollYProgress }: Zovaix3DObjectProps) {
-  // Map scroll progress to layer alignments
+  // Map scroll progress to layer alignments across Z-space
   const layerZ_Back = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [-250, 0, 150, 300]);
   const layerZ_Middle = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [-100, 0, 180, 320]);
   const layerZ_Front = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [150, 0, 220, 350]);
@@ -171,6 +171,11 @@ export default function Home() {
     });
   }, [demoScroll]);
 
+  // Set document title & metadata dynamically for SEO (Stage 8)
+  useEffect(() => {
+    document.title = "ZovaiX Sites — AI Website Building Platform & Creative Studio";
+  }, []);
+
   // Initialize Lenis Smooth Scroll
   useEffect(() => {
     const lenis = new Lenis({
@@ -210,7 +215,7 @@ export default function Home() {
       {/* Interactive Spatial Grid Backdrop */}
       <ZovaixFabric />
 
-      {/* ── HEADER ── */}
+      {/* ── HEADER (STAGE 1) ── */}
       <header className="fixed top-6 left-1/2 -translate-x-1/2 h-16 px-6 rounded-2xl flex items-center justify-between z-50 w-full max-w-5xl transition-all duration-300 backdrop-blur-md" style={{ background: 'rgba(9, 9, 15, 0.75)', border: '1px solid var(--surface-border)' }}>
         <div className="cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
           <ZovaixLogo size="sm" />
@@ -238,481 +243,483 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── SCENE 01: ARRIVAL & HERO SCROLLTYTELLING ── */}
-      <div ref={heroContainerRef} className="h-[230vh] w-full relative z-10">
-        
-        {/* Sticky Hero Wrapper */}
-        <div className="sticky top-0 h-screen w-full flex flex-col items-center justify-center overflow-hidden">
+      {/* ── STAGE 1 & 2: HERO & SCROLL-CONTROLLED 3D ASSEMBLY ── */}
+      <main>
+        <div ref={heroContainerRef} className="h-[230vh] w-full relative z-10">
           
-          {/* Animated Hero Typography */}
-          <motion.div 
-            style={{ scale: heroTitleScale, opacity: heroTitleOpacity, y: heroTitleY }}
-            className="max-w-4xl px-6 text-center space-y-6 select-none"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide" style={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>ZovaiX Sites v2.0</span>
-            </div>
+          {/* Sticky Hero Wrapper */}
+          <div className="sticky top-0 h-screen w-full flex flex-col items-center justify-center overflow-hidden">
             
-            {/* Mixed-typography Art-Directed Title */}
-            <h1 className="text-[52px] sm:text-[92px] font-extrabold tracking-[-0.04em] leading-[0.9] text-foreground text-hero uppercase flex flex-col items-center justify-center">
-              <span>CREATE</span>
-              <span className="font-serif italic font-light text-primary lowercase tracking-wide my-1">without</span>
-              <span>LIMITS.</span>
-            </h1>
-            
-            <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Describe your vision. ZovaiX drafts bespoke layouts, writes natural copy, and delivers a professional website in seconds.
-            </p>
-            
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button size="lg" className="w-full sm:w-auto h-12 px-8 rounded-xl text-sm font-semibold gap-2 btn-premium shadow-lg shadow-primary/20" onClick={goToLogin}>
-                Start Creating <ArrowRight className="h-4 w-4" />
-              </Button>
-              <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 rounded-xl text-sm font-semibold hover:bg-[var(--surface-2)] transition-colors border-border/60" onClick={() => {
-                document.getElementById("showcase")?.scrollIntoView({ behavior: "smooth" });
-              }}>
-                See Showcase
-              </Button>
-            </div>
-          </motion.div>
-
-          {/* Procedural 3D Visual Object assembly (Emerging underneath the text) */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 mt-32" style={{ perspective: "1500px" }}>
-            <Zovaix3DObject scrollYProgress={heroScroll} />
-          </div>
-
-        </div>
-      </div>
-
-      {/* ── SCENE 02: TRUSTED & PROBLEM STATEMENT ── */}
-      <section className="w-full py-20 px-6 border-y relative z-20 bg-[var(--surface-0)]" style={{ borderColor: 'var(--surface-border)' }}>
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
-          <div className="text-left space-y-3 max-w-md">
-            <h2 className="text-3xl font-extrabold tracking-tight leading-tight text-gradient-warm">
-              The AI landing page era has ended.
-            </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Standard AI page builders copy templates, resulting in static, repetitive layouts. ZovaiX drafts bespoke, tailored structures from scratch.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-6 shrink-0 w-full md:w-auto">
-            <div className="p-5 rounded-2xl border flex flex-col gap-2" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-              <span className="text-xs font-mono text-primary font-bold uppercase tracking-wider">01. Bespoke Code</span>
-              <p className="text-xs text-muted-foreground">No template tags. ZovaiX renders custom modular code from your brief summary.</p>
-            </div>
-            <div className="p-5 rounded-2xl border flex flex-col gap-2" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-              <span className="text-xs font-mono text-primary font-bold uppercase tracking-wider">02. Design Memory</span>
-              <p className="text-xs text-muted-foreground">The AI remembers color weights, font scaling, and alignment choices across updates.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SCENE 03: 3D DEPTH WEBSITE SHOWCASE (HORIZONTAL GALLERY) ── */}
-      <div id="showcase" ref={showcaseContainerRef} className="h-[250vh] w-full relative z-20 bg-[var(--surface-0)]">
-        
-        {/* Sticky showcase deck */}
-        <div className="sticky top-0 h-screen w-full flex flex-col justify-center overflow-hidden">
-          
-          <div className="max-w-5xl mx-auto px-6 mb-10 text-left">
-            <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">REAL WEBSITE DEPLOYMENTS</span>
-            <h2 className="text-3xl font-extrabold tracking-tight mt-2">Crafted with ZovaiX</h2>
-            <p className="text-sm text-muted-foreground mt-1">Believable layouts tailored for beauty and conversion.</p>
-          </div>
-
-          {/* Horizontal Scrolly Deck of Explodable Previews */}
-          <div className="relative w-full flex items-center pl-6 sm:pl-[20%]">
+            {/* Animated Hero Typography */}
             <motion.div 
-              style={{ x: showcaseX }}
-              className="flex gap-8 w-max pr-[400px]"
+              style={{ scale: heroTitleScale, opacity: heroTitleOpacity, y: heroTitleY }}
+              className="max-w-4xl px-6 text-center space-y-6 select-none"
             >
-              {[
-                { 
-                  title: "Villa Sempione", 
-                  category: "Architecture", 
-                  logo: "K R O N O S",
-                  headline: "Spaces defined by stone, light & shadow.",
-                  image: "/images/luxury_architecture.jpg",
-                  bg: "#0B0C10" 
-                },
-                { 
-                  title: "Apex Finance", 
-                  category: "SaaS Startup", 
-                  logo: "▲ A P E X",
-                  headline: "Autonomous accounting for high-scale teams.",
-                  image: "/images/abstract_finance.jpg",
-                  bg: "#070B19" 
-                },
-                { 
-                  title: "L'Atelier Milan", 
-                  category: "Fashion Brand", 
-                  logo: "L ' A T E L I E R",
-                  headline: "Handcrafted leather goods made in Italy.",
-                  image: "/images/minimal_fashion.jpg",
-                  bg: "#14100E" 
-                },
-                { 
-                  title: "Osteria Doria", 
-                  category: "Restaurant", 
-                  logo: "O S T E R I A",
-                  headline: "Rustic culinary heritage in Zurich Enge.",
-                  image: "/images/luxury_architecture.jpg",
-                  bg: "#0B100C" 
-                }
-              ].map((site, i) => (
-                <FragmentedPreview
-                  key={i}
-                  title={site.title}
-                  category={site.category}
-                  image={site.image}
-                  logo={site.logo}
-                  headline={site.headline}
-                  bgColor={site.bg}
-                />
-              ))}
-            </motion.div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* ── SCENE 04: AI GENERATION DEMONSTRATION ── */}
-      <div id="how-it-works" ref={demoContainerRef} className="h-[250vh] w-full relative z-20 bg-[var(--surface-0)]">
-        
-        {/* Sticky Demo Wrapper */}
-        <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden">
-          
-          <div className="max-w-5xl w-full px-6 grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-            
-            {/* Left: Input & Steps */}
-            <div className="md:col-span-5 space-y-6 text-left">
-              <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">REAL-TIME ASSEMBLY</span>
-              <h2 className="text-3xl font-extrabold tracking-tight">How ZovaiX Builds</h2>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide" style={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
+                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                <span>ZovaiX Sites v2.0</span>
+              </div>
               
-              {/* Text Input mock */}
-              <div className="p-4 rounded-xl border relative" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-                <p className="text-sm font-sans text-foreground/90 italic">
-                  "Create a premium website for a luxury architecture studio."
-                </p>
-                <div className="absolute right-4 bottom-4 h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
-                  <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
-                </div>
-              </div>
-
-              {/* Progress checklist */}
-              <div className="space-y-3 font-mono text-xs">
-                {[
-                  "Analyzing brand strategy brief",
-                  "Designing layout grids & flexboxes",
-                  "Matching typography scale & pairings",
-                  "Synthesizing Obsidian color theme",
-                  "Choreographing Lenis smooth scrolling",
-                  "Applying clean semantic code exports"
-                ].map((step, idx) => {
-                  const isChecked = demoStep >= idx * 1.8;
-                  const isCurrent = demoStep >= idx * 1.8 && demoStep < (idx + 1) * 1.8;
-                  
-                  return (
-                    <div 
-                      key={idx} 
-                      className={`flex items-center gap-3 transition-colors duration-300 ${isChecked ? "text-foreground" : isCurrent ? "text-primary" : "text-muted-foreground/30"}`}
-                    >
-                      <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${isChecked ? "border-primary bg-primary/10 text-primary" : "border-border/50 bg-transparent"}`}>
-                        {isChecked && <Check className="w-3 h-3" />}
-                      </div>
-                      <span className={isCurrent ? "font-bold" : ""}>{step}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Right: Live Wireframe → Finished Website Card */}
-            <div className="md:col-span-7 w-full flex items-center justify-center">
-              <div className="w-full max-w-[480px] rounded-2xl border overflow-hidden shadow-2xl relative" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-                
-                {/* Browser Mockup Chrome */}
-                <div className="h-10 border-b flex items-center justify-between px-4" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}>
-                  <div className="flex gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-white/10" />
-                    <div className="w-2 h-2 rounded-full bg-white/10" />
-                    <div className="w-2 h-2 rounded-full bg-white/10" />
-                  </div>
-                  <span className="text-[9px] font-mono text-muted-foreground/50">live-builder.app</span>
-                  <div className="w-10" />
-                </div>
-
-                {/* Transition container depending on demoStep */}
-                <div className="p-8 h-80 relative flex flex-col justify-between overflow-hidden">
-                  
-                  {/* Wireframe grids (Visible in early steps) */}
-                  <div className={`absolute inset-0 grid grid-cols-6 grid-rows-6 pointer-events-none transition-opacity duration-500 ${demoStep < 4 ? "opacity-20" : "opacity-0"}`}>
-                    {Array.from({ length: 36 }).map((_, idx) => (
-                      <div key={idx} className="border-[0.5px] border-dashed border-white/50" />
-                    ))}
-                  </div>
-
-                  {/* Logo (Visible from step 2) */}
-                  <div className={`transition-all duration-500 ${demoStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}`}>
-                    <span className="font-bold tracking-widest text-[11px] uppercase">K R O N O S</span>
-                  </div>
-
-                  {/* Title (Visible from step 3) */}
-                  <div className="space-y-3 relative z-10">
-                    <div className={`h-8 w-3/4 rounded bg-white/5 transition-all duration-500 ${demoStep >= 3 ? "hidden" : "block"}`} />
-                    <h3 className={`text-2xl font-serif text-foreground transition-all duration-500 ${demoStep >= 3 ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"}`}>
-                      Villa Sempione
-                    </h3>
-                    <p className={`text-xs text-muted-foreground max-w-xs transition-all duration-500 ${demoStep >= 4 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
-                      Crafting structural symmetry defined by stone and location. Zurich.
-                    </p>
-                  </div>
-
-                  {/* Image render (Visible from step 5) */}
-                  <div className="relative w-full aspect-[21/9] rounded-lg overflow-hidden border border-white/5 bg-white/5">
-                    <div className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${demoStep >= 5 ? "opacity-80" : "opacity-0"}`} style={{ backgroundImage: `url('/images/luxury_architecture.jpg')` }} />
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-      {/* ── SCENE 05: EDITORIAL PARALLAX SHOWCASE ── */}
-      <section id="projects" className="w-full py-32 px-6 bg-[var(--surface-0)] border-t" style={{ borderColor: 'var(--surface-border)' }}>
-        <div className="max-w-5xl mx-auto space-y-24">
-          
-          <div className="max-w-2xl text-left space-y-4">
-            <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">FINE ART DIRECTION</span>
-            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Real-World Case Studies</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              ZovaiX does not create plain template blocks. We structure layouts specifically for editorial impact, balancing typography sizes, layout flow, and image parallax weight.
-            </p>
-          </div>
-
-          {/* Project 1: Kronos Studio */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-            <div className="md:col-span-7 aspect-[4/3] rounded-3xl overflow-hidden border relative" style={{ borderColor: 'var(--surface-border)' }}>
-              <ParallaxImage src="/images/luxury_architecture.jpg" alt="Villa Sempione architecture" speed={0.8} />
-            </div>
-            <div className="md:col-span-5 text-left space-y-6">
-              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Case Study 01</span>
-              <h3 className="text-3xl font-serif text-foreground font-light leading-tight">Kronos Architecture</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                A minimalist portfolio design tailored for a boutique Zurich-based architect studio. The site relies on dramatic asymmetric layout grids and raw structural image renders.
+              {/* Mixed-typography Art-Directed Title */}
+              <h1 className="text-[52px] sm:text-[92px] font-extrabold tracking-[-0.04em] leading-[0.9] text-foreground text-hero uppercase flex flex-col items-center justify-center">
+                <span>CREATE</span>
+                <span className="font-serif italic font-light text-primary lowercase tracking-wide my-1">without</span>
+                <span>LIMITS.</span>
+              </h1>
+              
+              <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+                Describe your business vision. ZovaiX drafts bespoke layouts, writes natural copy, and delivers a professional website in seconds.
               </p>
-              <div className="pt-2">
-                <Button variant="outline" className="rounded-xl border-border/60 hover:bg-[var(--surface-2)]" onClick={goToLogin}>
-                  Explore Layout details →
+              
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Button size="lg" className="w-full sm:w-auto h-12 px-8 rounded-xl text-sm font-semibold gap-2 btn-premium shadow-lg shadow-primary/20" onClick={goToLogin}>
+                  Start Creating <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 rounded-xl text-sm font-semibold hover:bg-[var(--surface-2)] transition-colors border-border/60" onClick={() => {
+                  document.getElementById("showcase")?.scrollIntoView({ behavior: "smooth" });
+                }}>
+                  See Showcase
                 </Button>
               </div>
-            </div>
-          </div>
+            </motion.div>
 
-          {/* Project 2: L'Atelier Milan */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
-            <div className="md:col-span-5 text-left space-y-6 order-2 md:order-1">
-              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Case Study 02</span>
-              <h3 className="text-3xl font-serif text-foreground font-light leading-tight">L'Atelier Milan</h3>
+            {/* Procedural 3D Visual Object assembly (Emerging underneath text) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 mt-32" style={{ perspective: "1500px" }}>
+              <Zovaix3DObject scrollYProgress={heroScroll} />
+            </div>
+
+          </div>
+        </div>
+
+        {/* ── PROBLEM STATEMENT & BESPOKE ADVANTAGE ── */}
+        <section className="w-full py-20 px-6 border-y relative z-20 bg-[var(--surface-0)]" style={{ borderColor: 'var(--surface-border)' }}>
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
+            <div className="text-left space-y-3 max-w-md">
+              <h2 className="text-3xl font-extrabold tracking-tight leading-tight text-gradient-warm">
+                The AI landing page era has ended.
+              </h2>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                A fashion ecommerce lookbook designed for custom artisan leather goods. Highly contrast lighting style, warm studio backdrops, and simple typography.
+                Standard AI page builders copy templates, resulting in static, repetitive layouts. ZovaiX drafts bespoke, tailored structures from scratch.
               </p>
-              <div className="pt-2">
-                <Button variant="outline" className="rounded-xl border-border/60 hover:bg-[var(--surface-2)]" onClick={goToLogin}>
-                  Explore Layout details →
-                </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-6 shrink-0 w-full md:w-auto">
+              <div className="p-5 rounded-2xl border flex flex-col gap-2" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <span className="text-xs font-mono text-primary font-bold uppercase tracking-wider">01. Bespoke Code</span>
+                <p className="text-xs text-muted-foreground">No template tags. ZovaiX renders custom modular code from your brief summary.</p>
+              </div>
+              <div className="p-5 rounded-2xl border flex flex-col gap-2" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <span className="text-xs font-mono text-primary font-bold uppercase tracking-wider">02. Design Memory</span>
+                <p className="text-xs text-muted-foreground">The AI remembers color weights, font scaling, and alignment choices across updates.</p>
               </div>
             </div>
-            <div className="md:col-span-7 aspect-[4/3] rounded-3xl overflow-hidden border relative order-1 md:order-2" style={{ borderColor: 'var(--surface-border)' }}>
-              <ParallaxImage src="/images/minimal_fashion.jpg" alt="L'Atelier fashion model" speed={0.9} />
-            </div>
           </div>
+        </section>
 
-        </div>
-      </section>
-
-      {/* ── SCENE 06: INTERACTIVE EDITOR PREVIEW ── */}
-      <section className="w-full py-28 px-6 bg-[var(--surface-1)] border-y" style={{ borderColor: 'var(--surface-border)' }}>
-        <div className="max-w-5xl mx-auto space-y-12">
+        {/* ── STAGE 3 & 4: ZOVALX SHOWCASE GALLERY & IMAGE FRAGMENTATION ── */}
+        <section id="showcase" ref={showcaseContainerRef} className="h-[250vh] w-full relative z-20 bg-[var(--surface-0)]">
           
-          <div className="text-center space-y-3">
-            <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">CREATOR WORKSPACE</span>
-            <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Interactive Studio Editor</h2>
-            <p className="text-sm text-muted-foreground max-w-xl mx-auto">Inspect elements, customize layout themes, and toggle viewports. Simulated sandbox environment.</p>
-          </div>
-
-          <div className="rounded-2xl border shadow-2xl overflow-hidden" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}>
+          {/* Sticky showcase deck */}
+          <div className="sticky top-0 h-screen w-full flex flex-col justify-center overflow-hidden">
             
-            {/* Editor Workspace Header */}
-            <div className="h-14 border-b flex items-center justify-between px-6 bg-[var(--surface-1)]" style={{ borderColor: 'var(--surface-border)' }}>
-              <div className="flex items-center gap-3">
-                <ZovaixLogo size="sm" />
-                <span className="h-4 w-px bg-white/10" />
-                <span className="text-xs text-muted-foreground font-mono">Villa Sempione / Zurich</span>
-              </div>
+            <div className="max-w-5xl mx-auto px-6 mb-10 text-left">
+              <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">CONCEPT / GENERATED WITH ZOVAIX</span>
+              <h2 className="text-3xl font-extrabold tracking-tight mt-2">Crafted with ZovaiX</h2>
+              <p className="text-sm text-muted-foreground mt-1">Believable layouts tailored for beauty and conversion. Click cards to explode layers.</p>
+            </div>
 
-              {/* Viewport Control switchers */}
-              <div className="flex items-center gap-1 rounded-xl p-1 border" style={{ backgroundColor: 'var(--surface-0)', borderColor: 'var(--surface-border)' }}>
-                {(["desktop", "tablet", "mobile"] as const).map((device) => (
-                  <button
-                    key={device}
-                    onClick={() => {
-                      soundEngine.playTabSwitch();
-                      setPreviewDevice(device);
-                    }}
-                    className={`p-1.5 rounded-lg transition-colors ${previewDevice === device ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {device === "desktop" && <Monitor className="h-3.5 w-3.5" />}
-                    {device === "tablet" && <Tablet className="h-3.5 w-3.5" />}
-                    {device === "mobile" && <Smartphone className="h-3.5 w-3.5" />}
-                  </button>
+            {/* Horizontal Scrolly Deck of Explodable Previews */}
+            <div className="relative w-full flex items-center pl-6 sm:pl-[20%]">
+              <motion.div 
+                style={{ x: showcaseX }}
+                className="flex gap-8 w-max pr-[400px]"
+              >
+                {[
+                  { 
+                    title: "Villa Sempione", 
+                    category: "Architecture", 
+                    logo: "K R O N O S",
+                    headline: "Spaces defined by stone, light & shadow.",
+                    image: "/images/luxury_architecture.jpg",
+                    bg: "#0B0C10" 
+                  },
+                  { 
+                    title: "Apex Finance", 
+                    category: "SaaS Startup", 
+                    logo: "▲ A P E X",
+                    headline: "Autonomous accounting for high-scale teams.",
+                    image: "/images/abstract_finance.jpg",
+                    bg: "#070B19" 
+                  },
+                  { 
+                    title: "L'Atelier Milan", 
+                    category: "Fashion Brand", 
+                    logo: "L ' A T E L I E R",
+                    headline: "Handcrafted leather goods made in Italy.",
+                    image: "/images/minimal_fashion.jpg",
+                    bg: "#14100E" 
+                  },
+                  { 
+                    title: "Osteria Doria", 
+                    category: "Restaurant", 
+                    logo: "O S T E R I A",
+                    headline: "Rustic culinary heritage in Zurich Enge.",
+                    image: "/images/luxury_architecture.jpg",
+                    bg: "#0B100C" 
+                  }
+                ].map((site, i) => (
+                  <FragmentedPreview
+                    key={i}
+                    title={site.title}
+                    category={site.category}
+                    image={site.image}
+                    logo={site.logo}
+                    headline={site.headline}
+                    bgColor={site.bg}
+                  />
                 ))}
-              </div>
-
-              {/* Color palette engine toggle */}
-              <button 
-                onClick={() => {
-                  soundEngine.playToggle();
-                  setPreviewTheme(t => t === "dark" ? "light" : "dark");
-                }}
-                className="text-xs font-semibold px-3.5 py-1.5 rounded-xl border transition-colors hover:bg-[var(--surface-2)]"
-                style={{ backgroundColor: 'var(--surface-0)', borderColor: 'var(--surface-border)' }}
-              >
-                Theme: <span className="text-primary font-bold uppercase">{previewTheme}</span>
-              </button>
-            </div>
-
-            {/* Simulated Live Viewport Area */}
-            <div className="p-8 flex items-center justify-center min-h-[360px] relative transition-colors duration-500" style={{ backgroundColor: previewTheme === "dark" ? "#0F1015" : "#F5F5F7" }}>
-              <div 
-                className="transition-all duration-500 border rounded-2xl shadow-xl overflow-hidden flex flex-col justify-between"
-                style={{ 
-                  width: previewDevice === "desktop" ? "100%" : previewDevice === "tablet" ? "640px" : "320px",
-                  height: "280px",
-                  backgroundColor: previewTheme === "dark" ? "#0A0A0E" : "#FFFFFF",
-                  borderColor: previewTheme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)"
-                }}
-              >
-                <div className="p-6 h-full flex flex-col justify-between text-left">
-                  <span className={`text-[10px] font-mono tracking-widest uppercase ${previewTheme === "dark" ? "text-white/50" : "text-black/50"}`}>K R O N O S</span>
-                  <div className="space-y-2">
-                    <h3 className={`text-xl font-serif leading-tight transition-colors duration-300 ${previewTheme === "dark" ? "text-white" : "text-black"}`}>
-                       Villa Sempione
-                    </h3>
-                    <p className={`text-xs transition-colors duration-300 ${previewTheme === "dark" ? "text-muted-foreground" : "text-zinc-500"}`}>
-                      Bespoke structural design defined by Locarno location.
-                    </p>
-                  </div>
-                  <div className="h-10 w-full rounded bg-primary/20 border border-primary/30 flex items-center justify-center">
-                    <span className="text-primary text-[10px] font-mono font-bold tracking-widest uppercase">EXPLORE VILLA</span>
-                  </div>
-                </div>
-              </div>
+              </motion.div>
             </div>
 
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── SCENE 07: EDITORIAL PRICING ── */}
-      <section id="pricing" className="w-full py-28 px-6 relative z-20 bg-[var(--surface-0)]">
-        <div className="max-w-4xl mx-auto space-y-16">
-          <div className="text-center space-y-3">
-            <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">TRANSPARENT VALUE</span>
-            <h2 className="text-3xl font-extrabold tracking-tight">Simple Pricing</h2>
-            <p className="text-sm text-muted-foreground">Start building for free, upgrade when you need to connect domains.</p>
-          </div>
+        {/* ── STAGE 6: HOW ZOVAIX WORKS NARRATIVE ── */}
+        <section id="how-it-works" ref={demoContainerRef} className="h-[250vh] w-full relative z-20 bg-[var(--surface-0)]">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="p-8 rounded-2xl border flex flex-col justify-between" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-              <div>
-                <h3 className="text-lg font-bold text-foreground mb-2">Free</h3>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-extrabold text-foreground">₹0</span>
+          {/* Sticky Demo Wrapper */}
+          <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden">
+            
+            <div className="max-w-5xl w-full px-6 grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+              
+              {/* Left: Input & Steps */}
+              <div className="md:col-span-5 space-y-6 text-left">
+                <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">REAL-TIME ASSEMBLY</span>
+                <h2 className="text-3xl font-extrabold tracking-tight">How ZovaiX Builds</h2>
+                
+                {/* Text Input mock */}
+                <div className="p-4 rounded-xl border relative" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                  <p className="text-sm font-sans text-foreground/90 italic">
+                    "Create a premium website for a luxury architecture studio."
+                  </p>
+                  <div className="absolute right-4 bottom-4 h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30">
+                    <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-6 pb-6 border-b" style={{ borderColor: 'var(--surface-border)' }}>Perfect for exploring the creative studio.</p>
-                <ul className="space-y-4 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>1 Project</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>Basic Design AI</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>Community Support</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>Zovaix Subdomain</span>
-                  </li>
-                </ul>
+
+                {/* Progress checklist */}
+                <div className="space-y-3 font-mono text-xs">
+                  {[
+                    "Analyzing brand strategy brief",
+                    "Designing layout grids & flexboxes",
+                    "Matching typography scale & pairings",
+                    "Synthesizing Obsidian color theme",
+                    "Choreographing Lenis smooth scrolling",
+                    "Applying clean semantic code exports"
+                  ].map((step, idx) => {
+                    const isChecked = demoStep >= idx * 1.8;
+                    const isCurrent = demoStep >= idx * 1.8 && demoStep < (idx + 1) * 1.8;
+                    
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`flex items-center gap-3 transition-colors duration-300 ${isChecked ? "text-foreground" : isCurrent ? "text-primary" : "text-muted-foreground/30"}`}
+                      >
+                        <div className={`h-4.5 w-4.5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${isChecked ? "border-primary bg-primary/10 text-primary" : "border-border/50 bg-transparent"}`}>
+                          {isChecked && <Check className="w-3 h-3" />}
+                        </div>
+                        <span className={isCurrent ? "font-bold" : ""}>{step}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <Button variant="outline" className="w-full h-11 rounded-xl text-xs font-semibold mt-8 border-border/60 hover:bg-[var(--surface-2)]" onClick={goToLogin}>
-                Start for Free
-              </Button>
+
+              {/* Right: Live Wireframe → Finished Website Card */}
+              <div className="md:col-span-7 w-full flex items-center justify-center">
+                <div className="w-full max-w-[480px] rounded-2xl border overflow-hidden shadow-2xl relative" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                  
+                  {/* Browser Mockup Chrome */}
+                  <div className="h-10 border-b flex items-center justify-between px-4" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}>
+                    <div className="flex gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-white/10" />
+                      <div className="w-2 h-2 rounded-full bg-white/10" />
+                      <div className="w-2 h-2 rounded-full bg-white/10" />
+                    </div>
+                    <span className="text-[9px] font-mono text-muted-foreground/50">live-builder.app</span>
+                    <div className="w-10" />
+                  </div>
+
+                  {/* Transition container depending on demoStep */}
+                  <div className="p-8 h-80 relative flex flex-col justify-between overflow-hidden">
+                    
+                    {/* Wireframe grids (Visible in early steps) */}
+                    <div className={`absolute inset-0 grid grid-cols-6 grid-rows-6 pointer-events-none transition-opacity duration-500 ${demoStep < 4 ? "opacity-20" : "opacity-0"}`}>
+                      {Array.from({ length: 36 }).map((_, idx) => (
+                        <div key={idx} className="border-[0.5px] border-dashed border-white/50" />
+                      ))}
+                    </div>
+
+                    {/* Logo (Visible from step 2) */}
+                    <div className={`transition-all duration-500 ${demoStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}`}>
+                      <span className="font-bold tracking-widest text-[11px] uppercase">K R O N O S</span>
+                    </div>
+
+                    {/* Title (Visible from step 3) */}
+                    <div className="space-y-3 relative z-10">
+                      <div className={`h-8 w-3/4 rounded bg-white/5 transition-all duration-500 ${demoStep >= 3 ? "hidden" : "block"}`} />
+                      <h3 className={`text-2xl font-serif text-foreground transition-all duration-500 ${demoStep >= 3 ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95"}`}>
+                        Villa Sempione
+                      </h3>
+                      <p className={`text-xs text-muted-foreground max-w-xs transition-all duration-500 ${demoStep >= 4 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}>
+                        Crafting structural symmetry defined by stone and location. Zurich.
+                      </p>
+                    </div>
+
+                    {/* Image render (Visible from step 5) */}
+                    <div className="relative w-full aspect-[21/9] rounded-lg overflow-hidden border border-white/5 bg-white/5">
+                      <div className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${demoStep >= 5 ? "opacity-80" : "opacity-0"}`} style={{ backgroundImage: `url('/images/luxury_architecture.jpg')` }} />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
             </div>
 
-            <div className="p-8 rounded-2xl border flex flex-col justify-between relative shadow-lg" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--primary)' }}>
-              <div className="absolute top-0 inset-x-0 h-1 bg-primary rounded-t-2xl" />
-              <div className="absolute top-6 right-6 bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase border border-primary/20">
-                Creator
+          </div>
+        </section>
+
+        {/* ── EDITORIAL CASE STUDIES ── */}
+        <section id="projects" className="w-full py-32 px-6 bg-[var(--surface-0)] border-t" style={{ borderColor: 'var(--surface-border)' }}>
+          <div className="max-w-5xl mx-auto space-y-24">
+            
+            <div className="max-w-2xl text-left space-y-4">
+              <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">FINE ART DIRECTION</span>
+              <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Real-World Case Studies</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                ZovaiX does not create plain template blocks. We structure layouts specifically for editorial impact, balancing typography sizes, layout flow, and image parallax weight.
+              </p>
+            </div>
+
+            {/* Project 1: Kronos Studio */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+              <div className="md:col-span-7 aspect-[4/3] rounded-3xl overflow-hidden border relative" style={{ borderColor: 'var(--surface-border)' }}>
+                <ParallaxImage src="/images/luxury_architecture.jpg" alt="Villa Sempione architecture" speed={0.8} />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-foreground mb-2">Pro</h3>
-                <div className="flex items-baseline gap-2 mb-4">
-                  <span className="text-3xl font-extrabold text-foreground">₹499</span>
-                  <span className="text-xs text-muted-foreground">/ month</span>
+              <div className="md:col-span-5 text-left space-y-6">
+                <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Case Study 01</span>
+                <h3 className="text-3xl font-serif text-foreground font-light leading-tight">Kronos Architecture</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  A minimalist portfolio design tailored for a boutique Zurich-based architect studio. The site relies on dramatic asymmetric layout grids and raw structural image renders.
+                </p>
+                <div className="pt-2">
+                  <Button variant="outline" className="rounded-xl border-border/60 hover:bg-[var(--surface-2)]" onClick={goToLogin}>
+                    Explore Layout details →
+                  </Button>
                 </div>
-                <p className="text-sm text-muted-foreground mb-6 pb-6 border-b" style={{ borderColor: 'var(--surface-border)' }}>For professionals and serious creators.</p>
-                <ul className="space-y-4 text-sm text-foreground font-medium">
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>Unlimited Projects</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>Advanced Design AI</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>Priority Support</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>Custom Domains</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                    <span>Clean Code Export</span>
-                  </li>
-                </ul>
               </div>
-              <Button className="w-full h-11 rounded-xl text-xs font-semibold mt-8 btn-premium" onClick={goToLogin}>
-                Upgrade to Creator
-              </Button>
+            </div>
+
+            {/* Project 2: L'Atelier Milan */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+              <div className="md:col-span-5 text-left space-y-6 order-2 md:order-1">
+                <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Case Study 02</span>
+                <h3 className="text-3xl font-serif text-foreground font-light leading-tight">L'Atelier Milan</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  A fashion ecommerce lookbook designed for custom artisan leather goods. Highly contrast lighting style, warm studio backdrops, and simple typography.
+                </p>
+                <div className="pt-2">
+                  <Button variant="outline" className="rounded-xl border-border/60 hover:bg-[var(--surface-2)]" onClick={goToLogin}>
+                    Explore Layout details →
+                  </Button>
+                </div>
+              </div>
+              <div className="md:col-span-7 aspect-[4/3] rounded-3xl overflow-hidden border relative order-1 md:order-2" style={{ borderColor: 'var(--surface-border)' }}>
+                <ParallaxImage src="/images/minimal_fashion.jpg" alt="L'Atelier fashion model" speed={0.9} />
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        {/* ── STAGE 5: ACTUAL PRODUCT DEMONSTRATION ── */}
+        <section className="w-full py-28 px-6 bg-[var(--surface-1)] border-y" style={{ borderColor: 'var(--surface-border)' }}>
+          <div className="max-w-5xl mx-auto space-y-12">
+            
+            <div className="text-center space-y-3">
+              <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">CREATOR WORKSPACE</span>
+              <h2 className="text-3xl font-extrabold tracking-tight text-foreground">Interactive Studio Editor</h2>
+              <p className="text-sm text-muted-foreground max-w-xl mx-auto">Inspect elements, customize layout themes, and toggle viewports. Simulated sandbox environment.</p>
+            </div>
+
+            <div className="rounded-2xl border shadow-2xl overflow-hidden" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}>
+              
+              {/* Editor Workspace Header */}
+              <div className="h-14 border-b flex items-center justify-between px-6 bg-[var(--surface-1)]" style={{ borderColor: 'var(--surface-border)' }}>
+                <div className="flex items-center gap-3">
+                  <ZovaixLogo size="sm" />
+                  <span className="h-4 w-px bg-white/10" />
+                  <span className="text-xs text-muted-foreground font-mono">Villa Sempione / Zurich</span>
+                </div>
+
+                {/* Viewport Control switchers */}
+                <div className="flex items-center gap-1 rounded-xl p-1 border" style={{ backgroundColor: 'var(--surface-0)', borderColor: 'var(--surface-border)' }}>
+                  {(["desktop", "tablet", "mobile"] as const).map((device) => (
+                    <button
+                      key={device}
+                      onClick={() => {
+                        soundEngine.playTabSwitch();
+                        setPreviewDevice(device);
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors ${previewDevice === device ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {device === "desktop" && <Monitor className="h-3.5 w-3.5" />}
+                      {device === "tablet" && <Tablet className="h-3.5 w-3.5" />}
+                      {device === "mobile" && <Smartphone className="h-3.5 w-3.5" />}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Color palette engine toggle */}
+                <button 
+                  onClick={() => {
+                    soundEngine.playToggle();
+                    setPreviewTheme(t => t === "dark" ? "light" : "dark");
+                  }}
+                  className="text-xs font-semibold px-3.5 py-1.5 rounded-xl border transition-colors hover:bg-[var(--surface-2)]"
+                  style={{ backgroundColor: 'var(--surface-0)', borderColor: 'var(--surface-border)' }}
+                >
+                  Theme: <span className="text-primary font-bold uppercase">{previewTheme}</span>
+                </button>
+              </div>
+
+              {/* Simulated Live Viewport Area */}
+              <div className="p-8 flex items-center justify-center min-h-[360px] relative transition-colors duration-500" style={{ backgroundColor: previewTheme === "dark" ? "#0F1015" : "#F5F5F7" }}>
+                <div 
+                  className="transition-all duration-500 border rounded-2xl shadow-xl overflow-hidden flex flex-col justify-between"
+                  style={{ 
+                    width: previewDevice === "desktop" ? "100%" : previewDevice === "tablet" ? "640px" : "320px",
+                    height: "280px",
+                    backgroundColor: previewTheme === "dark" ? "#0A0A0E" : "#FFFFFF",
+                    borderColor: previewTheme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)"
+                  }}
+                >
+                  <div className="p-6 h-full flex flex-col justify-between text-left">
+                    <span className={`text-[10px] font-mono tracking-widest uppercase ${previewTheme === "dark" ? "text-white/50" : "text-black/50"}`}>K R O N O S</span>
+                    <div className="space-y-2">
+                      <h3 className={`text-xl font-serif leading-tight transition-colors duration-300 ${previewTheme === "dark" ? "text-white" : "text-black"}`}>
+                         Villa Sempione
+                      </h3>
+                      <p className={`text-xs transition-colors duration-300 ${previewTheme === "dark" ? "text-muted-foreground" : "text-zinc-500"}`}>
+                        Bespoke structural design defined by Locarno location.
+                      </p>
+                    </div>
+                    <div className="h-10 w-full rounded bg-primary/20 border border-primary/30 flex items-center justify-center">
+                      <span className="text-primary text-[10px] font-mono font-bold tracking-widest uppercase">EXPLORE VILLA</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── SCENE 08: FINAL PAYOFF CTA ── */}
-      <section className="w-full py-40 px-6 text-center relative overflow-hidden z-20 bg-[var(--surface-0)] border-t" style={{ borderColor: 'var(--surface-border)' }}>
-        <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent -z-10" />
-        <div className="max-w-2xl mx-auto space-y-8">
-          <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Your idea is enough.</h2>
-          <Button size="lg" className="h-13 px-8 rounded-xl text-sm font-semibold gap-2 btn-premium shadow-lg shadow-primary/20" onClick={goToLogin}>
-            Start Creating <ArrowRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </section>
+        {/* ── EDITORIAL PRICING ── */}
+        <section id="pricing" className="w-full py-28 px-6 relative z-20 bg-[var(--surface-0)]">
+          <div className="max-w-4xl mx-auto space-y-16">
+            <div className="text-center space-y-3">
+              <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">TRANSPARENT VALUE</span>
+              <h2 className="text-3xl font-extrabold tracking-tight">Simple Pricing</h2>
+              <p className="text-sm text-muted-foreground">Start building for free, upgrade when you need to connect domains.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="p-8 rounded-2xl border flex flex-col justify-between" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground mb-2">Free</h3>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-3xl font-extrabold text-foreground">₹0</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-6 pb-6 border-b" style={{ borderColor: 'var(--surface-border)' }}>Perfect for exploring the creative studio.</p>
+                  <ul className="space-y-4 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>1 Project</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>Basic Design AI</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>Community Support</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>Zovaix Subdomain</span>
+                    </li>
+                  </ul>
+                </div>
+                <Button variant="outline" className="w-full h-11 rounded-xl text-xs font-semibold mt-8 border-border/60 hover:bg-[var(--surface-2)]" onClick={goToLogin}>
+                  Start for Free
+                </Button>
+              </div>
+
+              <div className="p-8 rounded-2xl border flex flex-col justify-between relative shadow-lg" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--primary)' }}>
+                <div className="absolute top-0 inset-x-0 h-1 bg-primary rounded-t-2xl" />
+                <div className="absolute top-6 right-6 bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase border border-primary/20">
+                  Creator
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground mb-2">Pro</h3>
+                  <div className="flex items-baseline gap-2 mb-4">
+                    <span className="text-3xl font-extrabold text-foreground">₹499</span>
+                    <span className="text-xs text-muted-foreground">/ month</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-6 pb-6 border-b" style={{ borderColor: 'var(--surface-border)' }}>For professionals and serious creators.</p>
+                  <ul className="space-y-4 text-sm text-foreground font-medium">
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>Unlimited Projects</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>Advanced Design AI</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>Priority Support</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>Custom Domains</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                      <span>Clean Code Export</span>
+                    </li>
+                  </ul>
+                </div>
+                <Button className="w-full h-11 rounded-xl text-xs font-semibold mt-8 btn-premium" onClick={goToLogin}>
+                  Upgrade to Creator
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── STAGE 7: FINAL PAYOFF CTA ── */}
+        <section className="w-full py-40 px-6 text-center relative overflow-hidden z-20 bg-[var(--surface-0)] border-t" style={{ borderColor: 'var(--surface-border)' }}>
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent -z-10" />
+          <div className="max-w-2xl mx-auto space-y-8">
+            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Your next website starts with an idea.</h2>
+            <Button size="lg" className="h-13 px-8 rounded-xl text-sm font-semibold gap-2 btn-premium shadow-lg shadow-primary/20" onClick={goToLogin}>
+              Start Creating <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </section>
+      </main>
 
       {/* ── FOOTER ── */}
       <footer className="w-full py-12 px-6 bg-[var(--surface-1)] border-t z-20 relative" style={{ borderColor: 'var(--surface-border)' }}>
