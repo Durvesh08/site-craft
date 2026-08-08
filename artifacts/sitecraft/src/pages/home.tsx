@@ -2,14 +2,117 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, CheckCircle2, Layout, Sparkles, Globe, Command, ArrowUpRight, Check, Monitor, Tablet, Smartphone, Volume2, VolumeX } from "lucide-react";
+import { ArrowRight, CheckCircle2, Sparkles, ArrowUpRight, Check, Monitor, Tablet, Smartphone, Volume2, VolumeX } from "lucide-react";
 import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 import { soundEngine } from "@/lib/sound-effects";
 import { ZovaixFabric } from "@/components/ui/creative/zovaix-fabric";
 import { ParallaxImage } from "@/components/ui/creative/parallax-image";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { FragmentedPreview } from "@/components/ui/creative/fragmented-preview";
+import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 import Lenis from "lenis";
 
+// ── CUSTOM 3D OBJECT (THE ZOVALX FABRIC METAPHOR) ──
+interface Zovaix3DObjectProps {
+  scrollYProgress: MotionValue<number>;
+}
+
+function Zovaix3DObject({ scrollYProgress }: Zovaix3DObjectProps) {
+  // Map scroll progress to layer alignments
+  const layerZ_Back = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [-250, 0, 150, 300]);
+  const layerZ_Middle = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [-100, 0, 180, 320]);
+  const layerZ_Front = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [150, 0, 220, 350]);
+
+  const layerRotX_Back = useTransform(scrollYProgress, [0, 0.55], [-35, 0]);
+  const layerRotY_Back = useTransform(scrollYProgress, [0, 0.55], [45, 0]);
+
+  const layerRotX_Middle = useTransform(scrollYProgress, [0, 0.55], [25, 0]);
+  const layerRotY_Middle = useTransform(scrollYProgress, [0, 0.55], [-35, 0]);
+
+  const layerRotX_Front = useTransform(scrollYProgress, [0, 0.55], [-15, 0]);
+  const layerRotY_Front = useTransform(scrollYProgress, [0, 0.55], [20, 0]);
+
+  const opacity_Back = useTransform(scrollYProgress, [0, 0.2, 0.55, 0.8], [0, 0.65, 1, 0]);
+  const opacity_Middle = useTransform(scrollYProgress, [0, 0.2, 0.55, 0.8], [0, 0.8, 1, 0]);
+  const opacity_Front = useTransform(scrollYProgress, [0, 0.2, 0.55, 0.8], [0, 0.9, 1, 0]);
+
+  const globalScale = useTransform(scrollYProgress, [0, 0.55, 0.8], [0.8, 1, 1.15]);
+
+  return (
+    <motion.div
+      style={{ scale: globalScale, transformStyle: "preserve-3d" }}
+      className="relative w-[340px] sm:w-[540px] h-[360px] sm:h-[480px] pointer-events-none"
+    >
+      {/* LAYER 1: Smoked Glass Backboard & Grid Lines (Z-depth back) */}
+      <motion.div
+        className="absolute inset-0 rounded-2xl border border-white/5 shadow-2xl flex flex-col justify-between p-6 backdrop-blur-sm"
+        style={{ 
+          z: layerZ_Back,
+          rotateX: layerRotX_Back,
+          rotateY: layerRotY_Back,
+          opacity: opacity_Back,
+          transformStyle: "preserve-3d",
+          backgroundColor: "rgba(9, 9, 15, 0.55)",
+          borderColor: "rgba(255, 255, 255, 0.05)"
+        }}
+      >
+        <div className="flex justify-between items-center opacity-30">
+          <span className="text-[9px] font-mono tracking-widest text-primary font-bold">K R O N O S</span>
+          <span className="text-[9px] font-mono">GRID LAYOUT // 12C</span>
+        </div>
+        <div className="absolute inset-0 grid grid-cols-6 grid-rows-6 opacity-[0.03] pointer-events-none">
+          {Array.from({ length: 36 }).map((_, idx) => (
+            <div key={idx} className="border border-white" />
+          ))}
+        </div>
+        <div className="flex justify-between items-center opacity-30">
+          <span className="text-[9px] font-mono">SWISS RESIDENCE</span>
+          <span className="text-[9px] font-mono">01/08</span>
+        </div>
+      </motion.div>
+
+      {/* LAYER 2: High-contrast layout image plane (Z-depth middle) */}
+      <motion.div
+        className="absolute inset-8 rounded-xl overflow-hidden border shadow-xl bg-black/45"
+        style={{ 
+          z: layerZ_Middle,
+          rotateX: layerRotX_Middle,
+          rotateY: layerRotY_Middle,
+          opacity: opacity_Middle,
+          transformStyle: "preserve-3d",
+          borderColor: "rgba(255, 255, 255, 0.05)"
+        }}
+      >
+        <img
+          src="/images/luxury_architecture.jpg"
+          alt="Villa Sempione architecture"
+          className="w-full h-full object-cover grayscale opacity-90"
+        />
+      </motion.div>
+
+      {/* LAYER 3: Translucent UI cards, headlines, and buttons (Z-depth front) */}
+      <motion.div
+        className="absolute bottom-6 right-6 left-6 p-5 rounded-xl border backdrop-blur-md flex flex-col gap-2 shadow-2xl"
+        style={{ 
+          z: layerZ_Front,
+          rotateX: layerRotX_Front,
+          rotateY: layerRotY_Front,
+          opacity: opacity_Front,
+          transformStyle: "preserve-3d",
+          backgroundColor: "rgba(9, 9, 15, 0.85)",
+          borderColor: "rgba(255, 255, 255, 0.08)"
+        }}
+      >
+        <span className="text-[10px] font-mono tracking-wider text-primary font-bold">MONOLITHIC STRUCTURE</span>
+        <h4 className="text-xl font-serif font-light text-[#EDECE7] leading-tight">Villa Sempione</h4>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Crafting architectural symmetry defined by stone, light, and Swiss lakeside location.
+        </p>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ── MAIN LANDING PAGE ──
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -35,18 +138,13 @@ export default function Home() {
     offset: ["start start", "end end"]
   });
 
-  // Hero Interpolation Transforms (Mixed typography reveal)
-  const heroTitleScale = useTransform(heroScroll, [0, 0.45], [1, 0.82]);
-  const heroTitleOpacity = useTransform(heroScroll, [0, 0.4], [1, 0]);
-  const heroTitleY = useTransform(heroScroll, [0, 0.4], [0, -60]);
-  
-  const heroImageScale = useTransform(heroScroll, [0.15, 0.75, 1], [0.72, 0.96, 1.05]);
-  const heroImageY = useTransform(heroScroll, [0.15, 0.75], ["140px", "0px"]);
-  const heroImageClip = useTransform(heroScroll, [0.15, 0.85], ["inset(12% rounded 24px)", "inset(0% rounded 0px)"]);
-  const heroChromeOpacity = useTransform(heroScroll, [0.15, 0.7], [1, 0]);
+  // Hero Interpolation Transforms
+  const heroTitleScale = useTransform(heroScroll, [0, 0.4], [1, 0.82]);
+  const heroTitleOpacity = useTransform(heroScroll, [0, 0.35], [1, 0]);
+  const heroTitleY = useTransform(heroScroll, [0, 0.4], [0, -50]);
 
   // Showcase Horizontal Transformation (3D overlap carousel)
-  const showcaseX = useTransform(showcaseScroll, [0, 1], ["0%", "-60%"]);
+  const showcaseX = useTransform(showcaseScroll, [0, 1], ["0%", "-65%"]);
   
   // Demo Interactive State
   const [demoStep, setDemoStep] = useState(0);
@@ -141,7 +239,7 @@ export default function Home() {
       </header>
 
       {/* ── SCENE 01: ARRIVAL & HERO SCROLLTYTELLING ── */}
-      <div ref={heroContainerRef} className="h-[200vh] w-full relative z-10">
+      <div ref={heroContainerRef} className="h-[230vh] w-full relative z-10">
         
         {/* Sticky Hero Wrapper */}
         <div className="sticky top-0 h-screen w-full flex flex-col items-center justify-center overflow-hidden">
@@ -179,74 +277,11 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* Immersive Website Preview Canvas */}
-          <motion.div
-            style={{ 
-              scale: heroImageScale, 
-              y: heroImageY,
-              clipPath: heroImageClip,
-              borderColor: 'var(--surface-border)',
-              backgroundColor: 'var(--surface-0)'
-            }}
-            className="absolute bottom-0 w-full max-w-6xl aspect-[16/10] overflow-hidden border shadow-2xl z-10"
-          >
-            {/* Mock browser header bar */}
-            <motion.div 
-              style={{ 
-                opacity: heroChromeOpacity,
-                backgroundColor: 'var(--surface-2)',
-                borderColor: 'var(--surface-border)'
-              }}
-              className="h-10 border-b flex items-center justify-between px-5" 
-            >
-              <div className="flex gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
-              </div>
-              <div className="h-5 px-4 rounded bg-[var(--surface-0)] border border-border/40 font-mono text-[9px] text-muted-foreground flex items-center">
-                lux-architecture.zovaix.app
-              </div>
-              <div className="w-10" />
-            </motion.div>
+          {/* Procedural 3D Visual Object assembly (Emerging underneath the text) */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 mt-32" style={{ perspective: "1500px" }}>
+            <Zovaix3DObject scrollYProgress={heroScroll} />
+          </div>
 
-            {/* Rendered Luxury Architecture Website Content */}
-            <div className="w-full h-full bg-[#0F1015] p-8 sm:p-12 overflow-y-auto overflow-hidden">
-              <header className="flex justify-between items-center mb-16 border-b border-white/5 pb-6">
-                <span className="font-bold tracking-widest text-sm uppercase">K R O N O S</span>
-                <nav className="flex gap-8 text-xs tracking-wider uppercase text-muted-foreground">
-                  <span>Projects</span>
-                  <span>Philosophy</span>
-                  <span>Contact</span>
-                </nav>
-              </header>
-              <main className="space-y-12">
-                <div className="max-w-2xl space-y-6">
-                  <h2 className="text-3xl sm:text-5xl font-light tracking-tight leading-tight uppercase font-serif text-[#EDECE7]">
-                    Monolithic structures for <span className="italic font-normal text-primary">modern living</span>
-                  </h2>
-                  <p className="text-sm text-muted-foreground/80 leading-relaxed font-sans max-w-lg">
-                    Constructing architectural experiences defined by stone, light, and symmetry. Based in Zurich and Milan.
-                  </p>
-                </div>
-                
-                {/* Large high-end photo render */}
-                <div className="w-full aspect-[21/9] rounded-xl overflow-hidden relative border border-white/10 group">
-                  <img 
-                    src="/images/luxury_architecture.jpg" 
-                    alt="Luxury architectural structure" 
-                    className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
-                    <div className="text-left space-y-1">
-                      <span className="text-[10px] font-mono tracking-widest uppercase text-primary font-bold">Project 01</span>
-                      <p className="font-serif text-lg">Villa Sempione, Locarno</p>
-                    </div>
-                  </div>
-                </div>
-              </main>
-            </div>
-          </motion.div>
         </div>
       </div>
 
@@ -274,7 +309,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SCENE 03: 3D DEPTH WEBSITE SHOWCASE ── */}
+      {/* ── SCENE 03: 3D DEPTH WEBSITE SHOWCASE (HORIZONTAL GALLERY) ── */}
       <div id="showcase" ref={showcaseContainerRef} className="h-[250vh] w-full relative z-20 bg-[var(--surface-0)]">
         
         {/* Sticky showcase deck */}
@@ -286,7 +321,7 @@ export default function Home() {
             <p className="text-sm text-muted-foreground mt-1">Believable layouts tailored for beauty and conversion.</p>
           </div>
 
-          {/* Horizontal Scrolly Deck */}
+          {/* Horizontal Scrolly Deck of Explodable Previews */}
           <div className="relative w-full flex items-center pl-6 sm:pl-[20%]">
             <motion.div 
               style={{ x: showcaseX }}
@@ -322,44 +357,19 @@ export default function Home() {
                   category: "Restaurant", 
                   logo: "O S T E R I A",
                   headline: "Rustic culinary heritage in Zurich Enge.",
-                  image: "/images/luxury_architecture.jpg", // Using architecture since we want real beautiful photos
+                  image: "/images/luxury_architecture.jpg",
                   bg: "#0B100C" 
                 }
               ].map((site, i) => (
-                <motion.div
+                <FragmentedPreview
                   key={i}
-                  whileHover={{ y: -8, scale: 1.01 }}
-                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                  className="w-[340px] sm:w-[480px] rounded-2xl overflow-hidden border shadow-2xl flex flex-col justify-between"
-                  style={{ borderColor: 'var(--surface-border)', backgroundColor: site.bg }}
-                >
-                  {/* Browser chrome */}
-                  <div className="h-10 border-b flex items-center justify-between px-4" style={{ backgroundColor: 'rgba(255,255,255,0.02)', borderColor: 'var(--surface-border)' }}>
-                    <div className="flex gap-1">
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-                    </div>
-                    <span className="text-[10px] font-mono text-muted-foreground/60">{site.title.toLowerCase().replace(/\s+/g, '')}.com</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/40" />
-                  </div>
-
-                  {/* Body preview */}
-                  <div className="p-8 space-y-6">
-                    <span className="text-[10px] font-mono tracking-widest uppercase opacity-40">{site.logo}</span>
-                    <h3 className="text-xl sm:text-2xl font-serif leading-tight">{site.headline}</h3>
-                    
-                    <div className="w-full aspect-[16/9] rounded-lg overflow-hidden border" style={{ borderColor: 'var(--surface-border)' }}>
-                      <img src={site.image} alt={site.title} className="w-full h-full object-cover opacity-80" />
-                    </div>
-                  </div>
-
-                  {/* Metadata footer */}
-                  <div className="px-8 py-4 border-t flex items-center justify-between" style={{ backgroundColor: 'rgba(0,0,0,0.15)', borderColor: 'var(--surface-border)' }}>
-                    <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">{site.category}</span>
-                    <span className="text-xs text-primary font-bold flex items-center gap-1">View Project <ArrowRight className="w-3 h-3" /></span>
-                  </div>
-                </motion.div>
+                  title={site.title}
+                  category={site.category}
+                  image={site.image}
+                  logo={site.logo}
+                  headline={site.headline}
+                  bgColor={site.bg}
+                />
               ))}
             </motion.div>
           </div>
@@ -508,7 +518,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
             <div className="md:col-span-5 text-left space-y-6 order-2 md:order-1">
               <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Case Study 02</span>
-              <h3 className="text-3xl font-serif text-foreground font-light leading-tight font-sans">L'Atelier Milan</h3>
+              <h3 className="text-3xl font-serif text-foreground font-light leading-tight">L'Atelier Milan</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 A fashion ecommerce lookbook designed for custom artisan leather goods. Highly contrast lighting style, warm studio backdrops, and simple typography.
               </p>
