@@ -18,37 +18,36 @@ const PREVIEWS = [
 ];
 
 function FloatingPreview({ index, src, meta, scrollProgress }: { index: number, src: string, meta: string, scrollProgress: MotionValue<number> }) {
-  // Story phases mapped across [0.10, 0.70] global scroll range (so it finishes before Pricing)
-  const rangePerItem = 0.60 / PREVIEWS.length; // 0.12 per item
-  
-  // Overlap so the next item starts before the current one finishes
-  const start = 0.10 + (index * (rangePerItem - 0.04)); 
-  const center = start + (rangePerItem / 2);
-  const end = start + rangePerItem;
+  // Map 5 items across [0.05, 0.85] with wide overlapping windows (0.20 width per item)
+  const step = 0.15; 
+  const start = 0.05 + (index * step); 
+  const end = start + 0.22;
+  const center = (start + end) / 2;
 
+  // Solid visibility in the middle of its window
   const opacity = useTransform(scrollProgress, [start, start + 0.04, end - 0.04, end], [0, 1, 1, 0]);
-  const scale = useTransform(scrollProgress, [start, center, end], [0.8, 1.05, 0.85]);
-  const y = useTransform(scrollProgress, [start, center, end], [100, 0, -100]);
+  const scale = useTransform(scrollProgress, [start, center, end], [0.85, 1.02, 0.9]);
+  const y = useTransform(scrollProgress, [start, center, end], [80, 0, -80]);
   
-  // Sweeping 3D parallax alternating by index
+  // Dramatic 3D sweeping parallax from off-screen / sides
   const isEven = index % 2 === 0;
-  const x = useTransform(scrollProgress, [start, center, end], [isEven ? 100 : -100, 0, isEven ? -100 : 100]);
-  const rotateY = useTransform(scrollProgress, [start, center, end], [isEven ? 15 : -15, 0, isEven ? -15 : 15]);
-  const rotateZ = useTransform(scrollProgress, [start, center, end], [isEven ? -5 : 5, 0, isEven ? 5 : -5]);
+  const x = useTransform(scrollProgress, [start, center, end], [isEven ? 350 : -350, 0, isEven ? -350 : 350]);
+  const rotateY = useTransform(scrollProgress, [start, center, end], [isEven ? 25 : -25, 0, isEven ? -25 : 25]);
+  const rotateZ = useTransform(scrollProgress, [start, center, end], [isEven ? -8 : 8, 0, isEven ? 8 : -8]);
 
   return (
     <motion.div 
-      className="absolute inset-0 flex items-center justify-center pointer-events-none [perspective:2000px]"
+      className="absolute inset-0 flex items-center justify-center pointer-events-none [perspective:1500px]"
       style={{ opacity, scale, y, x, rotateY, rotateZ }}
     >
-      <div className="relative w-[85vw] max-w-[1100px] aspect-video rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.8)] border border-white/10 pointer-events-auto group">
+      <div className="relative w-[85vw] max-w-[1100px] aspect-video rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.85)] border border-white/15 pointer-events-auto group bg-black/40 backdrop-blur-sm">
         <img src={src} alt="Website Preview" className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105" />
         
-        {/* Inner shadow/vignette for premium depth */}
-        <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(0,0,0,0.6)] pointer-events-none" />
+        {/* Inner shadow/vignette for depth */}
+        <div className="absolute inset-0 shadow-[inset_0_0_120px_rgba(0,0,0,0.7)] pointer-events-none" />
 
         {/* Floating Metadata */}
-        <div className="absolute left-6 sm:left-10 bottom-6 sm:bottom-10 p-4 sm:p-5 bg-black/50 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl transition-transform duration-500 group-hover:-translate-y-2" style={{ transform: "translateZ(50px)" }}>
+        <div className="absolute left-6 sm:left-10 bottom-6 sm:bottom-10 p-4 sm:p-5 bg-black/60 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-2xl transition-transform duration-500 group-hover:-translate-y-2" style={{ transform: "translateZ(50px)" }}>
           <p className="text-xs sm:text-sm font-mono text-[#F5F3EE] tracking-[0.2em] font-medium">{meta}</p>
         </div>
       </div>
@@ -150,8 +149,8 @@ export default function Home() {
 
       {/* ── CINEMATIC FLOATING SHOWCASE STORY ── */}
       <main>
-        {/* Total height determines scroll length. 800vh provides a long smooth 9-phase story. */}
-        <div ref={heroStoryRef} id="story" className="h-[800vh] w-full relative z-10">
+        {/* Total height determines scroll length. 500vh provides a tight, responsive story. */}
+        <div ref={heroStoryRef} id="story" className="h-[500vh] w-full relative z-10">
           
           {/* Sticky Window */}
           <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center">
