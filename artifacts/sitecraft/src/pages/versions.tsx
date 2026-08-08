@@ -30,31 +30,36 @@ export default function ProjectVersions() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8 animate-fade-in">
-      <div>
+    <div className="p-8 max-w-[1000px] mx-auto space-y-8 animate-fade-in">
+      <div className="pb-6" style={{ borderBottom: '1px solid var(--surface-border)' }}>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
           <History className="h-8 w-8 text-primary" />
           Version History
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           {project?.name ? `Manage versions for ${project.name}` : "View and restore previous states of your site."}
         </p>
       </div>
 
-      <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-border before:to-transparent">
+      <div className="space-y-6 relative before:absolute before:inset-y-0 before:left-5 md:before:left-1/2 before:-translate-x-px before:w-0.5" style={{ ['--line-bg' as any]: 'var(--surface-border)' }}>
+        {/* Timeline line color */}
+        <div className="absolute inset-y-0 left-5 md:left-1/2 -translate-x-px w-0.5 bg-gradient-to-b" style={{ backgroundImage: `linear-gradient(to bottom, var(--surface-border) 0%, transparent 100%)` }} />
+
         {isLoading ? (
-          <div className="animate-pulse space-y-4">
+          <div className="space-y-4">
             {[1, 2, 3].map(i => (
-              <Card key={i} className="glass-panel opacity-50 relative ml-12 md:ml-0 md:w-[calc(50%-2rem)]">
-                <CardHeader className="py-4"><div className="h-4 bg-muted rounded w-1/3" /></CardHeader>
-                <CardContent><div className="h-10 bg-muted rounded w-full" /></CardContent>
-              </Card>
+              <div key={i} className="relative ml-12 md:ml-0 md:w-[calc(50%-2rem)]">
+                <div className="rounded-2xl p-6 space-y-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
+                  <div className="h-4 rounded w-1/3 skeleton-shimmer" />
+                  <div className="h-10 rounded w-full skeleton-shimmer" />
+                </div>
+              </div>
             ))}
           </div>
         ) : versions.length === 0 ? (
-          <Card className="glass-panel text-center p-12 relative z-10 border-dashed">
-            <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-            <h3 className="text-lg font-medium">No versions found</h3>
+          <Card className="text-center p-12 relative z-10 border-dashed rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+            <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-55" />
+            <h3 className="text-lg font-medium text-foreground">No versions found</h3>
             <p className="text-sm text-muted-foreground">This project doesn't have any saved versions yet.</p>
           </Card>
         ) : (
@@ -67,27 +72,27 @@ export default function ProjectVersions() {
               )}>
                 {/* Timeline dot */}
                 <div className={cn(
-                  "absolute left-[-3rem] md:left-1/2 flex h-4 w-4 md:-translate-x-1/2 items-center justify-center rounded-full border-2 ring-4 ring-background z-10 transition-colors",
-                  isLatest ? "border-primary bg-primary" : "border-muted-foreground/30 bg-card group-hover:border-primary/50"
-                )} />
+                  "absolute left-[-2rem] md:left-1/2 flex h-4 w-4 md:-translate-x-1/2 items-center justify-center rounded-full border-2 ring-4 z-10 transition-colors",
+                  isLatest ? "border-primary bg-primary" : "border-muted-foreground/30 bg-[var(--surface-1)] group-hover:border-primary/50"
+                )} style={{ ringColor: 'var(--surface-0)' }} />
 
                 <Card className={cn(
-                  "glass-panel w-full md:w-[calc(50%-2rem)] transition-all duration-300 hover:shadow-md",
-                  isLatest ? "border-primary/50 shadow-sm shadow-primary/10" : "hover:border-border/80"
-                )}>
+                  "w-full md:w-[calc(50%-2rem)] transition-all duration-300 rounded-2xl",
+                  isLatest ? "shadow-sm shadow-primary/5" : "hover:border-[rgba(255,255,255,0.12)]"
+                )} style={{ backgroundColor: 'var(--surface-1)', border: `1px solid ${isLatest ? 'var(--primary)' : 'var(--surface-border)'}` }}>
                   <CardHeader className="py-4 pb-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <CardTitle className="text-base font-semibold">v{version.versionNumber}</CardTitle>
+                        <CardTitle className="text-base font-semibold text-foreground">v{version.versionNumber}</CardTitle>
                         {isLatest && <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-wider uppercase">Current</span>}
                       </div>
-                      <span className="text-xs text-muted-foreground font-mono">
+                      <span className="text-xs text-muted-foreground">
                         {version.createdAt ? format(new Date(version.createdAt), "MMM d, h:mm a") : "Unknown time"}
                       </span>
                     </div>
                   </CardHeader>
                   <CardContent className="py-4 pt-0">
-                    <CardDescription className="mb-4">
+                    <CardDescription className="mb-4 text-sm text-muted-foreground">
                       {version.label || `Auto-saved generation point`}
                     </CardDescription>
                     
@@ -95,9 +100,10 @@ export default function ProjectVersions() {
                       <Button 
                         variant="secondary" 
                         size="sm" 
-                        className="w-full gap-2"
+                        className="w-full gap-2 rounded-xl text-xs font-semibold h-9"
                         disabled={isLatest || restoreVersion.isPending}
                         onClick={() => handleRestore(version.id)}
+                        style={{ backgroundColor: 'var(--surface-2)', border: '1px solid var(--surface-border)', color: 'var(--foreground)' }}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
                         {restoreVersion.isPending && restoreVersion.variables?.versionId === version.id ? "Restoring..." : "Restore Version"}

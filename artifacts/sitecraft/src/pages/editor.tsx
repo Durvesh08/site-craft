@@ -4,8 +4,8 @@ import { useGetProject } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  RotateCcw, Monitor, Tablet, Smartphone, Sparkles, Send, Zap,
-  Rocket, Loader2, Code, Layers, Paperclip, Check, CornerDownLeft
+  RotateCcw, Monitor, Tablet, Smartphone, Sparkles, Send,
+  Rocket, Code, Layers, Paperclip, Check, CornerDownLeft, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -23,6 +23,14 @@ interface ChatMessage {
   bullets?: string[];
 }
 
+const THINKING_MESSAGES = [
+  "Understanding your request...",
+  "Planning improvements...",
+  "Generating layout...",
+  "Optimizing responsiveness...",
+  "Reviewing design quality..."
+];
+
 export default function ProjectEditor() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
@@ -34,9 +42,11 @@ export default function ProjectEditor() {
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [selectedSection, setSelectedSection] = useState<string | null>("Hero Section");
   const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [isSectionsOpen, setIsSectionsOpen] = useState(false);
 
   const [editInstruction, setEditInstruction] = useState("");
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [thinkingIndex, setThinkingIndex] = useState(0);
   const [iframeKey, setIframeKey] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -47,13 +57,13 @@ export default function ProjectEditor() {
 
   // Left Section Layers
   const [sections] = useState([
-    { id: "Hero Section", name: "Hero Section", elements: ["Headline", "CTA Button", "3D Canvas"], status: "Ready" },
-    { id: "Constellation", name: "Agent Swarm Graph", elements: ["18 Neural Nodes", "Energy Rays"], status: "Active" },
-    { id: "Telemetry", name: "Telemetry Console", elements: ["Terminal Output", "WAI-ARIA Score"], status: "Ready" },
+    { id: "Hero Section", name: "Hero Section", elements: ["Headline", "CTA Button", "Visual"], status: "Ready" },
+    { id: "Features", name: "Features Grid", elements: ["Feature Cards", "Icons"], status: "Ready" },
+    { id: "Testimonials", name: "Testimonials", elements: ["Reviews", "Avatars"], status: "Ready" },
     { id: "Pricing", name: "Pricing Matrix", elements: ["Developer Tier", "Enterprise Tier"], status: "Ready" },
   ]);
 
-  // Chat conversation stream (90% of right sidebar)
+  // Chat conversation stream
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "init",
@@ -101,7 +111,19 @@ export default function ProjectEditor() {
   // Auto-scroll chat
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isRegenerating]);
+  }, [messages, isRegenerating, thinkingIndex]);
+
+  // Thinking messages cycler
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isRegenerating) {
+      setThinkingIndex(0);
+      interval = setInterval(() => {
+        setThinkingIndex((prev) => (prev + 1) % THINKING_MESSAGES.length);
+      }, 2500);
+    }
+    return () => clearInterval(interval);
+  }, [isRegenerating]);
 
   const iframeUrl = project?.id
     ? `/api/projects/${project.id}/preview?page=${currentPage}&t=${new Date(project.updatedAt).getTime()}&k=${iframeKey}`
@@ -123,7 +145,6 @@ export default function ProjectEditor() {
 
     soundEngine.playPrimaryClick();
 
-    // Contextual prompt injection if a section is selected
     const fullPrompt = selectedSection
       ? `Editing [${selectedSection}]: ${rawPrompt}`
       : rawPrompt;
@@ -164,7 +185,6 @@ export default function ProjectEditor() {
             bullets: [
               "Improved typography hierarchy & contrast",
               "Applied dark glassmorphism & soft borders",
-              "Optimized WAI-ARIA 99/100 accessibility",
             ],
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           },
@@ -180,34 +200,33 @@ export default function ProjectEditor() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#030305] text-foreground font-sans overflow-hidden select-none relative">
-      
+    <div className="flex h-screen w-full bg-[var(--surface-0)] text-[#EDECE7] font-sans overflow-hidden select-none relative">
       <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} />
 
       {/* ── TOP MINIMALIST TOOLBAR ── */}
-      <header className="absolute top-0 inset-x-0 h-14 border-b border-white/10 glass flex items-center justify-between px-6 z-40 shadow-2xl backdrop-blur-2xl">
+      <header className="absolute top-0 inset-x-0 h-14 border-b border-[rgba(255,255,255,0.06)] bg-[var(--surface-1)] flex items-center justify-between px-6 z-40 backdrop-blur-md">
         
         {/* Left: Project & Page Switcher */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2.5 cursor-pointer group" onClick={() => setLocation("/dashboard")}>
             <ZovaixLogo size="sm" showLabel={false} />
-            <span className="font-extrabold text-sm tracking-tight text-foreground">
-              {project?.name || "ZOVAIX SITES Studio"}
+            <span className="font-bold text-[15px] tracking-tight text-[#EDECE7]">
+              {project?.name || "ZOVAIX SITES"}
             </span>
           </div>
 
-          <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />
+          <div className="h-4 w-[1px] bg-[rgba(255,255,255,0.06)] hidden sm:block" />
 
           {/* Pages */}
           {pages.length > 0 && (
-            <div className="flex items-center gap-1 bg-secondary/30 rounded-xl p-1 border border-white/10">
+            <div className="flex items-center gap-1 bg-[var(--surface-2)] rounded-lg p-1">
               {pages.map((p) => (
                 <button
                   key={p}
                   onClick={() => { soundEngine.playTabSwitch(); setCurrentPage(p); }}
                   className={cn(
-                    "px-3 py-1 text-xs font-mono font-bold rounded-lg transition-all",
-                    currentPage === p ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"
+                    "px-3 py-1 text-[13px] font-medium rounded-md transition-all",
+                    currentPage === p ? "bg-[var(--surface-3)] text-[#EDECE7]" : "text-muted-foreground hover:text-[#EDECE7]"
                   )}
                 >
                   {p.replace(".html", "")}
@@ -218,7 +237,7 @@ export default function ProjectEditor() {
         </div>
 
         {/* Center: Viewport Switcher */}
-        <div className="flex items-center gap-1 bg-secondary/40 rounded-xl p-1 border border-white/10">
+        <div className="flex items-center gap-1 bg-[var(--surface-2)] rounded-lg p-1">
           {(["desktop", "tablet", "mobile"] as Viewport[]).map((v) => {
             const Icon = v === "desktop" ? Monitor : v === "tablet" ? Tablet : Smartphone;
             return (
@@ -226,8 +245,8 @@ export default function ProjectEditor() {
                 key={v}
                 onClick={() => { soundEngine.playTabSwitch(); setViewport(v); }}
                 className={cn(
-                  "h-8 px-3 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 transition-all",
-                  viewport === v ? "bg-primary/20 text-primary border border-primary/30" : "text-muted-foreground hover:text-foreground"
+                  "h-7 px-3 rounded-md text-[13px] font-medium flex items-center gap-1.5 transition-all",
+                  viewport === v ? "bg-[var(--surface-3)] text-[#EDECE7]" : "text-muted-foreground hover:text-[#EDECE7]"
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
@@ -241,18 +260,18 @@ export default function ProjectEditor() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsCommandOpen(true)}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary/40 border border-white/10 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[rgba(255,255,255,0.06)] text-[13px] text-muted-foreground hover:text-[#EDECE7] transition-colors"
           >
             <span>Command</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-black/40 text-[10px]">⌘K</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-[var(--surface-4)] text-[10px]">⌘K</kbd>
           </button>
 
-          <Button size="sm" variant="ghost" className="h-8 text-xs gap-1.5" onClick={() => refetch()}>
+          <Button size="sm" variant="ghost" className="h-8 text-[13px] font-medium gap-1.5 hover:bg-[var(--surface-2)]" onClick={() => refetch()}>
             <RotateCcw className="h-3.5 w-3.5" /> Reload
           </Button>
 
-          <Button size="sm" className="h-9 px-4 rounded-xl text-xs font-bold shadow-lg shadow-primary/30 btn-magnetic" onClick={() => setLocation(`/projects/${id}/deployments`)}>
-            <Rocket className="h-3.5 w-3.5 mr-1" /> Deploy
+          <Button size="sm" className="h-8 px-4 rounded-lg text-[13px] font-semibold bg-[hsl(243,75%,62%)] hover:bg-[hsl(243,75%,68%)] text-white transition-all shadow-sm" onClick={() => setLocation(`/projects/${id}/deployments`)}>
+            <Rocket className="h-3.5 w-3.5 mr-1" /> Publish
           </Button>
         </div>
 
@@ -262,83 +281,91 @@ export default function ProjectEditor() {
       <div className="flex-1 flex pt-14 h-full relative overflow-hidden">
         
         {/* ── LEFT SECTION LAYERS PANEL ── */}
-        <aside className="w-64 border-r border-white/10 glass flex flex-col z-30">
-          <div className="p-4 border-b border-white/10 flex items-center justify-between font-mono text-xs font-bold text-foreground">
-            <span className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" /> SECTION LAYERS
-            </span>
-          </div>
+        <div className={cn(
+          "flex flex-col border-r border-[rgba(255,255,255,0.06)] bg-[var(--surface-2)] z-30 transition-all duration-300 relative",
+          isSectionsOpen ? "w-[240px]" : "w-0 border-r-0"
+        )}>
+          {isSectionsOpen && (
+            <>
+              <div className="p-4 border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between text-[11px] font-semibold uppercase tracking-widest text-[#EDECE7] whitespace-nowrap">
+                <span className="flex items-center gap-2">
+                  <Layers className="h-3.5 w-3.5 text-[hsl(243,75%,62%)]" /> SECTIONS
+                </span>
+              </div>
 
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 font-mono text-xs">
-            {sections.map((sec) => (
-              <button
-                key={sec.id}
-                onClick={() => { soundEngine.playTabSwitch(); setSelectedSection(sec.name); }}
-                className={cn(
-                  "w-full p-3 rounded-2xl text-left border transition-all space-y-1.5",
-                  selectedSection === sec.name
-                    ? "bg-primary/20 border-primary/50 text-primary shadow-lg"
-                    : "bg-secondary/15 border-white/5 text-muted-foreground hover:border-white/20 hover:text-foreground"
-                )}
-              >
-                <div className="flex items-center justify-between font-bold text-foreground">
-                  <span>■ {sec.name}</span>
-                  <span className="text-[10px] text-emerald-400 font-normal">✓ {sec.status}</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground/80 leading-relaxed">
-                  Contains: {sec.elements.join(", ")}
-                </div>
-              </button>
-            ))}
-          </div>
-        </aside>
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {sections.map((sec) => (
+                  <button
+                    key={sec.id}
+                    onClick={() => { soundEngine.playTabSwitch(); setSelectedSection(sec.name); }}
+                    className={cn(
+                      "w-full p-3 rounded-xl text-left border transition-all space-y-1.5",
+                      selectedSection === sec.name
+                        ? "bg-[var(--surface-3)] border-[rgba(255,255,255,0.12)] text-[#EDECE7]"
+                        : "bg-transparent border-transparent text-muted-foreground hover:bg-[var(--surface-3)]/50 hover:text-[#EDECE7]"
+                    )}
+                  >
+                    <div className="flex items-center justify-between font-medium text-[13px] text-foreground">
+                      <span>{sec.name}</span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground/80 leading-relaxed whitespace-normal">
+                      {sec.elements.join(", ")}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
-        {/* ── CENTER HERO CANVAS (20-25% LARGER PREVIEW) ── */}
-        <main className="flex-1 relative flex flex-col items-center justify-center p-4 md:p-6 bg-[#05050a] overflow-auto">
+        {/* Toggle Button for Sections */}
+        <button 
+          onClick={() => setIsSectionsOpen(!isSectionsOpen)}
+          className={cn(
+            "absolute top-[72px] z-40 p-1.5 rounded-r-lg bg-[var(--surface-2)] border border-l-0 border-[rgba(255,255,255,0.06)] text-muted-foreground hover:text-[#EDECE7] transition-all duration-300",
+            isSectionsOpen ? "left-[240px]" : "left-0"
+          )}
+        >
+          {isSectionsOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+
+        {/* ── CENTER HERO CANVAS (70%+ width) ── */}
+        <main className="flex-1 relative flex flex-col items-center justify-center p-4 md:p-8 bg-[var(--surface-0)] overflow-auto min-w-[50%]">
           
-          {/* Ambient Lighting */}
-          <div className="absolute inset-0 bg-[radial-gradient(#818cf8_1px,transparent_1px)] [background-size:36px_36px] opacity-15 pointer-events-none" />
-
           {/* Floating Contextual Toolbar above canvas */}
           {selectedSection && (
-            <div className="mb-3 glass px-4 py-1.5 rounded-2xl border border-white/20 shadow-2xl flex items-center gap-3 z-30 animate-fade-in">
-              <span className="text-xs font-mono font-bold text-primary flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> {selectedSection}
+            <div className="mb-4 bg-[var(--surface-2)]/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-[rgba(255,255,255,0.06)] flex items-center gap-4 z-30 animate-fade-in shadow-sm">
+              <span className="text-[13px] font-medium text-[#EDECE7] flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-[hsl(243,75%,62%)]" /> {selectedSection}
               </span>
-              <div className="h-3 w-[1px] bg-white/10" />
-              <button onClick={() => handlePromptSubmit("make it premium")} className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                ✨ Improve
+              <div className="h-4 w-[1px] bg-[rgba(255,255,255,0.06)]" />
+              <button onClick={() => handlePromptSubmit("make it premium")} className="text-[13px] font-medium text-muted-foreground hover:text-[#EDECE7] transition-colors">
+                Improve
               </button>
-              <button onClick={() => handlePromptSubmit("redesign layout")} className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                🎨 Redesign
+              <button onClick={() => handlePromptSubmit("redesign layout")} className="text-[13px] font-medium text-muted-foreground hover:text-[#EDECE7] transition-colors">
+                Redesign
               </button>
-              <button onClick={() => handlePromptSubmit("rewrite copy to sound punchy")} className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                ✍️ Rewrite
-              </button>
-              <button onClick={() => handlePromptSubmit("add Framer motion animations")} className="text-xs font-mono font-semibold text-muted-foreground hover:text-foreground transition-colors">
-                ⚡ Animate
+              <button onClick={() => handlePromptSubmit("rewrite copy")} className="text-[13px] font-medium text-muted-foreground hover:text-[#EDECE7] transition-colors">
+                Rewrite
               </button>
             </div>
           )}
 
-          {/* Floating Canvas Box (Expanded Size) */}
+          {/* Floating Canvas Box */}
           <div
             className={cn(
-              "transition-all duration-500 rounded-3xl glass border border-white/20 shadow-2xl overflow-hidden relative flex flex-col backdrop-blur-2xl h-full max-h-[920px]",
+              "transition-all duration-500 rounded-[20px] bg-[var(--surface-0)] border border-[rgba(255,255,255,0.06)] shadow-lg overflow-hidden relative flex flex-col h-full max-h-[920px]",
               getViewportWidth()
             )}
           >
             {/* Window Bar */}
-            <div className="h-9 px-4 border-b border-white/10 bg-secondary/40 flex items-center justify-between font-mono text-[10px] text-muted-foreground shrink-0">
+            <div className="h-10 px-4 border-b border-[rgba(255,255,255,0.06)] bg-[var(--surface-1)] flex items-center justify-between text-[11px] text-muted-foreground shrink-0">
               <div className="flex items-center gap-2">
-                <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
-                <div className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
-                <span className="ml-2 font-bold text-foreground">app.sitecraft.ai / {currentPage}</span>
+                <div className="h-2.5 w-2.5 rounded-full bg-[#EF4444]" />
+                <div className="h-2.5 w-2.5 rounded-full bg-[#F59E0B]" />
+                <div className="h-2.5 w-2.5 rounded-full bg-[#22C55E]" />
+                <span className="ml-3 font-medium text-[#EDECE7] tracking-wide">{currentPage}</span>
               </div>
-              <span className="text-emerald-400 font-bold flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> LIVE CANVAS
-              </span>
             </div>
 
             {/* Preview Iframe */}
@@ -348,68 +375,55 @@ export default function ProjectEditor() {
                 src={iframeUrl}
                 className="w-full flex-1 bg-white animate-fade-in"
                 sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-top-navigation-by-user-activation"
-                title="Visual Studio Preview"
+                title="Preview"
               />
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                <p className="text-xs font-mono text-muted-foreground">Synthesizing Visual Preview...</p>
+              <div className="flex-1 flex flex-col items-center justify-center bg-[var(--surface-0)]">
+                <div className="w-full h-full skeleton-shimmer bg-[var(--surface-1)] opacity-20" />
               </div>
             )}
-
           </div>
-
         </main>
 
-        {/* ── RIGHT PANEL: AI WORKSPACE CHAT (90% Conversational Dominance) ── */}
-        <aside className="w-96 border-l border-white/10 glass flex flex-col z-30 shadow-2xl backdrop-blur-2xl">
+        {/* ── RIGHT PANEL: AI CHAT (Calm, Simple, Beautiful) ── */}
+        <aside className="w-[380px] bg-[var(--surface-1)] border-l border-[rgba(255,255,255,0.06)] flex flex-col z-30 shrink-0">
           
-          {/* Workspace Header */}
-          <div className="p-4 border-b border-white/10 bg-secondary/30 flex items-center justify-between font-mono text-xs font-bold text-foreground">
-            <span className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" /> AI WORKSPACE
-            </span>
-            <span className="text-[10px] text-emerald-400">GPT-4o SYNTHESIZER</span>
-          </div>
-
-          {/* Conversation Feed (90% Height) */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans text-xs">
+          {/* Conversation Feed */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 text-[15px]">
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={cn(
-                  "p-4 rounded-2xl leading-relaxed space-y-2 transition-all",
-                  m.sender === "user"
-                    ? "bg-primary/20 text-primary border border-primary/30 ml-6 rounded-br-none shadow-md"
-                    : "bg-secondary/30 text-foreground border border-white/10 mr-6 rounded-bl-none"
+                  "flex flex-col gap-1.5",
+                  m.sender === "user" ? "items-end ml-12" : "items-start mr-12"
                 )}
               >
-                <p className="font-medium text-xs">{m.text}</p>
-
+                <div className={cn(
+                  "px-4 py-2.5 rounded-2xl max-w-full leading-relaxed",
+                  m.sender === "user" 
+                    ? "bg-[var(--surface-3)] text-muted-foreground rounded-tr-sm" 
+                    : "bg-transparent text-[#EDECE7] px-0"
+                )}>
+                  <p>{m.text}</p>
+                </div>
+                
                 {m.bullets && (
-                  <div className="space-y-1 pt-1 border-t border-white/10 font-mono text-[11px]">
+                  <div className="space-y-2 mt-2 px-0">
                     {m.bullets.map((b, idx) => (
-                      <div key={idx} className="flex items-start gap-1.5 text-emerald-400">
-                        <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                      <div key={idx} className="flex items-start gap-2 text-[14px] text-muted-foreground">
+                        <Check className="h-4 w-4 shrink-0 text-[#22C55E]" />
                         <span>{b}</span>
                       </div>
                     ))}
                   </div>
                 )}
-
-                <div className="text-[9px] font-mono text-muted-foreground opacity-60 text-right pt-0.5">
-                  {m.timestamp}
-                </div>
               </div>
             ))}
 
             {isRegenerating && (
-              <div className="mr-6 p-4 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-mono text-xs space-y-2 animate-pulse">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
-                  <span className="font-bold">AI Swarm Partner is working...</span>
-                </div>
-                <p className="text-[11px] text-purple-300/80">Refining typography, glass tokens, and layout physics...</p>
+              <div className="flex items-center gap-3 text-muted-foreground text-[14px] animate-pulse py-2">
+                <Sparkles className="h-4 w-4 text-[hsl(243,75%,62%)]" />
+                <span>{THINKING_MESSAGES[thinkingIndex]}</span>
               </div>
             )}
 
@@ -417,8 +431,8 @@ export default function ProjectEditor() {
           </div>
 
           {/* Fixed Bottom Input Area */}
-          <div className="p-4 border-t border-white/10 bg-secondary/30 space-y-2">
-            <div className="relative flex items-center">
+          <div className="p-4 bg-[var(--surface-1)]">
+            <div className="relative flex items-end bg-[var(--surface-2)] rounded-[20px] p-2 border border-[rgba(255,255,255,0.06)] focus-within:border-[rgba(255,255,255,0.12)] transition-colors">
               <Textarea
                 ref={textareaRef}
                 value={editInstruction}
@@ -430,15 +444,15 @@ export default function ProjectEditor() {
                     handlePromptSubmit();
                   }
                 }}
-                placeholder={selectedSection ? `Transform ${selectedSection}...` : "Type what you want..."}
-                className="min-h-[75px] bg-black/40 border border-white/10 text-xs font-medium rounded-2xl p-3 pr-10 focus:outline-none focus:border-primary shadow-inner"
+                placeholder="Ask AI to update the design..."
+                className="min-h-[44px] max-h-[200px] w-full bg-transparent border-0 text-[15px] font-normal resize-none px-3 py-2.5 focus-visible:ring-0 shadow-none text-[#EDECE7] placeholder:text-muted-foreground"
               />
               
-              <div className="absolute right-3 bottom-3 flex items-center gap-1.5">
+              <div className="flex items-center gap-1 p-1 shrink-0">
                 <button
                   type="button"
                   onClick={() => toast.info("Asset attachment coming soon")}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                  className="p-2 rounded-xl text-muted-foreground hover:bg-[var(--surface-3)] hover:text-[#EDECE7] transition-colors"
                 >
                   <Paperclip className="h-4 w-4" />
                 </button>
@@ -446,16 +460,11 @@ export default function ProjectEditor() {
                   type="button"
                   onClick={() => handlePromptSubmit()}
                   disabled={isRegenerating || !editInstruction.trim()}
-                  className="p-2 rounded-xl bg-primary text-primary-foreground disabled:opacity-40 shadow-md"
+                  className="p-2 rounded-xl bg-[hsl(243,75%,62%)] text-white hover:bg-[hsl(243,75%,68%)] disabled:opacity-50 disabled:hover:bg-[hsl(243,75%,62%)] transition-all shadow-sm"
                 >
-                  <Send className="h-3.5 w-3.5" />
+                  <Send className="h-4 w-4" />
                 </button>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground px-1">
-              <span>Shift + Enter for new line</span>
-              <span className="flex items-center gap-1">Press <CornerDownLeft className="h-2.5 w-2.5" /> to send</span>
             </div>
           </div>
 

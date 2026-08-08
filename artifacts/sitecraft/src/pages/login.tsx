@@ -47,12 +47,11 @@ export default function Login() {
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans">
       {/* Left Panel: Branding & Context (Hidden on small screens) */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-card relative overflow-hidden border-r border-border/50">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden" style={{ background: 'var(--surface-1)', borderRight: '1px solid var(--surface-border)' }}>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary/8 via-transparent to-transparent pointer-events-none" />
         
-        {/* Animated Background Mesh */}
-        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[100px] animate-pulse-slow pointer-events-none" />
-        <div className="absolute top-[40%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent/20 blur-[120px] animate-float pointer-events-none" />
+        {/* Subtle ambient glow */}
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/8 blur-[120px] pointer-events-none" />
 
         <div className="relative z-10">
           <ZovaixLogo size="lg" />
@@ -63,7 +62,7 @@ export default function Login() {
             Build the next generation of <span className="text-gradient-primary">web experiences.</span>
           </h1>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Join thousands of creators building highly optimized, beautifully designed web applications with the power of Autonomous AI Agents.
+            Join thousands of creators building beautiful, high-performing websites effortlessly with AI.
           </p>
           
           <div className="flex items-center gap-4 pt-8">
@@ -75,24 +74,21 @@ export default function Login() {
               ))}
             </div>
             <div className="text-sm">
-              <p className="font-medium">Loved by builders</p>
-              <p className="text-muted-foreground">Over 10,000+ deployments</p>
+              <p className="font-medium">Loved by creators</p>
+              <p className="text-muted-foreground">Thousands of websites built</p>
             </div>
           </div>
         </div>
 
-        <div className="relative z-10 flex items-center text-sm text-muted-foreground gap-2 font-mono">
-          <Command className="h-4 w-4" /> Press <kbd className="px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs font-sans">⌘ K</kbd> to open command menu anytime
+        <div className="relative z-10 flex items-center text-sm text-muted-foreground gap-2">
+          <Command className="h-4 w-4" /> Press <kbd className="px-2 py-0.5 rounded-md text-xs font-medium" style={{ background: 'var(--surface-2)', border: '1px solid var(--surface-border)' }}>⌘ K</kbd> to search anything
         </div>
       </div>
 
       {/* Right Panel: Auth Form */}
       <div className="flex w-full lg:w-1/2 flex-col items-center justify-center p-8 sm:p-12 relative">
         <Link href="/" className="absolute top-8 left-8 lg:hidden flex items-center gap-2 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <span className="font-bold text-lg tracking-tight">SiteCraft</span>
+          <ZovaixLogo size="sm" />
         </Link>
 
         <div className="w-full max-w-[420px] space-y-8 animate-slide-up">

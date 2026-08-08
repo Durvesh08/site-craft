@@ -320,7 +320,7 @@ export default function SettingsPage() {
         <div className="space-y-6">
           {/* TAB 1: PROFILE */}
           {activeTab === "profile" && (
-            <Card className="glass-panel">
+            <Card className="rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
               <CardHeader>
                 <CardTitle>Profile Details</CardTitle>
                 <CardDescription>Configure your personal identification parameters.</CardDescription>
@@ -393,7 +393,7 @@ export default function SettingsPage() {
 
           {/* TAB 2: FTP */}
           {activeTab === "ftp" && (
-            <Card className="glass-panel">
+            <Card className="rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
               <CardHeader>
                 <CardTitle>FTP Server Configuration</CardTitle>
                 <CardDescription>Setup details for automated ftp publication hosting providers (e.g. Hostinger).</CardDescription>
@@ -554,16 +554,16 @@ export default function SettingsPage() {
 
           {/* TAB 3: AI ENGINE */}
           {activeTab === "ai" && (
-            <Card className="glass-panel border-primary/20 shadow-xl">
-              <CardHeader className="bg-gradient-to-r from-primary/10 via-accent/5 to-transparent pb-6 border-b border-border/50">
+            <Card className="rounded-2xl shadow-xl overflow-hidden" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+              <CardHeader className="pb-6 border-b" style={{ borderColor: 'var(--surface-border)', backgroundColor: 'var(--surface-2)' }}>
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-inner">
+                  <div className="p-2.5 rounded-xl text-primary" style={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
                     <Cpu className="h-6 w-6" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-bold">Multi-LLM Intelligence Suite</CardTitle>
+                    <CardTitle className="text-xl font-bold">AI Generation Settings</CardTitle>
                     <CardDescription className="text-sm">
-                      Configure your preferred AI model engines. SiteCraft supports Google Gemini, OpenAI (GPT-4o), Anthropic Claude 3.5, DeepSeek Coder, and Free GLM / OpenRouter endpoints.
+                      Configure your preferred AI model engines. ZOVAIX SITES supports Google Gemini, OpenAI (GPT-4o), Anthropic Claude 3.5, DeepSeek Coder, and Free GLM / OpenRouter endpoints.
                     </CardDescription>
                   </div>
                 </div>
@@ -685,11 +685,11 @@ export default function SettingsPage() {
 
           {/* TAB 4: BRANDING */}
           {activeTab === "branding" && (
-            <Card className="glass-panel">
+            <Card className="rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
               <CardHeader>
                 <CardTitle>Branding & Theme Customization</CardTitle>
                 <CardDescription>
-                  This does not change SiteCraft's own dashboard — it sets default branding (company name, logo,
+                  This does not change ZOVAIX SITES' own dashboard — it sets default branding (company name, logo,
                   favicon, color) that the AI weaves into every site it generates for you, unless a project's own
                   business description says otherwise. Handy if you're generating multiple sites for the same brand.
                 </CardDescription>

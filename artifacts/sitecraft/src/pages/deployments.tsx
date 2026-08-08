@@ -1,35 +1,24 @@
 import {
   useListProjectDeployments,
   getListProjectDeploymentsQueryKey,
-  useDeployProject,
   useListProjects,
   useGetDeployment,
   getGetDeploymentQueryKey,
-  useRetryDeployment,
 } from "@workspace/api-client-react";
 import { format } from "date-fns";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   Rocket, Globe, Server, CheckCircle, XCircle, Clock,
-  ExternalLink, Link2, RefreshCw, ChevronDown, ChevronUp,
-  Terminal, AlertTriangle, Trash2, Code2, Cloud, Github, Shield,
+  ExternalLink, ChevronDown, ChevronUp,
+  Terminal, Trash2,
 } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { DnsManager } from "@/components/deployments/dns-manager";
 
 function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete: (id: string) => void }) {
@@ -46,11 +35,11 @@ function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete:
 
   return (
     <>
-      <TableRow key={deployment.id} className={`hover:bg-secondary/20 transition-colors ${isActive ? "bg-primary/5" : ""}`}>
+      <TableRow key={deployment.id} className={`transition-colors hover:bg-[var(--surface-2)] ${isActive ? "bg-primary/5" : ""}`} style={{ borderColor: 'var(--surface-border)' }}>
         <TableCell className="font-medium">
           <div className="flex items-center gap-2">
             <StatusIcon status={current.status} />
-            <span className="truncate max-w-[180px] text-foreground font-bold">{deployment._projectName}</span>
+            <span className="truncate max-w-[180px] text-foreground font-semibold">{deployment._projectName}</span>
           </div>
           {isActive && (
             <div className="mt-2 space-y-1">
@@ -66,7 +55,7 @@ function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete:
           </div>
         </TableCell>
         <TableCell><StatusBadge status={current.status} /></TableCell>
-        <TableCell className="text-sm text-muted-foreground font-mono">
+        <TableCell className="text-sm text-muted-foreground">
           {deployment.createdAt ? format(new Date(deployment.createdAt), "MMM d, HH:mm") : "—"}
         </TableCell>
         <TableCell className="text-right">
@@ -92,7 +81,7 @@ function DeploymentLogRow({ deployment, onDelete }: { deployment: any; onDelete:
       </TableRow>
 
       {expanded && log && (
-        <TableRow className="bg-black/60">
+        <TableRow style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}>
           <TableCell colSpan={5} className="p-4 font-mono text-xs text-emerald-400">
             <pre className="whitespace-pre-wrap max-h-48 overflow-y-auto">{log}</pre>
           </TableCell>
@@ -124,7 +113,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function Deployments() {
   const { data: projectsData } = useListProjects();
   const [activeTab, setActiveTab] = useState<"history" | "dns">("history");
-  const [viewProjectId, setViewProjectId] = useState("");
+  const [viewProjectId] = useState("");
 
   const projects = projectsData?.projects ?? [];
   const activeProjectId = viewProjectId || projects[0]?.id || "";
@@ -135,7 +124,7 @@ export default function Deployments() {
 
   const deployments = (deploymentsData?.deployments ?? []).map(d => ({
     ...d,
-    _projectName: projects.find(p => p.id === d.projectId)?.name ?? "Unknown Project",
+    _projectName: projects.find(p => p.id === d.projectId)?.name ?? "Unknown Website",
   }));
 
   const handleDeleteDeployment = async (deployId: string) => {
@@ -150,30 +139,30 @@ export default function Deployments() {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in relative z-10">
+    <div className="p-8 max-w-[1200px] mx-auto space-y-8 animate-fade-in relative z-10">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6" style={{ borderBottom: '1px solid var(--surface-border)' }}>
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-semibold mb-3">
-            <Rocket className="h-3.5 w-3.5" /> ENTERPRISE DEPLOYMENT HUB
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold mb-3">
+            <Rocket className="h-3.5 w-3.5" /> PUBLISHED SITES
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Global Distribution & Domains</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage edge deployments, GitHub Pages sync, FTP servers, and custom DNS routing.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Domains & Publishing</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage custom DNS routing, domains, and publishing history.</p>
         </div>
 
-        <div className="flex items-center gap-2 p-1 rounded-xl bg-secondary/30 border border-border/50">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl" style={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
           <button
             onClick={() => setActiveTab("history")}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "history" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
           >
-            Deployment History
+            Publishing History
           </button>
           <button
             onClick={() => setActiveTab("dns")}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === "dns" ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:text-foreground"}`}
           >
-            DNS & Domains
+            Domains
           </button>
         </div>
       </div>
@@ -182,22 +171,22 @@ export default function Deployments() {
         <DnsManager />
       ) : (
         <div className="space-y-6">
-          <div className="glass-panel rounded-3xl border border-white/10 overflow-hidden shadow-xl">
+          <div className="rounded-2xl overflow-hidden shadow-xl" style={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-white/10 font-mono text-xs text-muted-foreground uppercase">
-                  <TableHead>Project</TableHead>
-                  <TableHead>Target Host</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="font-mono text-xs text-muted-foreground uppercase" style={{ borderColor: 'var(--surface-border)' }}>
+                  <TableHead className="py-4">Website</TableHead>
+                  <TableHead className="py-4">Target Host</TableHead>
+                  <TableHead className="py-4">Status</TableHead>
+                  <TableHead className="py-4">Timestamp</TableHead>
+                  <TableHead className="py-4 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {deployments.length === 0 ? (
-                  <TableRow>
+                  <TableRow style={{ border: 'none' }}>
                     <TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">
-                      No deployments recorded yet. Initialize a deployment from the Command Center.
+                      No publishing events recorded yet. You can publish your site directly from the editor.
                     </TableCell>
                   </TableRow>
                 ) : (

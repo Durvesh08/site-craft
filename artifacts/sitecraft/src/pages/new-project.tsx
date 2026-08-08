@@ -238,7 +238,7 @@ export default function NewProject() {
             )}
           >
             <ListChecks className="h-4 w-4" />
-            Guided Wizard
+            Step by Step
           </button>
           <button
             type="button"
@@ -314,7 +314,7 @@ export default function NewProject() {
                 data-testid="button-quick-generate"
               >
                 {isSubmitting ? (
-                  <><Wand2 className="h-5 w-5 animate-spin" /> Starting Agents…</>
+                  <><Wand2 className="h-5 w-5 animate-spin" /> Creating your website…</>
                 ) : (
                   <><Wand2 className="h-5 w-5" /> Generate Site <ChevronRight className="h-5 w-5" /></>
                 )}
@@ -650,7 +650,7 @@ export default function NewProject() {
                 data-testid="button-generate-site"
               >
                 {isSubmitting ? (
-                  <><Wand2 className="h-5 w-5 animate-spin" /> Starting Agents…</>
+                  <><Wand2 className="h-5 w-5 animate-spin" /> Creating your website…</>
                 ) : (
                   <><Wand2 className="h-5 w-5" /> Generate Site <ChevronRight className="h-5 w-5" /></>
                 )}

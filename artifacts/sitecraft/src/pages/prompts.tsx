@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useListPrompts, useUpdatePrompt } from "@workspace/api-client-react";
-import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Settings2, Shield, Edit3, Bot, Loader2, Sparkles } from "lucide-react";
+import { Sparkles, Settings2, Shield, Edit3, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -80,26 +79,26 @@ export default function Prompts() {
           temperature,
         },
       });
-      toast.success("Agent prompt template updated successfully!");
+      toast.success("AI Assistant prompt configuration updated successfully!");
       setIsDialogOpen(false);
       refetch();
     } catch (error) {
-      toast.error("Failed to update prompt. Please try again.");
+      toast.error("Failed to update configuration. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex justify-between items-center">
+    <div className="p-8 max-w-[1200px] mx-auto space-y-8 animate-fade-in">
+      <div className="flex justify-between items-center pb-6" style={{ borderBottom: '1px solid var(--surface-border)' }}>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-            <MessageSquare className="h-8 w-8 text-primary" />
-            Prompt Library
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage the system prompts and instructions that power the 10 AI agents.
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold mb-3">
+            <Sparkles className="h-3.5 w-3.5" /> AI ASSISTANT
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">AI Prompt Library</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure system prompts and behaviors for the AI design specialists.
           </p>
         </div>
       </div>
@@ -107,51 +106,47 @@ export default function Prompts() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
           Array(6).fill(0).map((_, i) => (
-            <Card key={i} className="glass-panel">
-              <CardHeader className="gap-2">
-                <div className="h-6 bg-muted rounded w-1/2 animate-pulse" />
-                <div className="h-4 bg-muted rounded w-3/4 animate-pulse" />
-              </CardHeader>
-              <CardContent>
-                <div className="h-20 bg-muted rounded w-full animate-pulse" />
-              </CardContent>
-            </Card>
+            <div key={i} className="rounded-2xl p-6 space-y-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
+              <div className="h-6 rounded w-1/2 skeleton-shimmer" />
+              <div className="h-4 rounded w-3/4 skeleton-shimmer" />
+              <div className="h-20 rounded w-full skeleton-shimmer" />
+            </div>
           ))
         ) : prompts.length === 0 ? (
-          <div className="col-span-full py-12 text-center border border-dashed rounded-xl glass-panel">
+          <div className="col-span-full py-16 text-center rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
             <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-30" />
-            <h3 className="text-lg font-medium">No prompts loaded</h3>
-            <p className="text-muted-foreground">The system prompt library is empty.</p>
+            <h3 className="text-lg font-medium text-foreground">No prompts loaded</h3>
+            <p className="text-muted-foreground text-sm">The prompt library is currently empty.</p>
           </div>
         ) : (
           prompts.map((prompt) => (
-            <Card key={prompt.id} className="glass-panel flex flex-col h-full hover:border-primary/30 transition-colors">
+            <Card key={prompt.id} className="flex flex-col h-full hover:border-[rgba(255,255,255,0.12)] transition-colors rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--surface-border)' }}>
               <CardHeader className="pb-3 flex-none">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--surface-2)' }}>
                       {getRoleIcon(prompt.agentRole)}
                     </div>
-                    <CardTitle className="text-lg">{prompt.name}</CardTitle>
+                    <CardTitle className="text-base font-semibold text-foreground">{prompt.name}</CardTitle>
                   </div>
-                  {prompt.isActive && <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-transparent border-emerald-200 text-[10px] px-1.5 py-0">ACTIVE</Badge>}
+                  {prompt.isActive && <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] px-1.5 py-0 font-medium">ACTIVE</Badge>}
                 </div>
-                <CardDescription className="text-xs font-mono">
+                <CardDescription className="text-xs text-muted-foreground">
                   Role: {prompt.agentRole} • Model: {prompt.model}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1">
-                <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+                <p className="text-sm text-muted-foreground line-clamp-3 mb-4 leading-relaxed">
                   {prompt.description || "No description provided."}
                 </p>
-                <div className="bg-muted/50 border border-border/50 rounded-md p-3 max-h-32 overflow-hidden relative group">
+                <div className="border rounded-xl p-3 max-h-32 overflow-hidden relative" style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}>
                   <p className="text-xs font-mono leading-relaxed text-muted-foreground line-clamp-4">
                     {prompt.systemPrompt}
                   </p>
-                  <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-muted/50 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t" style={{ backgroundImage: `linear-gradient(to top, var(--surface-2) 0%, transparent 100%)` }} />
                 </div>
               </CardContent>
-              <CardFooter className="pt-0 flex justify-between items-center border-t border-border/50 pt-3 mt-auto bg-card/30">
+              <CardFooter className="pt-3 flex justify-between items-center border-t mt-auto" style={{ borderColor: 'var(--surface-border)' }}>
                 <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                   v{prompt.version}
                 </span>
@@ -159,9 +154,9 @@ export default function Prompts() {
                   variant="ghost"
                   size="sm"
                   onClick={() => handleOpenConfigure(prompt)}
-                  className="h-8 px-3 text-xs gap-1.5 hover:text-primary"
+                  className="h-8 px-3 text-xs gap-1.5 text-muted-foreground hover:text-foreground hover:bg-[var(--surface-2)]"
                 >
-                  <Settings2 className="h-3 w-3" />
+                  <Settings2 className="h-3.5 w-3.5" />
                   Configure
                 </Button>
               </CardFooter>
@@ -172,18 +167,18 @@ export default function Prompts() {
 
       {/* Configure Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col bg-card border border-border">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col rounded-[20px] overflow-hidden p-0 border border-white/10" style={{ backgroundColor: 'var(--surface-1)' }}>
+          <div className="p-6 border-b" style={{ borderColor: 'var(--surface-border)', backgroundColor: 'var(--surface-2)' }}>
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
               <Settings2 className="h-5 w-5 text-primary" />
-              Configure Agent Prompt Template
+              Configure AI Assistant Prompt
             </DialogTitle>
-            <DialogDescription>
-              Modify system-level guidelines and prompt templates for the {selectedPrompt?.agentRole} agent.
+            <DialogDescription className="text-sm text-muted-foreground mt-1">
+              Modify system-level guidelines and prompt templates for the {selectedPrompt?.agentRole} designer.
             </DialogDescription>
-          </DialogHeader>
+          </div>
 
-          <div className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
+          <div className="flex-1 overflow-y-auto space-y-4 p-6 pr-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase">Template Name</label>
@@ -191,7 +186,7 @@ export default function Prompts() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. UX Designer V2"
-                  className="bg-background/50"
+                  className="bg-[var(--surface-2)] border-border/50 focus:border-primary"
                 />
               </div>
               <div className="space-y-1.5">
@@ -199,7 +194,7 @@ export default function Prompts() {
                 <Input
                   value={selectedPrompt?.agentRole || ""}
                   disabled
-                  className="bg-muted/50 font-mono text-xs"
+                  className="bg-[var(--surface-2)] border-border/30 font-mono text-xs opacity-60"
                 />
               </div>
             </div>
@@ -210,7 +205,8 @@ export default function Prompts() {
                 <select
                   value={model}
                   onChange={(e) => setModel(e.target.value as PromptTemplate["model"])}
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background/50 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}
                 >
                   <option value="gemini-flash">Gemini Pro/Flash Hybrid (thinking disabled)</option>
                   <option value="gemini-pro">Gemini 2.5 Pro (Thinking)</option>
@@ -238,7 +234,7 @@ export default function Prompts() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe what this prompt configuration is optimized for..."
-                className="min-h-[60px] bg-background/50 text-xs"
+                className="min-h-[60px] bg-[var(--surface-2)] border-border/50 focus:border-primary text-xs"
               />
             </div>
 
@@ -251,7 +247,7 @@ export default function Prompts() {
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 placeholder="You are an expert AI agent..."
-                className="min-h-[220px] font-mono text-xs bg-background/50 resize-y leading-relaxed"
+                className="min-h-[200px] font-mono text-xs bg-[var(--surface-2)] border-border/50 focus:border-primary resize-y leading-relaxed"
               />
             </div>
 
@@ -261,30 +257,25 @@ export default function Prompts() {
                 value={userPromptTemplate}
                 onChange={(e) => setUserPromptTemplate(e.target.value)}
                 placeholder="Generate a layout for: {{businessDescription}}..."
-                className="min-h-[100px] font-mono text-xs bg-background/50 resize-y leading-relaxed"
+                className="min-h-[100px] font-mono text-xs bg-[var(--surface-2)] border-border/50 focus:border-primary resize-y leading-relaxed"
               />
             </div>
           </div>
 
-          <DialogFooter className="border-t border-border/50 pt-4">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
+          <div className="p-6 border-t flex flex-col-reverse sm:flex-row items-center justify-end gap-3 bg-[var(--surface-2)]" style={{ borderColor: 'var(--surface-border)' }}>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving} className="rounded-xl border-border/50">
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving || !name || !systemPrompt} className="gap-2">
-              {isSaving ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
-              ) : (
-                <><Sparkles className="h-4 w-4" /> Save Changes</>
-              )}
+            <Button onClick={handleSave} disabled={isSaving || !name || !systemPrompt} className="gap-2 btn-premium rounded-xl h-10 px-6">
+              {isSaving ? "Saving…" : "Save Changes"}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
 
-// Need Paintbrush icon for this file since it's not imported at top
 function Paintbrush(props: any) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>

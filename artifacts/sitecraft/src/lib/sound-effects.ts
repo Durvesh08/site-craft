@@ -1,5 +1,5 @@
 /**
- * Premium Tactile Sound Engine for SiteCraft Enterprise AI OS
+ * Premium Tactile Sound Engine for ZOVAIX SITES
  * Inspired by Linear, Raycast, Arc Browser, Apple VisionOS, and macOS.
  * Synthesizes warm, organic micro-audio via low-latency Web Audio API with pitch randomization.
  */
@@ -11,7 +11,7 @@ class PremiumSoundEngine {
 
   constructor() {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("sitecraft_sound_enabled");
+      const saved = localStorage.getItem("zovaix_sound_enabled");
       if (saved !== null) {
         this.enabled = saved === "true";
       }
@@ -39,7 +39,7 @@ class PremiumSoundEngine {
   public setEnabled(val: boolean) {
     this.enabled = val;
     if (typeof window !== "undefined") {
-      localStorage.setItem("sitecraft_sound_enabled", String(val));
+      localStorage.setItem("zovaix_sound_enabled", String(val));
     }
   }
 

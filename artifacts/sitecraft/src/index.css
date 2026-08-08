@@ -1,51 +1,64 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+/* ═══════════════════════════════════════════════════════════════
+   ZOVAIX SITES — Design Foundation
+   Based on: Zovaix Site Design System Vol. I (14 Volumes)
+   
+   Philosophy:
+   - Luxurious dark, not hacker black
+   - Layered surfaces, not flat planes
+   - Typography-led hierarchy
+   - 8pt spacing grid
+   - Subtle elevation, not neon glows
+   - Motion as communication, not decoration
+   ═══════════════════════════════════════════════════════════════ */
 
+@theme {
+  /* ── Typography ── */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ── Color Tokens ── */
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
-
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
-
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
-
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
-
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
-
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* ── Border Radius Scale (per spec) ── */
+  --radius-xs: 4px;
+  --radius-sm: 8px;      /* Small UI elements */
+  --radius-md: 12px;
+  --radius-lg: 16px;     /* Cards */
+  --radius-xl: 20px;     /* Dialogs */
+  --radius-2xl: 24px;    /* Floating panels */
+  --radius-3xl: 32px;    /* Hero sections */
 
+  /* ── Animations ── */
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
-  --animate-fade-in: fade-in 0.4s ease-out forwards;
-  --animate-fade-out: fade-out 0.4s ease-out forwards;
-  --animate-slide-up: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-in: fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-out: fade-out 0.25s ease-out forwards;
+  --animate-slide-up: slide-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-float: float 6s ease-in-out infinite;
   --animate-gradient: gradient 8s linear infinite;
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -60,20 +73,20 @@
     to { height: 0; }
   }
   @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   @keyframes fade-out {
     from { opacity: 1; }
     to { opacity: 0; }
   }
   @keyframes slide-up {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
   }
   @keyframes float {
     0% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
+    50% { transform: translateY(-8px); }
     100% { transform: translateY(0px); }
   }
   @keyframes gradient {
@@ -83,38 +96,66 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   LAYERED SURFACE SYSTEM
+   
+   "Dark mode must feel luxurious. Not black. Not gamer. Not hacker."
+   "Different elevation levels should use different surface colors."
+   
+   Surface-0 (deepest):  #09090F  — Page background
+   Surface-1:            #111118  — Cards, panels
+   Surface-2:            #18181F  — Raised cards, sidebars
+   Surface-3:            #1F2027  — Floating panels, dropdowns
+   Surface-4:            #26272E  — Tooltips, popovers
+   ═══════════════════════════════════════════════════════════════ */
+
 @layer base {
   :root {
-    /* Deep Obsidian & Graphite Palette */
-    --background: 240 10% 2%;
-    --foreground: 210 40% 98%;
+    /* Layered Luxurious Dark Palette */
+    --background: 240 15% 3.5%;        /* #09090F — Surface-0 */
+    --foreground: 60 6% 93%;           /* #EDECE7 — warm off-white */
 
-    --card: 240 8% 4%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 12% 6.5%;              /* #111118 — Surface-1 */
+    --card-foreground: 60 6% 93%;
 
-    --popover: 240 8% 4%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 10% 8.5%;           /* #18181F — Surface-2 */
+    --popover-foreground: 60 6% 93%;
 
-    --primary: 243 75% 59%;
+    --primary: 243 75% 62%;            /* Refined indigo-violet */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 6% 8%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 240 10% 9%;           /* Surface-2 variant */
+    --secondary-foreground: 60 6% 93%;
 
-    --muted: 240 6% 12%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 240 8% 13%;              /* Surface-3 */
+    --muted-foreground: 220 10% 55%;   /* Muted text — readable */
 
-    --accent: 240 6% 12%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 240 8% 13%;
+    --accent-foreground: 60 6% 93%;
 
-    --destructive: 0 62% 40%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 12%;
-    --input: 240 6% 12%;
-    --ring: 243 75% 59%;
+    --border: 240 8% 14%;             /* Subtle, not harsh */
+    --input: 240 8% 14%;
+    --ring: 243 75% 62%;
 
     --radius: 0.75rem;
+
+    /* ── Extended Surface Tokens ── */
+    --surface-0: #09090F;
+    --surface-1: #111118;
+    --surface-2: #18181F;
+    --surface-3: #1F2027;
+    --surface-4: #26272E;
+    --surface-border: rgba(255, 255, 255, 0.06);
+    --surface-border-hover: rgba(255, 255, 255, 0.12);
+
+    /* ── Semantic Colors ── */
+    --success: #22C55E;
+    --warning: #F59E0B;
+    --info: #3B82F6;
+    --danger: #EF4444;
   }
 }
 
@@ -122,71 +163,287 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary;
+    background-color: var(--surface-0);
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    background-color: #020204;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* ── Typography Scale ──
+     "Typography is the primary design element."
+     Hero > Display > Heading > Subheading > Body > Caption > Label > Button */
+
+  h1, .text-hero {
+    font-size: 3.75rem;       /* 60px */
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
+  h2, .text-display {
+    font-size: 2.25rem;       /* 36px */
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+  }
+  h3, .text-heading {
+    font-size: 1.5rem;        /* 24px */
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+  h4, .text-subheading {
+    font-size: 1.125rem;      /* 18px */
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+  p, .text-body {
+    font-size: 0.9375rem;     /* 15px */
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+  small, .text-caption {
+    font-size: 0.8125rem;     /* 13px */
+    font-weight: 450;
+    line-height: 1.45;
+    letter-spacing: 0.005em;
+  }
+  .text-label {
+    font-size: 0.6875rem;     /* 11px */
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .text-button {
+    font-size: 0.8125rem;     /* 13px */
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
+
+  ::selection {
+    background: hsl(243, 75%, 62%, 0.3);
+    color: hsl(243, 75%, 80%);
   }
 }
 
-/* Custom Scrollbar */
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR — Subtle, Luxurious
+   ═══════════════════════════════════════════════════════════════ */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #020204;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.16);
 }
 
-/* Aceternity / Magic UI Glass & Caustic Utilities */
+/* ═══════════════════════════════════════════════════════════════
+   ELEVATION SYSTEM
+   
+   "Depth from layering, not massive shadows."
+   "Avoid: Huge drop shadows, floating neon glows, excessive glass."
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Level 1 — Cards, panels sitting on the page */
+.elevation-1 {
+  background: var(--surface-1);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.elevation-1:hover {
+  border-color: var(--surface-border-hover);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Level 2 — Raised cards, sidebars, active panels */
+.elevation-2 {
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Level 3 — Floating panels, dropdowns, command palette */
+.elevation-3 {
+  background: var(--surface-3);
+  border: 1px solid var(--surface-border-hover);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Level 4 — Tooltips, popovers */
+.elevation-4 {
+  background: var(--surface-4);
+  border: 1px solid var(--surface-border-hover);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLASS PANEL — Refined, Not Heavy
+   Used sparingly for navbar and floating UI only
+   ═══════════════════════════════════════════════════════════════ */
+
 .glass {
-  background: rgba(10, 10, 15, 0.65);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(17, 17, 24, 0.7);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--surface-border);
 }
 
 .glass-panel {
-  background: rgba(15, 17, 26, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(17, 17, 24, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--surface-border);
 }
 
-.glow-card {
-  position: relative;
-  background: rgba(12, 14, 22, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: border-color 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
+/* ═══════════════════════════════════════════════════════════════
+   CARD SYSTEM
+   
+   "Cards should feel editorial. Never dashboard rectangles."
+   "Cards should breathe. Use whitespace. Not borders."
+   ═══════════════════════════════════════════════════════════════ */
+
+.card-editorial {
+  background: var(--surface-1);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-editorial:hover {
+  border-color: var(--surface-border-hover);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
 }
 
-.glow-card:hover {
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 30px rgba(99, 102, 241, 0.15);
+/* Portfolio-style project card */
+.card-project {
+  background: var(--surface-1);
+  border: 1px solid var(--surface-border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card-project:hover {
+  border-color: var(--surface-border-hover);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  transform: translateY(-4px);
 }
 
-.text-gradient-primary {
-  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 40%, #818cf8 70%, #c084fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+/* ═══════════════════════════════════════════════════════════════
+   BUTTON SYSTEM
+   
+   "Buttons should never feel heavy."
+   "Hover → Lift 2px → Shadow increases → Background transitions"
+   ═══════════════════════════════════════════════════════════════ */
 
-.text-gradient-cyan {
-  background: linear-gradient(135deg, #ffffff 0%, #38bdf8 50%, #818cf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.btn-premium {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-premium:hover {
+  transform: translateY(-1px);
+}
+.btn-premium:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .btn-magnetic {
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-magnetic:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TEXT GRADIENTS — Refined, Warm
+   ═══════════════════════════════════════════════════════════════ */
+
+.text-gradient-primary {
+  background: linear-gradient(135deg, #f0f0f0 0%, #c4b5fd 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-warm {
+  background: linear-gradient(135deg, #ffffff 0%, #e2d9f3 40%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #ffffff 0%, #7dd3fc 50%, #818cf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SKELETON LOADING
+   
+   "Every loading state needs skeletons. No spinners."
+   ═══════════════════════════════════════════════════════════════ */
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-1) 0%,
+    var(--surface-2) 50%,
+    var(--surface-1) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LEGACY COMPAT — Keep glow-card for existing components
+   ═══════════════════════════════════════════════════════════════ */
+
+.glow-card {
+  position: relative;
+  background: var(--surface-1);
+  border: 1px solid var(--surface-border);
+  border-radius: 16px;
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+.glow-card:hover {
+  border-color: var(--surface-border-hover);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
 }
