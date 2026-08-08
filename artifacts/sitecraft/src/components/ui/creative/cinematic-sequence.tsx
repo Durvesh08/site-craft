@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { useScroll, useTransform, MotionValue } from 'framer-motion';
+import { useMotionValueEvent, MotionValue } from 'framer-motion';
 
 interface SceneConfig {
   id: string;
@@ -134,42 +134,42 @@ export function CinematicSequence({ scrollYProgress }: CinematicSequenceProps) {
     };
   }, [totalFrames]);
 
-  // Map scroll progress to the exact frame to render
+  // Initial draw if scroll is 0
   useEffect(() => {
-    // Initial draw if scroll is 0
     let currentScene = cinematicTimeline[0];
     let src = `${currentScene.pathPrefix}${'1'.padStart(currentScene.padLength, '0')}.${currentScene.extension}`;
     currentSrcRef.current = src;
     drawFrame(src);
+  }, []);
 
-    return scrollYProgress.onChange((latest) => {
-      let currentScene = cinematicTimeline[0];
-      let sceneProgress = 0;
+  // Map scroll progress to the exact frame to render reliably via useMotionValueEvent
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    let currentScene = cinematicTimeline[0];
+    let sceneProgress = 0;
 
-      for (const scene of cinematicTimeline) {
-        if (latest >= scene.scrollRange[0] && latest <= scene.scrollRange[1]) {
-          currentScene = scene;
-          const range = scene.scrollRange[1] - scene.scrollRange[0];
-          sceneProgress = (latest - scene.scrollRange[0]) / range;
-          break;
-        }
+    for (const scene of cinematicTimeline) {
+      if (latest >= scene.scrollRange[0] && latest <= scene.scrollRange[1]) {
+        currentScene = scene;
+        const range = scene.scrollRange[1] - scene.scrollRange[0];
+        sceneProgress = (latest - scene.scrollRange[0]) / range;
+        break;
       }
+    }
 
-      if (latest > cinematicTimeline[cinematicTimeline.length - 1].scrollRange[1]) {
-        currentScene = cinematicTimeline[cinematicTimeline.length - 1];
-        sceneProgress = 1;
-      }
+    if (latest > cinematicTimeline[cinematicTimeline.length - 1].scrollRange[1]) {
+      currentScene = cinematicTimeline[cinematicTimeline.length - 1];
+      sceneProgress = 1;
+    }
 
-      let frameIndex = Math.floor(sceneProgress * currentScene.frameCount) + 1;
-      if (frameIndex > currentScene.frameCount) frameIndex = currentScene.frameCount;
+    let frameIndex = Math.floor(sceneProgress * currentScene.frameCount) + 1;
+    if (frameIndex > currentScene.frameCount) frameIndex = currentScene.frameCount;
 
-      const indexStr = frameIndex.toString().padStart(currentScene.padLength, '0');
-      const requestedSrc = `${currentScene.pathPrefix}${indexStr}.${currentScene.extension}`;
+    const indexStr = frameIndex.toString().padStart(currentScene.padLength, '0');
+    const requestedSrc = `${currentScene.pathPrefix}${indexStr}.${currentScene.extension}`;
 
-      currentSrcRef.current = requestedSrc;
-      drawFrame(requestedSrc);
-    });
-  }, [scrollYProgress]);
+    currentSrcRef.current = requestedSrc;
+    drawFrame(requestedSrc);
+  });
 
   // Handle resize rendering explicitly to not lose image on resize
   useEffect(() => {

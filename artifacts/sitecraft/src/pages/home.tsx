@@ -9,51 +9,7 @@ import { CinematicSequence } from "@/components/ui/creative/cinematic-sequence";
 import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 import Lenis from "lenis";
 
-const PREVIEWS = [
-  { id: 'lumina', src: '/previews/lumina.jpg', meta: '01 BESPOKE CODE' },
-  { id: 'pulsar', src: '/previews/pulsar.jpg', meta: '02 LOGIC ENGINE' },
-  { id: 'clout', src: '/previews/clout.jpg', meta: '03 DYNAMIC BRAND' },
-  { id: 'sonora', src: '/previews/sonora.jpg', meta: '04 PREMIUM ECOM' },
-  { id: 'nova', src: '/previews/nova.jpg', meta: '05 ARCHITECTURE' }
-];
 
-function FloatingPreview({ index, src, meta, scrollProgress }: { index: number, src: string, meta: string, scrollProgress: MotionValue<number> }) {
-  // Map 5 items across [0.05, 0.85] with wide overlapping windows (0.20 width per item)
-  const step = 0.15; 
-  const start = 0.05 + (index * step); 
-  const end = start + 0.22;
-  const center = (start + end) / 2;
-
-  // Solid visibility in the middle of its window
-  const opacity = useTransform(scrollProgress, [start, start + 0.04, end - 0.04, end], [0, 1, 1, 0]);
-  const scale = useTransform(scrollProgress, [start, center, end], [0.85, 1.02, 0.9]);
-  const y = useTransform(scrollProgress, [start, center, end], [80, 0, -80]);
-  
-  // Dramatic 3D sweeping parallax from off-screen / sides
-  const isEven = index % 2 === 0;
-  const x = useTransform(scrollProgress, [start, center, end], [isEven ? 350 : -350, 0, isEven ? -350 : 350]);
-  const rotateY = useTransform(scrollProgress, [start, center, end], [isEven ? 25 : -25, 0, isEven ? -25 : 25]);
-  const rotateZ = useTransform(scrollProgress, [start, center, end], [isEven ? -8 : 8, 0, isEven ? 8 : -8]);
-
-  return (
-    <motion.div 
-      className="absolute inset-0 flex items-center justify-center pointer-events-none [perspective:1500px]"
-      style={{ opacity, scale, y, x, rotateY, rotateZ }}
-    >
-      <div className="relative w-[85vw] max-w-[1100px] aspect-video rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.85)] border border-white/15 pointer-events-auto group bg-black/40 backdrop-blur-sm">
-        <img src={src} alt="Website Preview" className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105" />
-        
-        {/* Inner shadow/vignette for depth */}
-        <div className="absolute inset-0 shadow-[inset_0_0_120px_rgba(0,0,0,0.7)] pointer-events-none" />
-
-        {/* Floating Metadata */}
-        <div className="absolute left-6 sm:left-10 bottom-6 sm:bottom-10 p-4 sm:p-5 bg-black/60 backdrop-blur-3xl border border-white/15 rounded-2xl shadow-2xl transition-transform duration-500 group-hover:-translate-y-2" style={{ transform: "translateZ(50px)" }}>
-          <p className="text-xs sm:text-sm font-mono text-[#F5F3EE] tracking-[0.2em] font-medium">{meta}</p>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
 
 export default function Home() {
   const { isLoading } = useAuth();
@@ -155,7 +111,7 @@ export default function Home() {
           {/* Sticky Window */}
           <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center">
             
-            {/* Phase 1-2: Typography over Environment */}
+            {/* Phase 1-2: Hero Typography over Cinematic Environment */}
             <motion.div 
               style={{ opacity: textOpacity, scale: textScale, y: textY }}
               className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-6 text-center select-none z-10"
@@ -167,17 +123,6 @@ export default function Home() {
                 <span>LIMITS.</span>
               </h1>
             </motion.div>
-
-            {/* Phase 3-9: Floating 3D Previews */}
-            {PREVIEWS.map((preview, idx) => (
-              <FloatingPreview 
-                key={preview.id} 
-                index={idx} 
-                src={preview.src} 
-                meta={preview.meta} 
-                scrollProgress={globalScroll} 
-              />
-            ))}
 
           </div>
         </div>
