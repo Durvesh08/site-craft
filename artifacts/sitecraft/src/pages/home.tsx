@@ -10,11 +10,11 @@ import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 import Lenis from "lenis";
 
 const PREVIEWS = [
-  { id: 'lumina', src: '/cinematic/previews/lumina.jpg', meta: '01 BESPOKE CODE' },
-  { id: 'pulsar', src: '/cinematic/previews/pulsar.jpg', meta: '02 LOGIC ENGINE' },
-  { id: 'clout', src: '/cinematic/previews/clout.jpg', meta: '03 DYNAMIC BRAND' },
-  { id: 'sonora', src: '/cinematic/previews/sonora.jpg', meta: '04 PREMIUM ECOM' },
-  { id: 'nova', src: '/cinematic/previews/nova.jpg', meta: '05 ARCHITECTURE' }
+  { id: 'lumina', src: '/previews/lumina.jpg', meta: '01 BESPOKE CODE' },
+  { id: 'pulsar', src: '/previews/pulsar.jpg', meta: '02 LOGIC ENGINE' },
+  { id: 'clout', src: '/previews/clout.jpg', meta: '03 DYNAMIC BRAND' },
+  { id: 'sonora', src: '/previews/sonora.jpg', meta: '04 PREMIUM ECOM' },
+  { id: 'nova', src: '/previews/nova.jpg', meta: '05 ARCHITECTURE' }
 ];
 
 function FloatingPreview({ index, src, meta, scrollProgress }: { index: number, src: string, meta: string, scrollProgress: MotionValue<number> }) {
