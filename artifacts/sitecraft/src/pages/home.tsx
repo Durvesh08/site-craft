@@ -181,7 +181,7 @@ export default function Home() {
         </div>
 
         {/* ── PRICING & CTA ── */}
-        <section id="pricing" className="w-full py-24 px-6 relative z-20 bg-black/40 backdrop-blur-3xl border-t border-white/10">
+        <section id="pricing" className="w-full py-24 px-6 relative z-20 bg-transparent border-t border-white/10">
           <div className="max-w-4xl mx-auto space-y-12">
             <div className="text-center space-y-3">
               <span className="text-xs font-mono text-white/50 tracking-widest uppercase">TRANSPARENT VALUE</span>
