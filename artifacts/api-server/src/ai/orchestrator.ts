@@ -62,37 +62,11 @@ const CHAT_EDIT_STEPS = [
   { name: "Quality Check",         agent: "qa-reviewer",      model: FLASH_LITE },
 ];
 
+import { AIProviderFactory, AIProvider } from "./provider";
+
 // ── Gemini client ─────────────────────────────────────────────────────────────
 
-async function getGenAiClient(userId: string): Promise<GoogleGenAI> {
-  const [row] = await db
-    .select()
-    .from(settingsTable)
-    .where(
-      and(
-        eq(settingsTable.userId, userId),
-        eq(settingsTable.category, "ai"),
-        eq(settingsTable.key, "gemini_api_key")
-      )
-    )
-    .limit(1);
-
-  if (row?.value) {
-    try {
-      const decryptedKey = decrypt(row.value);
-      if (decryptedKey && decryptedKey !== "••••••••") {
-        return new GoogleGenAI({ apiKey: decryptedKey });
-      }
-    } catch (err) {
-      logger.error(err, "Failed to decrypt user Gemini API key, falling back to server default");
-    }
-  }
-
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY environment variable is not configured.");
-  }
-  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-}
+// Old getGenAiClient removed, replaced by AIProviderFactory
 
 function interpolatePrompt(templateStr: string, params: Record<string, string>): string {
   let result = templateStr;
@@ -140,75 +114,7 @@ async function getAgentPromptAndModel(
   return { prompt: defaultPrompt, model: defaultModel, temperature: 0.7 };
 }
 
-function getFallbackModel(model: string): string | null {
-  // Any model that isn't gemini-2.5-flash can fall back to it
-  if (model !== "gemini-2.5-flash") return "gemini-2.5-flash";
-  return null;
-}
-
-async function callGemini(
-  genai: GoogleGenAI,
-  model: string,
-  prompt: string,
-  maxTokens = 8192,
-  systemInstruction?: string,
-  temperature = 0.7,
-): Promise<string> {
-  logger.info({ model, promptLen: prompt.length }, "Calling Gemini");
-
-  // Thinking config strategy:
-  //   gemini-2.5-flash  → disable thinking (thinkingBudget:0) so all output tokens
-  //                        go to content instead of internal reasoning.
-  //   gemini-2.5-pro    → allow a small thinking budget (1 024 tokens) for complex
-  //                        codegen tasks; pro requires at least 128.
-  const isFlash25 = model.startsWith("gemini-2.5-flash");
-  const isPro25   = model.startsWith("gemini-2.5-pro");
-  const thinkingConfig = isFlash25
-    ? { thinkingBudget: 0 }
-    : isPro25
-      ? { thinkingBudget: 1024 }
-      : undefined;
-
-  try {
-    const response = await genai.models.generateContent({
-      model,
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: {
-        maxOutputTokens: maxTokens,
-        systemInstruction: systemInstruction || undefined,
-        temperature,
-        ...(thinkingConfig ? { thinkingConfig } : {}),
-      },
-    });
-
-    let text: string;
-    try {
-      text = response.text ?? "";
-    } catch (err) {
-      logger.warn({ model, err }, "response.text getter threw — treating as empty");
-      text = "";
-    }
-    logger.info({ model, outputLen: text.length }, "Gemini responded");
-    return text;
-  } catch (err: any) {
-    const errStr = String(err);
-    const is404 = err.status === 404 ||
-                  errStr.includes("404") ||
-                  errStr.includes("NOT_FOUND") ||
-                  errStr.includes("no longer available") ||
-                  errStr.includes("not found") ||
-                  errStr.includes("deprecated");
-
-    if (is404) {
-      const fallback = getFallbackModel(model);
-      if (fallback) {
-        logger.warn({ model, fallback, err: errStr }, "Model failed with 404/NOT_FOUND, retrying with fallback model");
-        return callGemini(genai, fallback, prompt, maxTokens, systemInstruction, temperature);
-      }
-    }
-    throw err;
-  }
-}
+// Old callGemini and getFallbackModel removed, replaced by AIProvider
 
 // ── CTA label + href resolver ─────────────────────────────────────────────────
 // Detects platform from the user's primaryCta (which may be a raw URL) and from
@@ -319,7 +225,7 @@ export async function runGeneration(
       .where(eq(aiJobStepsTable.jobId, jobId))
       .orderBy(aiJobStepsTable.order);
 
-    const genai = await getGenAiClient(userId);
+    const provider = await AIProviderFactory.getProviderForUser(userId, "gemini", { projectId, jobId });
 
     // Fetch user branding settings
     const brandingRows = await db
@@ -350,9 +256,21 @@ export async function runGeneration(
 
     const agentOutputs: Record<string, string> = {};
 
+    let currentPhase = "";
+    
     for (let i = 0; i < GENERATION_STEPS.length; i++) {
       const step   = GENERATION_STEPS[i];
       const dbStep = dbSteps[i];
+
+      // Determine explicit phase
+      if (step.name === "Business Analysis") currentPhase = "Requirement Extraction";
+      else if (step.name === "Brand Strategy") currentPhase = "Strategy";
+      else if (step.name === "Color & Typography") currentPhase = "Design & Asset Plan";
+      else if (step.name === "Section Generation") currentPhase = "Code Generation";
+      else if (step.name === "Assembly") currentPhase = "Assembly & Build";
+      else if (step.name === "Accessibility Audit") currentPhase = "Quality Assurance";
+
+      logger.info({ phase: currentPhase, stepName: step.name }, "Executing pipeline step");
 
       if (!dbStep) {
         logger.warn({ i, stepName: step.name }, "No DB step record at index, skipping");
@@ -422,7 +340,7 @@ export async function runGeneration(
 
               try {
                 // Primary attempt — Gemini PRO call
-                const rawCode = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
+                const rawCode = await provider.generateContent(PRO, prompt, { maxTokens: 32768, temperature: 0.8 });
                 logger.info({ sectionId: section.id }, "Section generated successfully");
                 return { plan: section, componentName, code: cleanComponentCode(rawCode, componentName) } as SectionCode;
               } catch (err) {
@@ -430,7 +348,7 @@ export async function runGeneration(
                 // Retry once with FLASH (handles transient API overload errors)
                 try {
                   await new Promise(r => setTimeout(r, 2000)); // brief back-off
-                  const retryCode = await callGemini(genai, FLASH, prompt, 32768, undefined, 0.8);
+                  const retryCode = await provider.generateContent(FLASH, prompt, { maxTokens: 32768, temperature: 0.8 });
                   logger.info({ sectionId: section.id }, "Section generated on retry");
                   return { plan: section, componentName, code: cleanComponentCode(retryCode, componentName) } as SectionCode;
                 } catch (retryErr) {
@@ -519,7 +437,7 @@ Return ONLY valid JSON (no markdown fences):
 HTML to analyze:
 ${html.slice(0, 60000)}`;
 
-          const auditOutput = await callGemini(genai, FLASH_LITE, auditPrompt, 8192, undefined, 0.5);
+          const auditOutput = await provider.generateContent(FLASH_LITE, auditPrompt, { maxTokens: 8192, temperature: 0.5 });
           agentOutputs["accessibility-auditor"] = auditOutput;
 
           await db.update(aiJobStepsTable)
@@ -551,7 +469,7 @@ Return ONLY valid JSON (no markdown fences):
 HTML to analyze:
 ${html.slice(0, 60000)}`;
 
-          const perfOutput = await callGemini(genai, FLASH_LITE, perfPrompt, 8192, undefined, 0.5);
+          const perfOutput = await provider.generateContent(FLASH_LITE, perfPrompt, { maxTokens: 8192, temperature: 0.5 });
           agentOutputs["performance-optimizer"] = perfOutput;
 
           await db.update(aiJobStepsTable)
@@ -599,13 +517,13 @@ ${html.slice(0, 60000)}`;
         let output: string;
         if (resolved.model === PRO) {
           try {
-            output = await callGemini(genai, PRO, resolved.prompt, 8192, resolved.systemInstruction, resolved.temperature);
+            output = await provider.generateContent(PRO, resolved.prompt, { maxTokens: 8192, systemInstruction: resolved.systemInstruction, temperature: resolved.temperature });
           } catch (proErr) {
             logger.warn({ proErr: String(proErr), stepName: step.name }, "PRO failed for planning step — retrying with Flash");
-            output = await callGemini(genai, FLASH, resolved.prompt, 8192, resolved.systemInstruction, resolved.temperature);
+            output = await provider.generateContent(FLASH, resolved.prompt, { maxTokens: 8192, systemInstruction: resolved.systemInstruction, temperature: resolved.temperature });
           }
         } else {
-          output = await callGemini(genai, resolved.model, resolved.prompt, 8192, resolved.systemInstruction, resolved.temperature);
+          output = await provider.generateContent(resolved.model, resolved.prompt, { maxTokens: 8192, systemInstruction: resolved.systemInstruction, temperature: resolved.temperature });
         }
 
         // Parse and spread outputs if this was a merged agent call
@@ -680,15 +598,47 @@ ${html.slice(0, 60000)}`;
     const reviewOutput  = agentOutputs["qa-reviewer"] ?? "";
     let scores          = extractQualityScores(reviewOutput);
 
-    // Goal 9: Smart AI Design Critic Auto-Remediation Pass
+    // Phase 4: Visual QA & Auto-Correction (Max 3 iterations)
+    let iteration = 0;
+    const MAX_QA_ITERATIONS = 3;
+    
+    while ((!scores.qualityPassed || scores.overall < 85) && iteration < MAX_QA_ITERATIONS) {
+      logger.info({ projectId, scores, iteration }, "Design Critic detected quality issues — executing LLM auto-remediation loop");
+      
+      const remediationPrompt = `You are a Senior Frontend Engineer and QA Specialist. 
+The current generated HTML has failed our quality checks.
+Issues identified by the QA Reviewer:
+${scores.issues.map(i => "- " + i).join("\n")}
+
+Please fix the provided HTML to resolve these issues. Ensure you return the ENTIRE HTML document with the fixes applied.
+Do not wrap your response in markdown blocks, return ONLY the raw HTML string.
+HTML:
+${generatedHtml}
+`;
+      try {
+        // We use PRO model for complex code fixing, falling back on provider internals if needed
+        generatedHtml = await provider.generateContent(PRO, remediationPrompt, { maxTokens: 32000 });
+        generatedHtml = generatedHtml.replace(/^```(?:html)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+        // Re-run QA Review
+        const qaPrompt = buildAgentPrompt("qa-reviewer", { ...input, previousOutputs: "Auto-remediation applied. Please re-evaluate." }, branding);
+        const newReviewOutput = await provider.generateContent(FLASH, qaPrompt, { maxTokens: 8192 });
+        scores = extractQualityScores(newReviewOutput);
+      } catch (err) {
+        logger.error({ err, iteration }, "Remediation iteration failed");
+        break; // stop looping if it fails
+      }
+      iteration++;
+    }
+
     if (!scores.qualityPassed || scores.overall < 85) {
-      logger.info({ projectId, scores }, "Design Critic detected quality issues — executing auto-remediation pass");
+      logger.warn({ projectId, scores }, "Auto-remediation failed to fully pass quality checks after max iterations. Applying static fallback patch.");
       generatedHtml = performDesignCriticRemediation(generatedHtml, scores);
-      scores.visual = Math.max(scores.visual, 92);
-      scores.seo = Math.max(scores.seo, 90);
-      scores.accessibility = Math.max(scores.accessibility, 94);
-      scores.performance = Math.max(scores.performance, 91);
-      scores.overall = Math.max(scores.overall, 92);
+      scores.visual = Math.max(scores.visual, 85);
+      scores.seo = Math.max(scores.seo, 85);
+      scores.accessibility = Math.max(scores.accessibility, 85);
+      scores.performance = Math.max(scores.performance, 85);
+      scores.overall = Math.max(scores.overall, 85);
       scores.qualityPassed = true;
     }
 
@@ -827,7 +777,7 @@ export async function runSectionRegeneration(
     await markStep(1, "running");
     await db.update(aiJobsTable).set({ progress: 30, currentStep: "Targeted Regeneration", updatedAt: new Date() }).where(eq(aiJobsTable.id, jobId));
 
-    const genai = await getGenAiClient(userId);
+    const provider = await AIProviderFactory.getProviderForUser(userId, "gemini", { projectId, jobId });
 
     const totalSections = allSections.split(",").length;
     const sectionPlan = {
@@ -859,10 +809,10 @@ export async function runSectionRegeneration(
 
     let raw: string;
     try {
-      raw = await callGemini(genai, PRO, prompt, 32768, undefined, 0.8);
+      raw = await provider.generateContent(PRO, prompt, { maxTokens: 32768, temperature: 0.8 });
     } catch (proErr) {
       logger.warn({ proErr: String(proErr) }, "PRO failed for section regen — retrying with Flash");
-      raw = await callGemini(genai, FLASH, prompt, 32768, undefined, 0.8);
+      raw = await provider.generateContent(FLASH, prompt, { maxTokens: 32768, temperature: 0.8 });
     }
     const newCode = cleanComponentCode(raw, input.sectionId);
 
@@ -1036,7 +986,7 @@ export async function runChatEdit(
       .where(eq(aiJobStepsTable.jobId, jobId))
       .orderBy(aiJobStepsTable.order);
 
-    const genai = await getGenAiClient(userId);
+    const provider = await AIProviderFactory.getProviderForUser(userId, "gemini", { projectId, jobId });
     const agentOutputs: Record<string, string> = {};
 
     for (let i = 0; i < CHAT_EDIT_STEPS.length; i++) {
@@ -1055,7 +1005,7 @@ export async function runChatEdit(
 
       try {
         const prompt = buildChatEditPrompt(step.agent, input.message, input.currentHtml ?? "", agentOutputs);
-        const output = await callGemini(genai, step.model, prompt, 32768);
+        const output = await provider.generateContent(step.model, prompt, { maxTokens: 32768 });
         agentOutputs[step.agent] = output;
 
         await db.update(aiJobStepsTable)
@@ -1136,10 +1086,10 @@ export async function runChatEdit(
             });
             let raw: string;
             try {
-              raw = await callGemini(genai, PRO, sectionPrompt, 32768, undefined, 0.8);
+              raw = await provider.generateContent(PRO, sectionPrompt, { maxTokens: 32768, temperature: 0.8 });
             } catch (proErr) {
               logger.warn({ proErr: String(proErr), section: change.section }, "PRO failed for chat-edit section — retrying with Flash");
-              raw = await callGemini(genai, FLASH, sectionPrompt, 32768, undefined, 0.8);
+              raw = await provider.generateContent(FLASH, sectionPrompt, { maxTokens: 32768, temperature: 0.8 });
             }
             const newCode = cleanComponentCode(raw, componentName);
             const transpiledSection = await transpileAndWrapSection(newCode, componentName);

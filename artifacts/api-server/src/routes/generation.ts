@@ -57,6 +57,7 @@ async function createJob(
   userId: string,
   type: "generate" | "chat-edit" | "regenerate-section",
   stepNames: string[],
+  payloadJson?: string,
 ) {
   const [job] = await db.insert(aiJobsTable).values({
     projectId,
@@ -64,6 +65,7 @@ async function createJob(
     type,
     status: "pending",
     progress: 0,
+    payloadJson,
   }).returning();
 
   const stepsData = stepNames.map((name, i) => ({
@@ -101,7 +103,14 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
       return;
     }
 
-    const { job, steps } = await createJob(params.data.id, req.user!.id, "generate", GENERATION_STEPS);
+    const payload = {
+      businessDescription: body.data.businessDescription,
+      targetAudience: body.data.targetAudience,
+      primaryCta: body.data.primaryCta,
+      additionalInstructions: body.data.additionalInstructions,
+      logoUrl: body.data.logoUrl ?? undefined,
+    };
+    const { job, steps } = await createJob(params.data.id, req.user!.id, "generate", GENERATION_STEPS, JSON.stringify(payload));
 
     // Update project to generating status
     await db.update(projectsTable)
@@ -114,16 +123,7 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
       })
       .where(eq(projectsTable.id, params.data.id));
 
-    // Run generation asynchronously (fire and forget)
-    runGeneration(job.id, params.data.id, req.user!.id, {
-      businessDescription: body.data.businessDescription,
-      targetAudience: body.data.targetAudience,
-      primaryCta: body.data.primaryCta,
-      additionalInstructions: body.data.additionalInstructions,
-      logoUrl: body.data.logoUrl ?? undefined,
-    }).catch((err) => {
-      logger.error({ err, jobId: job.id }, "Generation failed");
-    });
+    // The background worker (src/ai/worker.ts) will pick up the 'pending' job.
 
     res.status(202).json(toJobResponse(job, steps));
   } catch (err) {
@@ -151,18 +151,17 @@ router.post("/projects/:id/chat-edit", async (req: Request, res: Response) => {
       return;
     }
 
-    const { job, steps } = await createJob(params.data.id, req.user!.id, "chat-edit", CHAT_EDIT_STEPS);
+    const payload = {
+      message: body.data.message,
+      currentHtml: project.generatedHtml ?? undefined,
+    };
+    const { job, steps } = await createJob(params.data.id, req.user!.id, "chat-edit", CHAT_EDIT_STEPS, JSON.stringify(payload));
 
     await db.update(projectsTable)
       .set({ activeJobId: job.id, updatedAt: new Date() })
       .where(eq(projectsTable.id, params.data.id));
 
-    runChatEdit(job.id, params.data.id, req.user!.id, {
-      message: body.data.message,
-      currentHtml: project.generatedHtml ?? undefined,
-    }).catch((err) => {
-      logger.error({ err, jobId: job.id }, "Chat edit failed");
-    });
+    // The background worker will pick up the 'pending' job.
 
     res.status(202).json(toJobResponse(job, steps));
   } catch (err) {
@@ -190,23 +189,21 @@ router.post("/projects/:id/regenerate-section", async (req: Request, res: Respon
       return;
     }
 
+    const payload = {
+      sectionId:   body.data.sectionId,
+      instruction: body.data.instruction,
+      currentHtml: project.generatedHtml ?? "",
+    };
     const { job, steps } = await createJob(params.data.id, req.user!.id, "regenerate-section", [
       "Section Analysis",
       "Targeted Regeneration",
-    ]);
+    ], JSON.stringify(payload));
 
     await db.update(projectsTable)
       .set({ activeJobId: job.id, updatedAt: new Date() })
       .where(eq(projectsTable.id, params.data.id));
 
-    // Single Gemini PRO call — much faster than the full chat-edit pipeline
-    runSectionRegeneration(job.id, params.data.id, req.user!.id, {
-      sectionId:   body.data.sectionId,
-      instruction: body.data.instruction,
-      currentHtml: project.generatedHtml ?? "",
-    }).catch((err) => {
-      logger.error({ err, jobId: job.id }, "Section regeneration failed");
-    });
+    // The background worker will pick up the 'pending' job.
 
     res.status(202).json(toJobResponse(job, steps));
   } catch (err) {
@@ -230,13 +227,14 @@ router.post("/projects/:id/chat", async (req: Request, res: Response) => {
       return;
     }
 
-    const { job, steps } = await createJob(projectId, req.user!.id, "chat-edit", CHAT_EDIT_STEPS);
-    await db.update(projectsTable).set({ activeJobId: job.id, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
-
-    runChatEdit(job.id, projectId, req.user!.id, {
+    const payload = {
       message,
       currentHtml: project.generatedHtml ?? undefined,
-    }).catch((err) => logger.error({ err, jobId: job.id }, "Chat edit failed"));
+    };
+    const { job, steps } = await createJob(projectId, req.user!.id, "chat-edit", CHAT_EDIT_STEPS, JSON.stringify(payload));
+    await db.update(projectsTable).set({ activeJobId: job.id, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
+
+    // The background worker will pick up the 'pending' job.
 
     res.status(202).json(toJobResponse(job, steps));
   } catch (err) {

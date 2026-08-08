@@ -16,6 +16,7 @@ import {
   CreateDomainBody,
   DeleteDomainParams,
 } from "@workspace/api-zod";
+import { DeploymentProviderFactory } from "../deployments/provider";
 
 const router: IRouter = Router();
 
@@ -607,21 +608,27 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
       return;
     }
 
-    const creds = await resolveCredentials(req.user!.id, {
-      host: body.data.ftpHost,
-      port: (body.data as any).ftpPort,
-      username: body.data.ftpUsername,
-      password: body.data.ftpPassword,
-      path: body.data.ftpPath,
-      protocol: (body.data as any).protocol,
-    });
+    const protocol = (body.data as any).protocol;
+    const isEdge = ["vercel", "netlify", "cloudflare_pages"].includes(protocol);
+    let creds: DeployCredentials | null = null;
 
-    if (!creds) {
-      res.status(400).json({
-        error: "BadRequest",
-        message: "FTP credentials are not configured. Go to Settings → FTP Server Protocols.",
+    if (!isEdge) {
+      creds = await resolveCredentials(req.user!.id, {
+        host: body.data.ftpHost,
+        port: (body.data as any).ftpPort,
+        username: body.data.ftpUsername,
+        password: body.data.ftpPassword,
+        path: body.data.ftpPath,
+        protocol: protocol,
       });
-      return;
+
+      if (!creds) {
+        res.status(400).json({
+          error: "BadRequest",
+          message: "FTP credentials are not configured. Go to Settings → FTP Server Protocols.",
+        });
+        return;
+      }
     }
 
     const overwriteExisting = (body.data as any).overwriteExisting !== false;
@@ -633,25 +640,30 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
         projectId: params.data.id,
         userId: req.user!.id,
         status: "pending",
-        protocol: creds.protocol,
+        protocol: isEdge ? protocol : creds?.protocol,
         environment: (body.data.environment as any) || "production",
-        ftpHost: creds.host,
-        ftpPort: creds.port,
+        ftpHost: creds?.host ?? null,
+        ftpPort: creds?.port ?? 21,
         uploadProgress: 0,
         deploymentLog: "",
       })
       .returning();
 
-    // Fire and forget — client polls for progress
-    runUpload(
-      deployment.id,
-      params.data.id,
-      req.user!.id,
-      creds,
-      project.generatedHtml,
-      siteUrl,
-      overwriteExisting,
-    ).catch(err => logger.error({ err, deploymentId: deployment.id }, "runUpload threw"));
+    if (isEdge) {
+      // Use the new DeploymentProvider pattern for Edge CDNs
+      runEdgeDeploy(deployment.id, params.data.id, req.user!.id, protocol, project.generatedHtml);
+    } else {
+      // Fire and forget — client polls for progress
+      runUpload(
+        deployment.id,
+        params.data.id,
+        req.user!.id,
+        creds!,
+        project.generatedHtml,
+        siteUrl,
+        overwriteExisting,
+      ).catch((err) => logger.error({ err }, "Upload unhandled rejection"));
+    }
 
     res.status(202).json(toDeploymentResponse(deployment));
   } catch (err) {
@@ -660,7 +672,46 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
   }
 });
 
-// ── POST /deployments/:id/retry ───────────────────────────────────────────────
+async function runEdgeDeploy(deploymentId: string, projectId: string, userId: string, protocol: string, html: string) {
+  try {
+    await db.update(deploymentsTable)
+      .set({ status: "uploading", uploadProgress: 10 })
+      .where(eq(deploymentsTable.id, deploymentId));
+
+    await appendLog(deploymentId, `Starting deployment via ${protocol.toUpperCase()}...`);
+
+    const provider = DeploymentProviderFactory.getProvider(protocol);
+    const liveUrl = await provider.deploy({ deploymentId, projectId, generatedHtml: html }, {});
+
+    await db.update(deploymentsTable)
+      .set({
+        status: "live",
+        uploadProgress: 100,
+        liveUrl,
+        filesUploaded: 1,
+        completedAt: new Date(),
+      })
+      .where(eq(deploymentsTable.id, deploymentId));
+
+    await db.update(projectsTable)
+      .set({ status: "deployed", liveUrl, updatedAt: new Date() })
+      .where(eq(projectsTable.id, projectId));
+
+    await appendLog(deploymentId, `🚀 Deployment live at ${liveUrl}`);
+  } catch (err: any) {
+    logger.error({ err, deploymentId }, "Edge deployment failed");
+    await appendLog(deploymentId, `❌ Error: ${err?.message || "Deployment failed"}`);
+    await db.update(deploymentsTable)
+      .set({
+        status: "failed",
+        error: err?.message || "Deployment failed",
+        completedAt: new Date(),
+      })
+      .where(eq(deploymentsTable.id, deploymentId));
+  }
+}
+
+// POST /deployments/:id/retry ───────────────────────────────────────────────
 
 router.post("/deployments/:id/retry", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;

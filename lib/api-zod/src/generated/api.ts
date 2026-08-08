@@ -549,7 +549,7 @@ export const deployProjectBodyOverwriteExistingDefault = true;
 
 export const DeployProjectBody = zod.object({
   "environment": zod.enum(['production', 'staging']).default(deployProjectBodyEnvironmentDefault),
-  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).default(deployProjectBodyProtocolDefault),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp', 'vercel', 'netlify', 'cloudflare_pages']).default(deployProjectBodyProtocolDefault),
   "ftpHost": zod.string(),
   "ftpPort": zod.number().default(deployProjectBodyFtpPortDefault),
   "ftpUsername": zod.string(),
@@ -564,7 +564,7 @@ export const DeployProjectResponse = zod.object({
   "projectId": zod.string(),
   "status": zod.enum(['pending', 'uploading', 'verifying', 'live', 'failed', 'rolled_back']),
   "environment": zod.enum(['production', 'staging']),
-  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).optional(),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp', 'vercel', 'netlify', 'cloudflare_pages']).optional(),
   "liveUrl": zod.string().nullish(),
   "screenshotUrl": zod.string().nullish(),
   "ftpHost": zod.string().nullish(),

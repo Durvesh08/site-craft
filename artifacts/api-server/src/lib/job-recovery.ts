@@ -6,16 +6,11 @@ export async function recoverInterruptedJobs() {
   try {
     logger.info("Starting startup AI job recovery sweep...");
 
-    // Find all jobs that are 'running' or 'pending'
+    // Find all jobs that are 'running'
     const interruptedJobs = await db
       .select()
       .from(aiJobsTable)
-      .where(
-        or(
-          eq(aiJobsTable.status, "running"),
-          eq(aiJobsTable.status, "pending")
-        )
-      );
+      .where(eq(aiJobsTable.status, "running"));
 
     if (interruptedJobs.length === 0) {
       logger.info("No interrupted AI jobs found. Recovery sweep complete.");

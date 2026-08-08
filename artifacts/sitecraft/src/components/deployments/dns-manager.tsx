@@ -107,7 +107,7 @@ export function DnsManager() {
                 <th className="p-3 text-right font-medium">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y font-mono text-xs" style={{ divideColor: 'var(--surface-border)' }}>
+            <tbody className="divide-y font-mono text-xs" style={{ borderColor: 'var(--surface-border)' }}>
               {dnsRecords.map((record, i) => (
                 <tr key={i} className="hover:bg-[var(--surface-2)] transition-colors" style={{ borderColor: 'var(--surface-border)' }}>
                   <td className="p-3 font-bold text-primary">{record.type}</td>

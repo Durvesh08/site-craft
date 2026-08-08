@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { recoverInterruptedJobs } from "./lib/job-recovery";
 import { autoMigrate } from "./lib/auto-migrate";
+import { startWorkerLoop } from "./ai/worker";
 
 const rawPort = process.env["PORT"];
 
@@ -30,6 +31,9 @@ autoMigrate()
 
       // Sweep and recover any hung jobs from previous run
       await recoverInterruptedJobs();
+
+      // Start the AI Background Worker loop
+      startWorkerLoop();
     });
   })
   .catch((err) => {

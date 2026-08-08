@@ -11,106 +11,7 @@ import { FragmentedPreview } from "@/components/ui/creative/fragmented-preview";
 import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 import Lenis from "lenis";
 
-// ── CUSTOM 3D OBJECT (THE ZOVALX FABRIC METAPHOR) ──
-interface Zovaix3DObjectProps {
-  scrollYProgress: MotionValue<number>;
-}
-
-function Zovaix3DObject({ scrollYProgress }: Zovaix3DObjectProps) {
-  // Map scroll progress to layer alignments across Z-space
-  const layerZ_Back = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [-250, 0, 150, 300]);
-  const layerZ_Middle = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [-100, 0, 180, 320]);
-  const layerZ_Front = useTransform(scrollYProgress, [0, 0.55, 0.75, 1], [150, 0, 220, 350]);
-
-  const layerRotX_Back = useTransform(scrollYProgress, [0, 0.55], [-35, 0]);
-  const layerRotY_Back = useTransform(scrollYProgress, [0, 0.55], [45, 0]);
-
-  const layerRotX_Middle = useTransform(scrollYProgress, [0, 0.55], [25, 0]);
-  const layerRotY_Middle = useTransform(scrollYProgress, [0, 0.55], [-35, 0]);
-
-  const layerRotX_Front = useTransform(scrollYProgress, [0, 0.55], [-15, 0]);
-  const layerRotY_Front = useTransform(scrollYProgress, [0, 0.55], [20, 0]);
-
-  const opacity_Back = useTransform(scrollYProgress, [0, 0.2, 0.55, 0.8], [0, 0.65, 1, 0]);
-  const opacity_Middle = useTransform(scrollYProgress, [0, 0.2, 0.55, 0.8], [0, 0.8, 1, 0]);
-  const opacity_Front = useTransform(scrollYProgress, [0, 0.2, 0.55, 0.8], [0, 0.9, 1, 0]);
-
-  const globalScale = useTransform(scrollYProgress, [0, 0.55, 0.8], [0.8, 1, 1.15]);
-
-  return (
-    <motion.div
-      style={{ scale: globalScale, transformStyle: "preserve-3d" }}
-      className="relative w-[340px] sm:w-[540px] h-[360px] sm:h-[480px] pointer-events-none"
-    >
-      {/* LAYER 1: Smoked Glass Backboard & Grid Lines (Z-depth back) */}
-      <motion.div
-        className="absolute inset-0 rounded-2xl border border-white/5 shadow-2xl flex flex-col justify-between p-6 backdrop-blur-sm"
-        style={{ 
-          z: layerZ_Back,
-          rotateX: layerRotX_Back,
-          rotateY: layerRotY_Back,
-          opacity: opacity_Back,
-          transformStyle: "preserve-3d",
-          backgroundColor: "rgba(9, 9, 15, 0.55)",
-          borderColor: "rgba(255, 255, 255, 0.05)"
-        }}
-      >
-        <div className="flex justify-between items-center opacity-30">
-          <span className="text-[9px] font-mono tracking-widest text-primary font-bold">K R O N O S</span>
-          <span className="text-[9px] font-mono">GRID LAYOUT // 12C</span>
-        </div>
-        <div className="absolute inset-0 grid grid-cols-6 grid-rows-6 opacity-[0.03] pointer-events-none">
-          {Array.from({ length: 36 }).map((_, idx) => (
-            <div key={idx} className="border border-white" />
-          ))}
-        </div>
-        <div className="flex justify-between items-center opacity-30">
-          <span className="text-[9px] font-mono">SWISS RESIDENCE</span>
-          <span className="text-[9px] font-mono">01/08</span>
-        </div>
-      </motion.div>
-
-      {/* LAYER 2: High-contrast layout image plane (Z-depth middle) */}
-      <motion.div
-        className="absolute inset-8 rounded-xl overflow-hidden border shadow-xl bg-black/45"
-        style={{ 
-          z: layerZ_Middle,
-          rotateX: layerRotX_Middle,
-          rotateY: layerRotY_Middle,
-          opacity: opacity_Middle,
-          transformStyle: "preserve-3d",
-          borderColor: "rgba(255, 255, 255, 0.05)"
-        }}
-      >
-        <img
-          src="/images/luxury_architecture.jpg"
-          alt="Villa Sempione architecture"
-          className="w-full h-full object-cover grayscale opacity-90"
-        />
-      </motion.div>
-
-      {/* LAYER 3: Translucent UI cards, headlines, and buttons (Z-depth front) */}
-      <motion.div
-        className="absolute bottom-6 right-6 left-6 p-5 rounded-xl border backdrop-blur-md flex flex-col gap-2 shadow-2xl"
-        style={{ 
-          z: layerZ_Front,
-          rotateX: layerRotX_Front,
-          rotateY: layerRotY_Front,
-          opacity: opacity_Front,
-          transformStyle: "preserve-3d",
-          backgroundColor: "rgba(9, 9, 15, 0.85)",
-          borderColor: "rgba(255, 255, 255, 0.08)"
-        }}
-      >
-        <span className="text-[10px] font-mono tracking-wider text-primary font-bold">MONOLITHIC STRUCTURE</span>
-        <h4 className="text-xl font-serif font-light text-[#EDECE7] leading-tight">Villa Sempione</h4>
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Crafting architectural symmetry defined by stone, light, and Swiss lakeside location.
-        </p>
-      </motion.div>
-    </motion.div>
-  );
-}
+import { CinematicSequence } from "@/components/ui/creative/cinematic-sequence";
 
 // ── MAIN LANDING PAGE ──
 export default function Home() {
@@ -122,6 +23,9 @@ export default function Home() {
   const heroContainerRef = useRef<HTMLDivElement>(null);
   const showcaseContainerRef = useRef<HTMLDivElement>(null);
   const demoContainerRef = useRef<HTMLDivElement>(null);
+
+  // Global Scroll for Cinematic Engine
+  const { scrollYProgress: globalScroll } = useScroll();
 
   const { scrollYProgress: heroScroll } = useScroll({
     target: heroContainerRef,
@@ -210,10 +114,12 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-0)] text-[#EDECE7] font-sans selection:bg-primary/30 relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#070707] text-[#EDECE7] font-sans selection:bg-primary/30 relative overflow-x-hidden">
       
-      {/* Interactive Spatial Grid Backdrop */}
-      <ZovaixFabric />
+      {/* Cinematic Scroll Engine Backdrop */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <CinematicSequence scrollYProgress={globalScroll} />
+      </div>
 
       {/* ── HEADER (STAGE 1) ── */}
       <header className="fixed top-6 left-1/2 -translate-x-1/2 h-16 px-6 rounded-2xl flex items-center justify-between z-50 w-full max-w-5xl transition-all duration-300 backdrop-blur-md" style={{ background: 'rgba(9, 9, 15, 0.75)', border: '1px solid var(--surface-border)' }}>
@@ -284,15 +190,15 @@ export default function Home() {
             </motion.div>
 
             {/* Procedural 3D Visual Object assembly (Emerging underneath text) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 mt-32" style={{ perspective: "1500px" }}>
-              <Zovaix3DObject scrollYProgress={heroScroll} />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 mt-32">
+              {/* Removed Zovaix3DObject in favor of CinematicSequence background */}
             </div>
 
           </div>
         </div>
 
         {/* ── PROBLEM STATEMENT & BESPOKE ADVANTAGE ── */}
-        <section className="w-full py-20 px-6 border-y relative z-20 bg-[var(--surface-0)]" style={{ borderColor: 'var(--surface-border)' }}>
+        <section className="w-full py-20 px-6 border-y relative z-20 bg-black/50 backdrop-blur-md" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
           <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="text-left space-y-3 max-w-md">
               <h2 className="text-3xl font-extrabold tracking-tight leading-tight text-gradient-warm">
@@ -303,11 +209,11 @@ export default function Home() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-6 shrink-0 w-full md:w-auto">
-              <div className="p-5 rounded-2xl border flex flex-col gap-2" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+              <div className="p-5 rounded-2xl border flex flex-col gap-2 bg-black/40" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                 <span className="text-xs font-mono text-primary font-bold uppercase tracking-wider">01. Bespoke Code</span>
                 <p className="text-xs text-muted-foreground">No template tags. ZovaiX renders custom modular code from your brief summary.</p>
               </div>
-              <div className="p-5 rounded-2xl border flex flex-col gap-2" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+              <div className="p-5 rounded-2xl border flex flex-col gap-2 bg-black/40" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                 <span className="text-xs font-mono text-primary font-bold uppercase tracking-wider">02. Design Memory</span>
                 <p className="text-xs text-muted-foreground">The AI remembers color weights, font scaling, and alignment choices across updates.</p>
               </div>
@@ -316,7 +222,7 @@ export default function Home() {
         </section>
 
         {/* ── STAGE 3 & 4: ZOVALX SHOWCASE GALLERY & IMAGE FRAGMENTATION ── */}
-        <section id="showcase" ref={showcaseContainerRef} className="h-[250vh] w-full relative z-20 bg-[var(--surface-0)]">
+        <section id="showcase" ref={showcaseContainerRef} className="h-[250vh] w-full relative z-20">
           
           {/* Sticky showcase deck */}
           <div className="sticky top-0 h-screen w-full flex flex-col justify-center overflow-hidden">
@@ -384,7 +290,7 @@ export default function Home() {
         </section>
 
         {/* ── STAGE 6: HOW ZOVAIX WORKS NARRATIVE ── */}
-        <section id="how-it-works" ref={demoContainerRef} className="h-[250vh] w-full relative z-20 bg-[var(--surface-0)]">
+        <section id="how-it-works" ref={demoContainerRef} className="h-[250vh] w-full relative z-20">
           
           {/* Sticky Demo Wrapper */}
           <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden">
@@ -490,7 +396,7 @@ export default function Home() {
         </section>
 
         {/* ── EDITORIAL CASE STUDIES ── */}
-        <section id="projects" className="w-full py-32 px-6 bg-[var(--surface-0)] border-t" style={{ borderColor: 'var(--surface-border)' }}>
+        <section id="projects" className="w-full py-32 px-6 border-t bg-black/60 backdrop-blur-lg" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
           <div className="max-w-5xl mx-auto space-y-24">
             
             <div className="max-w-2xl text-left space-y-4">
@@ -543,7 +449,7 @@ export default function Home() {
         </section>
 
         {/* ── STAGE 5: ACTUAL PRODUCT DEMONSTRATION ── */}
-        <section className="w-full py-28 px-6 bg-[var(--surface-1)] border-y" style={{ borderColor: 'var(--surface-border)' }}>
+        <section className="w-full py-28 px-6 bg-black/80 backdrop-blur-xl border-y" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
           <div className="max-w-5xl mx-auto space-y-12">
             
             <div className="text-center space-y-3">
@@ -626,7 +532,7 @@ export default function Home() {
         </section>
 
         {/* ── EDITORIAL PRICING ── */}
-        <section id="pricing" className="w-full py-28 px-6 relative z-20 bg-[var(--surface-0)]">
+        <section id="pricing" className="w-full py-28 px-6 relative z-20 bg-black/90">
           <div className="max-w-4xl mx-auto space-y-16">
             <div className="text-center space-y-3">
               <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">TRANSPARENT VALUE</span>
@@ -710,7 +616,7 @@ export default function Home() {
         </section>
 
         {/* ── STAGE 7: FINAL PAYOFF CTA ── */}
-        <section className="w-full py-40 px-6 text-center relative overflow-hidden z-20 bg-[var(--surface-0)] border-t" style={{ borderColor: 'var(--surface-border)' }}>
+        <section className="w-full py-40 px-6 text-center relative overflow-hidden z-20 bg-black border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
           <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent -z-10" />
           <div className="max-w-2xl mx-auto space-y-8">
             <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Your next website starts with an idea.</h2>

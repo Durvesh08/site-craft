@@ -6,3 +6,4 @@ export * from "./deployments";
 export * from "./prompts";
 export * from "./versions";
 export * from "./settings";
+export * from "./usage";

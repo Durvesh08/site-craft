@@ -74,7 +74,7 @@ export default function ProjectVersions() {
                 <div className={cn(
                   "absolute left-[-2rem] md:left-1/2 flex h-4 w-4 md:-translate-x-1/2 items-center justify-center rounded-full border-2 ring-4 z-10 transition-colors",
                   isLatest ? "border-primary bg-primary" : "border-muted-foreground/30 bg-[var(--surface-1)] group-hover:border-primary/50"
-                )} style={{ ringColor: 'var(--surface-0)' }} />
+                )} style={{ '--tw-ring-color': 'var(--surface-0)' } as React.CSSProperties} />
 
                 <Card className={cn(
                   "w-full md:w-[calc(50%-2rem)] transition-all duration-300 rounded-2xl",

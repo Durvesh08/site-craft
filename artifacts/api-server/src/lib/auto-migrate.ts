@@ -260,6 +260,9 @@ export async function autoMigrate(): Promise<void> {
     // projects table — logo_url added after initial release
     await addColumnIfMissing("projects", "logo_url", "TEXT");
 
+    // ai_jobs table — payload_json added for async job queue architecture
+    await addColumnIfMissing("ai_jobs", "payload_json", "TEXT");
+
 
     // 11. domains (depends on users, projects)
     await client.query(`

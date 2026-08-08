@@ -8,6 +8,13 @@
       "when": 1785323321535,
       "tag": "0000_modern_marten_broadcloak",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786186820021,
+      "tag": "0001_noisy_freak",
+      "breakpoints": true
     }
   ]
 }

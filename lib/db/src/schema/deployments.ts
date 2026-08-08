@@ -22,6 +22,9 @@ export const deploymentProtocolEnum = pgEnum("deployment_protocol", [
   "ftp",
   "ftps",
   "sftp",
+  "vercel",
+  "netlify",
+  "cloudflare_pages"
 ]);
 
 export const deploymentsTable = pgTable("deployments", {
@@ -55,6 +58,8 @@ export const domainsTable = pgTable("domains", {
     .references(() => usersTable.id, { onDelete: "cascade" }),
   projectId: text("project_id").references(() => projectsTable.id, { onDelete: "set null" }),
   domain: text("domain").notNull(),
+  txtRecord: text("txt_record"),
+  cnameRecord: text("cname_record"),
   verified: boolean("verified").notNull().default(false),
   sslActive: boolean("ssl_active").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),

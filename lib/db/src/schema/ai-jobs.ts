@@ -45,6 +45,7 @@ export const aiJobsTable = pgTable("ai_jobs", {
   status: jobStatusEnum("status").notNull().default("pending"),
   progress: real("progress").notNull().default(0),
   currentStep: text("current_step"),
+  payloadJson: text("payload_json"),
   resultJson: text("result_json"),
   error: text("error"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
