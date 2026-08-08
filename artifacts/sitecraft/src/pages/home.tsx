@@ -5,168 +5,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { ArrowRight, CheckCircle2, Layout, Sparkles, Globe, Command, ArrowUpRight, Check, Monitor, Tablet, Smartphone, Volume2, VolumeX } from "lucide-react";
 import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 import { soundEngine } from "@/lib/sound-effects";
+import { ZovaixFabric } from "@/components/ui/creative/zovaix-fabric";
+import { ParallaxImage } from "@/components/ui/creative/parallax-image";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Lenis from "lenis";
 
-// ── SPATIAL BACKGROUND CANVAS ──
-// "The Zovaix Fabric" — a responsive, scroll-interactive particle mesh
-function SpatialBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const scrollRef = useRef({ y: 0, targetY: 0 });
-  const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let animationFrameId: number;
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
-
-    // Particle class representing structural nodes
-    class Particle {
-      x: number;
-      y: number;
-      baseX: number;
-      baseY: number;
-      size: number;
-      speedX: number;
-      speedY: number;
-      angle: number;
-      spinSpeed: number;
-
-      constructor() {
-        this.x = Math.random() * width;
-        this.y = Math.random() * height;
-        this.baseX = this.x;
-        this.baseY = this.y;
-        this.size = Math.random() * 1.5 + 0.5;
-        this.speedX = Math.random() * 0.4 - 0.2;
-        this.speedY = Math.random() * 0.4 - 0.2;
-        this.angle = Math.random() * Math.PI * 2;
-        this.spinSpeed = Math.random() * 0.01 - 0.005;
-      }
-
-      update(scrollY: number, mouseX: number, mouseY: number) {
-        this.angle += this.spinSpeed;
-        
-        // Float movement
-        this.x += this.speedX + Math.cos(this.angle) * 0.08;
-        this.y += this.speedY + Math.sin(this.angle) * 0.08 - scrollY * 0.15;
-
-        // Repel from mouse
-        const dx = this.x - mouseX;
-        const dy = this.y - mouseY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 120) {
-          const force = (120 - dist) / 120;
-          this.x += (dx / dist) * force * 4;
-          this.y += (dy / dist) * force * 4;
-        }
-
-        // Boundary wrap
-        if (this.x < 0) this.x = width;
-        if (this.x > width) this.x = 0;
-        if (this.y < 0) this.y = height;
-        if (this.y > height) this.y = 0;
-      }
-
-      draw(c: CanvasRenderingContext2D) {
-        c.fillStyle = "rgba(237, 236, 231, 0.2)";
-        c.beginPath();
-        c.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        c.fill();
-      }
-    }
-
-    const particles: Particle[] = Array.from({ length: 60 }, () => new Particle());
-
-    const handleResize = () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
-    };
-
-    const handleScroll = () => {
-      scrollRef.current.targetY = window.scrollY;
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseRef.current.targetX = e.clientX;
-      mouseRef.current.targetY = e.clientY;
-    };
-
-    window.addEventListener("resize", handleResize);
-    window.addEventListener("scroll", handleScroll);
-    window.addEventListener("mousemove", handleMouseMove);
-
-    const animate = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      // Interpolate scroll and mouse positions for physics smoothness
-      scrollRef.current.y += (scrollRef.current.targetY - scrollRef.current.y) * 0.1;
-      mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.08;
-      mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.08;
-
-      // Draw subtle spatial grid lines
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.015)";
-      ctx.lineWidth = 1;
-      const gridSize = 80;
-      const gridOffset = (scrollRef.current.y * 0.2) % gridSize;
-
-      for (let x = 0; x < width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      for (let y = -gridOffset; y < height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-
-      // Draw connections
-      ctx.strokeStyle = "rgba(237, 236, 231, 0.035)";
-      ctx.lineWidth = 0.5;
-
-      for (let i = 0; i < particles.length; i++) {
-        particles[i].update(scrollRef.current.y, mouseRef.current.x, mouseRef.current.y);
-        particles[i].draw(ctx);
-
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 100) {
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
-          }
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("mousemove", handleMouseMove);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="fixed inset-0 w-full h-full pointer-events-none z-0" />;
-}
-
-// ── MAIN LANDING PAGE ──
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -192,18 +35,18 @@ export default function Home() {
     offset: ["start start", "end end"]
   });
 
-  // Hero Interpolation Transforms
-  const heroTitleScale = useTransform(heroScroll, [0, 0.4], [1, 0.85]);
-  const heroTitleOpacity = useTransform(heroScroll, [0, 0.45], [1, 0]);
-  const heroTitleY = useTransform(heroScroll, [0, 0.4], [0, -40]);
+  // Hero Interpolation Transforms (Mixed typography reveal)
+  const heroTitleScale = useTransform(heroScroll, [0, 0.45], [1, 0.82]);
+  const heroTitleOpacity = useTransform(heroScroll, [0, 0.4], [1, 0]);
+  const heroTitleY = useTransform(heroScroll, [0, 0.4], [0, -60]);
   
-  const heroImageScale = useTransform(heroScroll, [0.1, 0.7, 1], [0.75, 0.95, 1.05]);
-  const heroImageY = useTransform(heroScroll, [0.1, 0.7], ["80px", "0px"]);
-  const heroImageClip = useTransform(heroScroll, [0.1, 0.8], ["inset(15% rounded 24px)", "inset(0% rounded 0px)"]);
-  const heroChromeOpacity = useTransform(heroScroll, [0.1, 0.6], [1, 0]);
+  const heroImageScale = useTransform(heroScroll, [0.15, 0.75, 1], [0.72, 0.96, 1.05]);
+  const heroImageY = useTransform(heroScroll, [0.15, 0.75], ["140px", "0px"]);
+  const heroImageClip = useTransform(heroScroll, [0.15, 0.85], ["inset(12% rounded 24px)", "inset(0% rounded 0px)"]);
+  const heroChromeOpacity = useTransform(heroScroll, [0.15, 0.7], [1, 0]);
 
   // Showcase Horizontal Transformation (3D overlap carousel)
-  const showcaseX = useTransform(showcaseScroll, [0, 1], ["0%", "-65%"]);
+  const showcaseX = useTransform(showcaseScroll, [0, 1], ["0%", "-60%"]);
   
   // Demo Interactive State
   const [demoStep, setDemoStep] = useState(0);
@@ -225,7 +68,6 @@ export default function Home() {
   // Synchronize Scroll Steps in Demo
   useEffect(() => {
     return demoScroll.onChange((latest) => {
-      // 10 steps of construction
       const step = Math.min(Math.floor(latest * 11), 10);
       setDemoStep(step);
     });
@@ -234,7 +76,7 @@ export default function Home() {
   // Initialize Lenis Smooth Scroll
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.15,
+      duration: 1.25,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       gestureOrientation: "vertical",
@@ -265,10 +107,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-0)] text-[#EDECE7] font-sans selection:bg-primary/30 relative">
+    <div className="min-h-screen bg-[var(--surface-0)] text-[#EDECE7] font-sans selection:bg-primary/30 relative overflow-x-hidden">
       
-      {/* Dynamic Spatial Canvas Overlay */}
-      <SpatialBackground />
+      {/* Interactive Spatial Grid Backdrop */}
+      <ZovaixFabric />
 
       {/* ── HEADER ── */}
       <header className="fixed top-6 left-1/2 -translate-x-1/2 h-16 px-6 rounded-2xl flex items-center justify-between z-50 w-full max-w-5xl transition-all duration-300 backdrop-blur-md" style={{ background: 'rgba(9, 9, 15, 0.75)', border: '1px solid var(--surface-border)' }}>
@@ -278,6 +120,7 @@ export default function Home() {
         <nav className="hidden md:flex items-center gap-8 text-[13px] font-medium text-muted-foreground">
           <a href="#showcase" className="hover:text-foreground transition-colors">Showcase</a>
           <a href="#how-it-works" className="hover:text-foreground transition-colors">Process</a>
+          <a href="#projects" className="hover:text-foreground transition-colors">Projects</a>
           <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
         </nav>
         <div className="flex items-center gap-4">
@@ -313,12 +156,15 @@ export default function Home() {
               <span>ZovaiX Sites v2.0</span>
             </div>
             
-            <h1 className="text-[52px] sm:text-[84px] font-extrabold tracking-[-0.04em] leading-[0.95] text-foreground text-hero uppercase">
-              Create <br className="sm:hidden" /> Without <br /> Limits
+            {/* Mixed-typography Art-Directed Title */}
+            <h1 className="text-[52px] sm:text-[92px] font-extrabold tracking-[-0.04em] leading-[0.9] text-foreground text-hero uppercase flex flex-col items-center justify-center">
+              <span>CREATE</span>
+              <span className="font-serif italic font-light text-primary lowercase tracking-wide my-1">without</span>
+              <span>LIMITS.</span>
             </h1>
             
-            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Describe your business vision. ZovaiX drafts bespoke layouts, writes natural copy, and delivers a professional website in seconds.
+            <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+              Describe your vision. ZovaiX drafts bespoke layouts, writes natural copy, and delivers a professional website in seconds.
             </p>
             
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -387,7 +233,7 @@ export default function Home() {
                 {/* Large high-end photo render */}
                 <div className="w-full aspect-[21/9] rounded-xl overflow-hidden relative border border-white/10 group">
                   <img 
-                    src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80" 
+                    src="/images/luxury_architecture.jpg" 
                     alt="Luxury architectural structure" 
                     className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" 
                   />
@@ -437,7 +283,7 @@ export default function Home() {
           <div className="max-w-5xl mx-auto px-6 mb-10 text-left">
             <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">REAL WEBSITE DEPLOYMENTS</span>
             <h2 className="text-3xl font-extrabold tracking-tight mt-2">Crafted with ZovaiX</h2>
-            <p className="text-sm text-muted-foreground mt-1">Believable layouts tailored for conversion and beauty.</p>
+            <p className="text-sm text-muted-foreground mt-1">Believable layouts tailored for beauty and conversion.</p>
           </div>
 
           {/* Horizontal Scrolly Deck */}
@@ -452,7 +298,7 @@ export default function Home() {
                   category: "Architecture", 
                   logo: "K R O N O S",
                   headline: "Spaces defined by stone, light & shadow.",
-                  image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+                  image: "/images/luxury_architecture.jpg",
                   bg: "#0B0C10" 
                 },
                 { 
@@ -460,7 +306,7 @@ export default function Home() {
                   category: "SaaS Startup", 
                   logo: "▲ A P E X",
                   headline: "Autonomous accounting for high-scale teams.",
-                  image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80",
+                  image: "/images/abstract_finance.jpg",
                   bg: "#070B19" 
                 },
                 { 
@@ -468,7 +314,7 @@ export default function Home() {
                   category: "Fashion Brand", 
                   logo: "L ' A T E L I E R",
                   headline: "Handcrafted leather goods made in Italy.",
-                  image: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80",
+                  image: "/images/minimal_fashion.jpg",
                   bg: "#14100E" 
                 },
                 { 
@@ -476,7 +322,7 @@ export default function Home() {
                   category: "Restaurant", 
                   logo: "O S T E R I A",
                   headline: "Rustic culinary heritage in Zurich Enge.",
-                  image: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80",
+                  image: "/images/luxury_architecture.jpg", // Using architecture since we want real beautiful photos
                   bg: "#0B100C" 
                 }
               ].map((site, i) => (
@@ -615,7 +461,7 @@ export default function Home() {
 
                   {/* Image render (Visible from step 5) */}
                   <div className="relative w-full aspect-[21/9] rounded-lg overflow-hidden border border-white/5 bg-white/5">
-                    <div className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${demoStep >= 5 ? "opacity-80" : "opacity-0"}`} style={{ backgroundImage: `url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80')` }} />
+                    <div className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${demoStep >= 5 ? "opacity-80" : "opacity-0"}`} style={{ backgroundImage: `url('/images/luxury_architecture.jpg')` }} />
                   </div>
                 </div>
 
@@ -627,7 +473,60 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── SCENE 05: INTERACTIVE EDITOR PREVIEW ── */}
+      {/* ── SCENE 05: EDITORIAL PARALLAX SHOWCASE ── */}
+      <section id="projects" className="w-full py-32 px-6 bg-[var(--surface-0)] border-t" style={{ borderColor: 'var(--surface-border)' }}>
+        <div className="max-w-5xl mx-auto space-y-24">
+          
+          <div className="max-w-2xl text-left space-y-4">
+            <span className="text-xs font-mono text-primary font-bold tracking-widest uppercase">FINE ART DIRECTION</span>
+            <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Real-World Case Studies</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              ZovaiX does not create plain template blocks. We structure layouts specifically for editorial impact, balancing typography sizes, layout flow, and image parallax weight.
+            </p>
+          </div>
+
+          {/* Project 1: Kronos Studio */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+            <div className="md:col-span-7 aspect-[4/3] rounded-3xl overflow-hidden border relative" style={{ borderColor: 'var(--surface-border)' }}>
+              <ParallaxImage src="/images/luxury_architecture.jpg" alt="Villa Sempione architecture" speed={0.8} />
+            </div>
+            <div className="md:col-span-5 text-left space-y-6">
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Case Study 01</span>
+              <h3 className="text-3xl font-serif text-foreground font-light leading-tight">Kronos Architecture</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                A minimalist portfolio design tailored for a boutique Zurich-based architect studio. The site relies on dramatic asymmetric layout grids and raw structural image renders.
+              </p>
+              <div className="pt-2">
+                <Button variant="outline" className="rounded-xl border-border/60 hover:bg-[var(--surface-2)]" onClick={goToLogin}>
+                  Explore Layout details →
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Project 2: L'Atelier Milan */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-12 items-center">
+            <div className="md:col-span-5 text-left space-y-6 order-2 md:order-1">
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest">Case Study 02</span>
+              <h3 className="text-3xl font-serif text-foreground font-light leading-tight font-sans">L'Atelier Milan</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                A fashion ecommerce lookbook designed for custom artisan leather goods. Highly contrast lighting style, warm studio backdrops, and simple typography.
+              </p>
+              <div className="pt-2">
+                <Button variant="outline" className="rounded-xl border-border/60 hover:bg-[var(--surface-2)]" onClick={goToLogin}>
+                  Explore Layout details →
+                </Button>
+              </div>
+            </div>
+            <div className="md:col-span-7 aspect-[4/3] rounded-3xl overflow-hidden border relative order-1 md:order-2" style={{ borderColor: 'var(--surface-border)' }}>
+              <ParallaxImage src="/images/minimal_fashion.jpg" alt="L'Atelier fashion model" speed={0.9} />
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── SCENE 06: INTERACTIVE EDITOR PREVIEW ── */}
       <section className="w-full py-28 px-6 bg-[var(--surface-1)] border-y" style={{ borderColor: 'var(--surface-border)' }}>
         <div className="max-w-5xl mx-auto space-y-12">
           
@@ -693,10 +592,10 @@ export default function Home() {
                   <span className={`text-[10px] font-mono tracking-widest uppercase ${previewTheme === "dark" ? "text-white/50" : "text-black/50"}`}>K R O N O S</span>
                   <div className="space-y-2">
                     <h3 className={`text-xl font-serif leading-tight transition-colors duration-300 ${previewTheme === "dark" ? "text-white" : "text-black"}`}>
-                       villa Sempione
+                       Villa Sempione
                     </h3>
                     <p className={`text-xs transition-colors duration-300 ${previewTheme === "dark" ? "text-muted-foreground" : "text-zinc-500"}`}>
-                      Bespoake structural design defined by Locarno location.
+                      Bespoke structural design defined by Locarno location.
                     </p>
                   </div>
                   <div className="h-10 w-full rounded bg-primary/20 border border-primary/30 flex items-center justify-center">
@@ -710,7 +609,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SCENE 06: EDITORIAL PRICING ── */}
+      {/* ── SCENE 07: EDITORIAL PRICING ── */}
       <section id="pricing" className="w-full py-28 px-6 relative z-20 bg-[var(--surface-0)]">
         <div className="max-w-4xl mx-auto space-y-16">
           <div className="text-center space-y-3">
@@ -794,7 +693,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SCENE 07: FINAL PAYOFF CTA ── */}
+      {/* ── SCENE 08: FINAL PAYOFF CTA ── */}
       <section className="w-full py-40 px-6 text-center relative overflow-hidden z-20 bg-[var(--surface-0)] border-t" style={{ borderColor: 'var(--surface-border)' }}>
         <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent -z-10" />
         <div className="max-w-2xl mx-auto space-y-8">
