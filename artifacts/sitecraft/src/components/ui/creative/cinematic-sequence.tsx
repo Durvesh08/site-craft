@@ -89,34 +89,40 @@ export function CinematicSequence({ scrollYProgress }: CinematicSequenceProps) {
     let isCancelled = false;
     let loaded = 0;
 
-    const loadImages = () => {
-      // Priority load the first frame
-      const firstScene = cinematicTimeline[0];
-      const firstSrc = `${firstScene.pathPrefix}${'1'.padStart(firstScene.padLength, '0')}.${firstScene.extension}`;
-
+    const loadImages = async () => {
       for (const scene of cinematicTimeline) {
         for (let i = 1; i <= scene.frameCount; i++) {
+          if (isCancelled) return;
           const indexStr = i.toString().padStart(scene.padLength, '0');
           const src = `${scene.pathPrefix}${indexStr}.${scene.extension}`;
 
-          const img = new Image();
-          img.src = src;
-          img.onload = () => {
-            if (isCancelled) return;
-            imagesRef.current[src] = img;
-            loaded++;
-            // Only update state every 10 frames to avoid thrashing, or when it's the very first frame
-            if (loaded % 10 === 0 || loaded === 1 || loaded === totalFrames) {
-              setLoadedCount(loaded);
-            }
-            // If this image is the one currently needed by the scroll position, draw it!
-            if (currentSrcRef.current === src) {
-              drawFrame(src);
-            }
-          };
-          img.onerror = () => {
-            console.error(`Failed to load image: ${src}`);
-          };
+          await new Promise<void>((resolve) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+              if (isCancelled) {
+                resolve();
+                return;
+              }
+              imagesRef.current[src] = img;
+              loaded++;
+              
+              // Only update state occasionally to avoid thrashing
+              if (loaded % 10 === 0 || loaded === 1 || loaded === totalFrames) {
+                setLoadedCount(loaded);
+              }
+              
+              // Draw immediately if this is the currently requested frame
+              if (currentSrcRef.current === src) {
+                drawFrame(src);
+              }
+              resolve();
+            };
+            img.onerror = () => {
+              console.error(`Failed to load image: ${src}`);
+              resolve(); // Resolve anyway so it continues
+            };
+          });
         }
       }
     };
