@@ -18,15 +18,18 @@ const PREVIEWS = [
 ];
 
 function FloatingPreview({ index, src, meta, scrollProgress }: { index: number, src: string, meta: string, scrollProgress: MotionValue<number> }) {
-  // Story phases mapped across [0.15, 0.90] global scroll range
+  // Story phases mapped across [0.10, 0.85] global scroll range
   const rangePerItem = 0.75 / PREVIEWS.length; // 0.15 per item
-  const start = 0.15 + (index * rangePerItem);
+  
+  // We want overlapping! Next item starts fading in BEFORE current item fully fades out.
+  // Overlap by 0.05
+  const start = 0.10 + (index * (rangePerItem - 0.03)); 
   const center = start + (rangePerItem / 2);
   const end = start + rangePerItem;
 
-  const opacity = useTransform(scrollProgress, [start, start + 0.04, end - 0.04, end], [0, 1, 1, 0]);
-  const scale = useTransform(scrollProgress, [start, end], [0.9, 1.05]);
-  const y = useTransform(scrollProgress, [start, center, end], [120, 0, -120]);
+  const opacity = useTransform(scrollProgress, [start, start + 0.05, end - 0.05, end], [0, 1, 1, 0]);
+  const scale = useTransform(scrollProgress, [start, end], [0.85, 1.15]);
+  const y = useTransform(scrollProgress, [start, center, end], [100, 0, -100]);
 
   return (
     <motion.div 
@@ -52,16 +55,14 @@ export default function Home() {
   
   const heroStoryRef = useRef<HTMLDivElement>(null);
   
-  // We use a single massive scroll container for the 9-phase story.
-  const { scrollYProgress: globalScroll } = useScroll({
-    target: heroStoryRef,
-    offset: ["start start", "end end"]
-  });
+  // Use global window scroll because conditional rendering (isLoading) breaks target refs in useScroll.
+  // The page is roughly 1000vh tall total (800vh story + pricing + footer).
+  const { scrollYProgress: globalScroll } = useScroll();
 
-  // Phase 1-2 Typography transforms
-  const textOpacity = useTransform(globalScroll, [0, 0.08, 0.15], [1, 1, 0]);
-  const textScale = useTransform(globalScroll, [0, 0.15], [1, 1.05]);
-  const textY = useTransform(globalScroll, [0, 0.15], [0, -80]);
+  // Phase 1-2 Typography transforms (active during first 10% of page scroll)
+  const textOpacity = useTransform(globalScroll, [0, 0.05, 0.10], [1, 1, 0]);
+  const textScale = useTransform(globalScroll, [0, 0.10], [1, 1.05]);
+  const textY = useTransform(globalScroll, [0, 0.10], [0, -80]);
 
   const goToLogin = () => {
     soundEngine.playPrimaryClick();
