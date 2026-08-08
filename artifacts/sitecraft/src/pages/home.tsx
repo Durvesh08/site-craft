@@ -38,15 +38,18 @@ function FloatingPreview({ index, src, meta, scrollProgress }: { index: number, 
 
   return (
     <motion.div 
-      className="absolute inset-0 flex items-center justify-center pointer-events-none perspective-[2000px]"
+      className="absolute inset-0 flex items-center justify-center pointer-events-none [perspective:2000px]"
       style={{ opacity, scale, y, x, rotateY, rotateZ }}
     >
-      <div className="relative w-[85vw] max-w-[1100px] aspect-[16/10] sm:aspect-video rounded-3xl overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.6)] border border-white/10 pointer-events-auto">
-        <img src={src} alt="Website Preview" className="w-full h-full object-cover" />
+      <div className="relative w-[85vw] max-w-[1100px] aspect-video rounded-3xl overflow-hidden shadow-[0_0_120px_rgba(0,0,0,0.8)] border border-white/10 pointer-events-auto group">
+        <img src={src} alt="Website Preview" className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105" />
         
+        {/* Inner shadow/vignette for premium depth */}
+        <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(0,0,0,0.6)] pointer-events-none" />
+
         {/* Floating Metadata */}
-        <div className="absolute left-6 sm:left-10 bottom-6 sm:bottom-10 p-4 sm:p-5 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl" style={{ transform: "translateZ(50px)" }}>
-          <p className="text-xs sm:text-sm font-mono text-[#F5F3EE] tracking-[0.2em]">{meta}</p>
+        <div className="absolute left-6 sm:left-10 bottom-6 sm:bottom-10 p-4 sm:p-5 bg-black/50 backdrop-blur-3xl border border-white/10 rounded-2xl shadow-2xl transition-transform duration-500 group-hover:-translate-y-2" style={{ transform: "translateZ(50px)" }}>
+          <p className="text-xs sm:text-sm font-mono text-[#F5F3EE] tracking-[0.2em] font-medium">{meta}</p>
         </div>
       </div>
     </motion.div>
