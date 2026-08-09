@@ -53,7 +53,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        throw new Error(json.error || "Invalid email or password");
+      } catch {
+        throw new Error(text || "Invalid email or password");
+      }
+    }
     await queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
   };
 
@@ -63,7 +71,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) {
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        throw new Error(json.error || "Registration failed");
+      } catch {
+        throw new Error(text || "Registration failed");
+      }
+    }
     await queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
   };
 

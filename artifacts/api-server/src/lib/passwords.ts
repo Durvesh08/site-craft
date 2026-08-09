@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 
 /**
  * Native Node.js PBKDF2 password hashing & verification (zero external dependencies)
+ * Supports legacy bcrypt hashes ($2a$, $2b$, $2y$) for backwards compatibility.
  */
 
 export function hashPassword(password: string): string {
@@ -12,6 +14,9 @@ export function hashPassword(password: string): string {
 
 export function comparePassword(password: string, storedHash: string): boolean {
   try {
+    if (storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$') || storedHash.startsWith('$2y$')) {
+      return bcrypt.compareSync(password, storedHash);
+    }
     const parts = storedHash.split(':');
     if (parts.length !== 2) return false;
     const [salt, originalHash] = parts;
