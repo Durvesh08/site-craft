@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { projectsService, Project } from "@/services/projects";
+import { generationService } from "@/services/generation";
 import { DetailedBriefWizard } from "@/components/dashboard/detailed-brief-wizard";
 import { ImportProjectModal } from "@/components/dashboard/import-project-modal";
+import { AttachmentsModal, AttachmentFile } from "@/components/dashboard/attachments-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -27,7 +29,8 @@ import {
   GitBranch,
   Layers,
   Clock,
-  ListFilter
+  ListFilter,
+  X
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -45,10 +49,13 @@ export default function Dashboard() {
   const [composerMode, setComposerMode] = useState<'quick' | 'brief' | 'import'>('quick');
   const [prompt, setPrompt] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("SaaS");
+  const [attachments, setAttachments] = useState<AttachmentFile[]>([]);
 
   // Modals
   const [briefOpen, setBriefOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [attachmentModalOpen, setAttachmentModalOpen] = useState(false);
+  const [attachmentModalMode, setAttachmentModalMode] = useState<'document' | 'image' | 'reference'>('document');
 
   // Pre-generation plan modal
   const [planModalOpen, setPlanModalOpen] = useState(false);
@@ -57,20 +64,43 @@ export default function Dashboard() {
   const projects = projectsService.getAll();
   const recentProjects = projectsService.getRecent(4);
 
+  const openAttachmentModal = (mode: 'document' | 'image' | 'reference') => {
+    setAttachmentModalMode(mode);
+    setAttachmentModalOpen(true);
+  };
+
+  const handleAddAttachment = (attachment: AttachmentFile) => {
+    setAttachments(prev => [...prev, attachment]);
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
   const handleQuickBuildSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
     setPlanModalOpen(true);
   };
 
-  const handleConfirmBuild = () => {
+  const handleConfirmBuild = async () => {
     setPlanModalOpen(false);
-    const newProj = projectsService.create(
-      prompt.slice(0, 30),
-      selectedCategory as any,
-      prompt
-    );
-    setLocation(`/projects/${newProj.id}/build`);
+    try {
+      const newProj = await projectsService.createRemoteProject(
+        prompt.slice(0, 30),
+        selectedCategory as any,
+        prompt
+      );
+      await generationService.startGeneration(newProj.id, {
+        businessDescription: prompt,
+        category: selectedCategory,
+        attachments,
+      });
+      toast.success("Generation started! Redirecting to building studio...");
+      setLocation(`/projects/${newProj.id}/build`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to start project build");
+    }
   };
 
   const handleStar = (id: string, e: React.MouseEvent) => {
@@ -99,6 +129,12 @@ export default function Dashboard() {
       {/* ── MODALS ── */}
       <DetailedBriefWizard isOpen={briefOpen} onClose={() => setBriefOpen(false)} />
       <ImportProjectModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
+      <AttachmentsModal
+        isOpen={attachmentModalOpen}
+        onClose={() => setAttachmentModalOpen(false)}
+        mode={attachmentModalMode}
+        onAddAttachment={handleAddAttachment}
+      />
 
       {/* Lightweight Pre-Generation Plan Review Modal */}
       {planModalOpen && (
@@ -116,6 +152,12 @@ export default function Dashboard() {
                 <span className="text-muted-foreground">Category:</span>
                 <span className="text-primary font-bold">{selectedCategory}</span>
               </div>
+              {attachments.length > 0 && (
+                <div className="flex justify-between border-b border-white/10 pb-2">
+                  <span className="text-muted-foreground">Attachments ({attachments.length}):</span>
+                  <span className="text-emerald-400 font-bold truncate max-w-[200px]">{attachments.map(a => a.name).join(", ")}</span>
+                </div>
+              )}
               <div className="flex justify-between border-b border-white/10 pb-2">
                 <span className="text-muted-foreground">Generated Pages:</span>
                 <span>Home, About, Features, Contact</span>
@@ -186,22 +228,46 @@ export default function Dashboard() {
               className="w-full h-32 bg-transparent text-sm text-foreground outline-none resize-none placeholder:text-muted-foreground/50 leading-relaxed font-sans"
             />
 
+            {/* Attached Chips */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
+                {attachments.map(att => (
+                  <div key={att.id} className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-white/90">
+                    {att.type === 'image' ? (
+                      <ImageIcon className="h-3.5 w-3.5 text-emerald-400" />
+                    ) : att.type === 'reference' ? (
+                      <Globe className="h-3.5 w-3.5 text-primary" />
+                    ) : (
+                      <Paperclip className="h-3.5 w-3.5 text-amber-400" />
+                    )}
+                    <span className="max-w-[180px] truncate">{att.name}</span>
+                    <button type="button" onClick={() => removeAttachment(att.id)} className="hover:text-destructive text-muted-foreground ml-1 p-0.5">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t" style={{ borderColor: 'var(--surface-border)' }}>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => openAttachmentModal('document')}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
                 >
                   <Paperclip className="h-3.5 w-3.5" /> Attach
                 </button>
                 <button
                   type="button"
+                  onClick={() => openAttachmentModal('image')}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
                 >
                   <ImageIcon className="h-3.5 w-3.5" /> Images
                 </button>
                 <button
                   type="button"
+                  onClick={() => openAttachmentModal('reference')}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
                 >
                   <LayoutTemplate className="h-3.5 w-3.5" /> References
@@ -212,7 +278,7 @@ export default function Dashboard() {
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="bg-white/5 text-xs text-foreground px-3 py-1.5 rounded-lg border border-white/10 outline-none cursor-pointer"
+                  className="bg-white/5 text-xs text-foreground px-3 py-1.5 rounded-lg border border-white/10 outline-none cursor-pointer font-medium"
                 >
                   <option value="SaaS" className="bg-black">SaaS</option>
                   <option value="Portfolio" className="bg-black">Portfolio</option>
@@ -249,170 +315,56 @@ export default function Dashboard() {
 
         {/* Project Cards Grid / Empty State */}
         {recentProjects.length === 0 ? (
-          <div className="p-10 rounded-2xl border text-center space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-            <div className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground mx-auto">
-              <Layers className="h-6 w-6" />
+          <div className="p-12 rounded-2xl border text-center space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mx-auto">
+              <Sparkles className="h-6 w-6" />
             </div>
             <div className="space-y-1">
-              <h3 className="font-bold text-base text-foreground">No projects yet</h3>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">Describe what you want to build in the Quick Build composer above to launch your first project.</p>
+              <h3 className="font-bold text-base text-foreground">No websites yet</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">Let's build your first project. Enter a prompt above to generate a complete website.</p>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {recentProjects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onStar={(e) => handleStar(project.id, e)}
-                onDuplicate={(e) => handleDuplicate(project.id, e)}
-                onDelete={(e) => handleDelete(project.id, e)}
-                onOpen={() => setLocation(`/projects/${project.id}/build`)}
-                onPreview={() => setLocation(`/projects/${project.id}/preview`)}
-                onCode={() => setLocation(`/projects/${project.id}/code`)}
-              />
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {recentProjects.map(p => (
+              <div
+                key={p.id}
+                onClick={() => setLocation(`/projects/${p.id}`)}
+                className="group p-4 rounded-2xl border cursor-pointer transition-all duration-200 hover:-translate-y-1 shadow-lg space-y-4 flex flex-col justify-between"
+                style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
+              >
+                <div className="space-y-3">
+                  <div className="h-36 rounded-xl overflow-hidden bg-black/40 border border-white/10 relative flex items-center justify-center">
+                    {p.thumbnail ? (
+                      <img src={p.thumbnail} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center space-y-1 p-4">
+                        <FileCode className="h-8 w-8 text-primary/60 mx-auto" />
+                        <span className="text-[10px] font-mono text-muted-foreground block uppercase">{p.category}</span>
+                      </div>
+                    )}
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400">
+                      {p.status}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{p.name}</h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{p.description}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t text-[11px] text-muted-foreground" style={{ borderColor: 'var(--surface-border)' }}>
+                  <span>{p.updatedAt}</span>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs font-semibold text-primary hover:bg-primary/10">
+                    Continue Editing →
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
         )}
       </section>
-
-    </div>
-  );
-}
-
-export function ProjectCard({
-  project,
-  onStar,
-  onDuplicate,
-  onDelete,
-  onOpen,
-  onPreview,
-  onCode,
-}: {
-  project: Project;
-  onStar: (e: React.MouseEvent) => void;
-  onDuplicate: (e: React.MouseEvent) => void;
-  onDelete: (e: React.MouseEvent) => void;
-  onOpen: () => void;
-  onPreview: () => void;
-  onCode: () => void;
-}) {
-  const [, setLocation] = useLocation();
-
-  return (
-    <div
-      onClick={onOpen}
-      className="group relative rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
-      style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
-    >
-      {/* Thumbnail Area — Neutral Code Placeholder (No stock images!) */}
-      <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#090A0C] border-b p-4 flex flex-col justify-between" style={{ borderColor: 'var(--surface-border)' }}>
-        
-        {/* Top Header of Code Mockup */}
-        <div className="flex items-center justify-between text-xs font-mono text-muted-foreground z-10">
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
-            <span className="ml-2 text-[11px] text-white/50">{project.name.toLowerCase().replace(/\s+/g, '-')}/src</span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={onStar}
-              className="p-1.5 rounded-full bg-black/60 border border-white/10 text-white/70 hover:text-amber-400 transition-colors"
-              title={project.isStarred ? "Unstar" : "Star"}
-            >
-              <Star className={cn("h-3.5 w-3.5", project.isStarred && "fill-amber-400 text-amber-400")} />
-            </button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <button className="p-1.5 rounded-full bg-black/60 border border-white/10 text-white/70 hover:text-white transition-colors">
-                  <MoreVertical className="h-3.5 w-3.5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-black/90 backdrop-blur-xl border-white/10 text-xs">
-                <DropdownMenuItem onClick={onOpen} className="cursor-pointer gap-2">
-                  <Edit className="h-3.5 w-3.5" /> Open Workspace
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onPreview} className="cursor-pointer gap-2">
-                  <Eye className="h-3.5 w-3.5" /> Preview Site
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onCode} className="cursor-pointer gap-2">
-                  <Code className="h-3.5 w-3.5" /> View Code
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLocation(`/projects/${project.id}/domains`)} className="cursor-pointer gap-2">
-                  <Globe className="h-3.5 w-3.5" /> Connect Domain
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setLocation(`/projects/${project.id}/deployments`)} className="cursor-pointer gap-2">
-                  <Rocket className="h-3.5 w-3.5" /> Deployments
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-white/10" />
-                <DropdownMenuItem onClick={onDuplicate} className="cursor-pointer gap-2">
-                  <Copy className="h-3.5 w-3.5" /> Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onDelete} className="cursor-pointer gap-2 text-destructive">
-                  <Trash2 className="h-3.5 w-3.5" /> Delete Project
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {/* Center Code Symbol & Category */}
-        <div className="my-auto flex flex-col items-center justify-center space-y-2 text-center select-none z-10">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-            <FileCode className="h-5 w-5" />
-          </div>
-          <span className="text-[11px] font-mono text-white/50 uppercase tracking-widest">{project.category} Project</span>
-        </div>
-
-        {/* Bottom Status Bar */}
-        <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground z-10">
-          <span>{project.domain}</span>
-          <span className="uppercase text-emerald-400">● {project.status}</span>
-        </div>
-
-        {/* Hover Action Overlay */}
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3 z-20 pointer-events-none">
-          <Button
-            size="sm"
-            className="h-8 px-4 rounded-xl text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 pointer-events-auto shadow-lg"
-            onClick={(e) => { e.stopPropagation(); onOpen(); }}
-          >
-            Open Workspace
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 px-3 rounded-xl text-xs font-semibold gap-1.5 border-white/20 text-white hover:bg-white/10 pointer-events-auto"
-            onClick={(e) => { e.stopPropagation(); onPreview(); }}
-          >
-            <Eye className="h-3.5 w-3.5" /> Preview
-          </Button>
-        </div>
-      </div>
-
-      {/* Card Body */}
-      <div className="p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
-            {project.name}
-          </h3>
-        </div>
-
-        <p className="text-xs text-muted-foreground line-clamp-1">
-          {project.description}
-        </p>
-
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground/70 pt-1 font-mono">
-          <span>{project.category}</span>
-          <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" /> {project.updatedAt}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

@@ -1,20 +1,18 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { projectsService, Project } from "@/services/projects";
-import { ProjectCard } from "@/pages/dashboard";
 import { Button } from "@/components/ui/button";
 import {
   Search,
   Plus,
-  Filter,
   Grid,
   List as ListIcon,
   Star,
   Clock,
-  Folder,
-  Layers,
   Archive,
-  ChevronDown
+  Layers,
+  FileCode,
+  ArrowRight
 } from "lucide-react";
 
 export default function ProjectsList() {
@@ -23,7 +21,7 @@ export default function ProjectsList() {
   const [activeTab, setActiveTab] = useState<'all' | 'recent' | 'starred' | 'folders' | 'archived'>('all');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [refreshCount, setRefreshCount] = useState(0);
+  const [, setRefreshCount] = useState(0);
 
   const projects = projectsService.getAll();
   const starred = projectsService.getStarred();
@@ -45,7 +43,7 @@ export default function ProjectsList() {
   }
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-8 pb-16 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -133,16 +131,40 @@ export default function ProjectsList() {
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map(p => (
-            <ProjectCard
+            <div
               key={p.id}
-              project={p}
-              onStar={(e) => { e.stopPropagation(); projectsService.toggleStar(p.id); setRefreshCount(c => c + 1); }}
-              onDuplicate={(e) => { e.stopPropagation(); projectsService.duplicate(p.id); setRefreshCount(c => c + 1); }}
-              onDelete={(e) => { e.stopPropagation(); if (confirm("Delete project?")) { projectsService.delete(p.id); setRefreshCount(c => c + 1); } }}
-              onOpen={() => setLocation(`/projects/${p.id}/build`)}
-              onPreview={() => setLocation(`/projects/${p.id}/preview`)}
-              onCode={() => setLocation(`/projects/${p.id}/code`)}
-            />
+              onClick={() => setLocation(`/projects/${p.id}/build`)}
+              className="group p-5 rounded-2xl border cursor-pointer transition-all duration-200 hover:-translate-y-1 shadow-lg space-y-4 flex flex-col justify-between"
+              style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
+            >
+              <div className="space-y-3">
+                <div className="h-36 rounded-xl overflow-hidden bg-black/40 border border-white/10 relative flex items-center justify-center">
+                  {p.thumbnail ? (
+                    <img src={p.thumbnail} alt={p.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="text-center space-y-1 p-4">
+                      <FileCode className="h-8 w-8 text-primary/60 mx-auto" />
+                      <span className="text-[10px] font-mono text-muted-foreground block uppercase">{p.category}</span>
+                    </div>
+                  )}
+                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400">
+                    {p.status}
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{p.name}</h3>
+                  <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{p.description}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t text-[11px] text-muted-foreground" style={{ borderColor: 'var(--surface-border)' }}>
+                <span>{p.updatedAt}</span>
+                <Button size="sm" variant="ghost" className="h-7 text-xs font-semibold text-primary hover:bg-primary/10">
+                  Open Project →
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
       ) : (
@@ -155,8 +177,12 @@ export default function ProjectsList() {
                 className="p-4 flex items-center justify-between hover:bg-white/5 cursor-pointer transition-colors"
               >
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-20 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
-                    <img src={p.thumbnail} alt={p.name} className="w-full h-full object-cover" />
+                  <div className="h-12 w-20 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0 flex items-center justify-center">
+                    {p.thumbnail ? (
+                      <img src={p.thumbnail} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <FileCode className="h-5 w-5 text-primary/50" />
+                    )}
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-foreground">{p.name}</h4>
@@ -169,7 +195,7 @@ export default function ProjectsList() {
                   <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
                     {p.status}
                   </span>
-                  <Button size="sm" variant="outline" className="h-8 text-xs border-white/10" onClick={(e) => { e.stopPropagation(); setLocation(`/projects/${p.id}/build`); }}>
+                  <Button size="sm" variant="outline" className="h-8 text-xs border-white/10" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setLocation(`/projects/${p.id}/build`); }}>
                     Open
                   </Button>
                 </div>
