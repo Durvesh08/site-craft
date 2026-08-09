@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { projectsService } from "@/services/projects";
+import { generationService } from "@/services/generation";
 import { Button } from "@/components/ui/button";
 import {
   Sparkles,
@@ -62,14 +63,25 @@ export function DetailedBriefWizard({ isOpen, onClose }: DetailedBriefWizardProp
     setPages(pages.filter(item => item !== p));
   };
 
-  const handleFinalBuild = () => {
-    const proj = projectsService.create(
-      name.trim() || `My ${projectType}`,
-      projectType as any,
-      description || `Bespoke ${projectType} built from Detailed Brief`
-    );
-    onClose();
-    setLocation(`/projects/${proj.id}/build`);
+  const handleFinalBuild = async () => {
+    try {
+      const projName = name.trim() || `My ${projectType}`;
+      const projDesc = `${description || `Bespoke ${projectType} built from Detailed Brief`}\nPages: ${pages.join(", ")}\nFeatures: ${features.join(", ")}\nIntegrations: ${integrations.join(", ")}\nDesign Style: ${designStyle}, Tone: ${brandTone}`;
+
+      const proj = await projectsService.createRemoteProject(
+        projName,
+        projectType as any,
+        projDesc
+      );
+      await generationService.startGeneration(proj.id, {
+        businessDescription: projDesc,
+        category: projectType,
+      });
+      onClose();
+      setLocation(`/projects/${proj.id}/build`);
+    } catch {
+      onClose();
+    }
   };
 
   return (
