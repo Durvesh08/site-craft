@@ -78,7 +78,14 @@ class ProjectsService {
   }
 
   getById(id: string): Project | undefined {
-    return this.projects.find(p => p.id === id);
+    if (!id) return undefined;
+    const cleanId = id.toLowerCase();
+    return this.projects.find(p =>
+      p.id === id ||
+      p.id.toLowerCase() === cleanId ||
+      p.name.toLowerCase().replace(/[^a-z0-9]/g, '-') === cleanId ||
+      cleanId.includes(p.id.toLowerCase())
+    );
   }
 
   getFolders(): Folder[] {

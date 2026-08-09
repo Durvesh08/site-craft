@@ -48,12 +48,13 @@ const SAMPLE_PROJECT_FILES: VFSFile[] = [
 class FilesService {
   private filesByProject: Record<string, VFSFile[]> = {};
 
-  getFilesForProject(projectId: string): VFSFile[] {
-    if (!this.filesByProject[projectId]) {
-      this.filesByProject[projectId] = JSON.parse(JSON.stringify(SAMPLE_PROJECT_FILES));
-      this.fetchRemoteFiles(projectId);
+  getFilesForProject(projectId: string = 'lumina'): VFSFile[] {
+    const key = projectId || 'lumina';
+    if (!this.filesByProject[key]) {
+      this.filesByProject[key] = JSON.parse(JSON.stringify(SAMPLE_PROJECT_FILES));
+      this.fetchRemoteFiles(key);
     }
-    return this.filesByProject[projectId];
+    return this.filesByProject[key];
   }
 
   async fetchRemoteFiles(projectId: string): Promise<VFSFile[]> {

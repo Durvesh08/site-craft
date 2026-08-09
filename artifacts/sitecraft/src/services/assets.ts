@@ -8,77 +8,62 @@ export interface Asset {
   createdAt: string;
 }
 
-const INITIAL_ASSETS: Asset[] = [
-  {
-    id: 'ast-1',
-    name: 'hero-architecture-bg.jpg',
-    category: 'images',
-    url: '/previews/lumina.jpg',
-    size: '1.2 MB',
-    dimensions: '3840 x 1920',
-    createdAt: 'Aug 1, 2026',
-  },
-  {
-    id: 'ast-2',
-    name: 'analytics-dashboard-hero.jpg',
-    category: 'images',
-    url: '/previews/pulsar.jpg',
-    size: '890 KB',
-    dimensions: '1920 x 1080',
-    createdAt: 'Aug 3, 2026',
-  },
-  {
-    id: 'ast-3',
-    name: 'esports-banner.jpg',
-    category: 'images',
-    url: '/previews/clout.jpg',
-    size: '2.1 MB',
-    dimensions: '3840 x 2160',
-    createdAt: 'Aug 4, 2026',
-  },
-  {
-    id: 'ast-4',
-    name: 'headphones-spec.jpg',
-    category: 'images',
-    url: '/previews/sonora.jpg',
-    size: '1.4 MB',
-    dimensions: '2560 x 1440',
-    createdAt: 'Aug 6, 2026',
-  },
-  {
-    id: 'ast-5',
-    name: 'studio-atelier.jpg',
-    category: 'images',
-    url: '/previews/nova.jpg',
-    size: '950 KB',
-    dimensions: '1920 x 1080',
-    createdAt: 'Aug 7, 2026',
-  },
-  {
-    id: 'ast-6',
-    name: 'brand-logo-mark.svg',
-    category: 'icons',
-    url: '/public/favicon.svg',
-    size: '4 KB',
-    dimensions: '24 x 24',
-    createdAt: 'Aug 2, 2026',
-  },
-  {
-    id: 'ast-7',
-    name: 'CabinetGrotesk-Bold.woff2',
-    category: 'fonts',
-    url: '#',
-    size: '42 KB',
-    createdAt: 'Aug 2, 2026',
-  },
-];
-
 class AssetsService {
-  private assets: Asset[] = [...INITIAL_ASSETS];
+  private assets: Asset[] = [];
+
+  async fetchAssets(projectId?: string): Promise<Asset[]> {
+    try {
+      const url = projectId ? `/api/projects/${projectId}/files` : `/api/storage/objects`;
+      const res = await fetch(url, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const files = Array.isArray(data) ? data : data.files || [];
+        const mapped: Asset[] = files
+          .filter((f: any) => {
+            const name = (f.name || f.path || "").toLowerCase();
+            return /\.(png|jpe?g|webp|gif|svg|mp4|webm|woff2?|ttf|pdf|doc|docx)$/i.test(name);
+          })
+          .map((f: any, idx: number) => {
+            const name = f.name || f.path || `file-${idx}`;
+            let cat: Asset['category'] = 'documents';
+            if (/\.(png|jpe?g|webp|gif)$/i.test(name)) cat = 'images';
+            else if (/\.(mp4|webm)$/i.test(name)) cat = 'videos';
+            else if (/\.(svg)$/i.test(name)) cat = 'icons';
+            else if (/\.(woff2?|ttf)$/i.test(name)) cat = 'fonts';
+
+            return {
+              id: f.id || `ast-${idx}`,
+              name,
+              category: cat,
+              url: f.url || (f.content ? `data:image/svg+xml;utf8,${encodeURIComponent(f.content)}` : `/api/storage/objects/${name}`),
+              size: f.size ? `${(f.size / 1024).toFixed(1)} KB` : '12 KB',
+              createdAt: f.createdAt ? new Date(f.createdAt).toLocaleDateString() : 'Just now',
+            };
+          });
+        this.assets = mapped;
+      }
+    } catch {
+      // Keep current assets state
+    }
+    return this.assets;
+  }
 
   getAssets(category?: Asset['category']): Asset[] {
     if (!category || category === ('all' as any)) return this.assets;
     return this.assets.filter(a => a.category === category);
+  }
+
+  addUploadedAsset(url: string, name: string, category: Asset['category'] = 'images'): Asset {
+    const newAsset: Asset = {
+      id: `ast-${Date.now()}`,
+      name,
+      category,
+      url,
+      size: '120 KB',
+      createdAt: 'Just now',
+    };
+    this.assets.unshift(newAsset);
+    return newAsset;
   }
 
   delete(id: string): boolean {

@@ -12,7 +12,14 @@ interface ProjectRuntimePreviewProps {
  * Hard separation: Zero Zovaix platform navigation, branding, or marketing CSS leakage.
  */
 export function ProjectRuntimePreview({ projectId }: ProjectRuntimePreviewProps) {
-  const project = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const rawProject = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const project = rawProject || {
+    id: projectId,
+    name: projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    description: `Bespoke AI application for ${projectId}`,
+    domain: `${projectId}.zovaix.site`,
+    status: 'draft',
+  };
   const filesTree = filesService.getFilesForProject(project.id);
 
   // Render bespoke project layouts depending on project ID / content

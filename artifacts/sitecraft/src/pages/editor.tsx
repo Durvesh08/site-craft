@@ -35,7 +35,19 @@ interface ChatMessage {
 export default function ProjectEditor() {
   const { id } = useParams<{ id?: string }>();
   const projectId = id || 'lumina';
-  const project = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const [, setRefresh] = useState(0);
+
+  useEffect(() => {
+    projectsService.fetchRemoteProjects().then(() => setRefresh(r => r + 1));
+  }, [projectId]);
+
+  const rawProject = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const project = rawProject || {
+    id: projectId,
+    name: projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    domain: `${projectId}.zovaix.site`,
+    status: 'draft',
+  };
 
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [isSectionsOpen, setIsSectionsOpen] = useState(false);

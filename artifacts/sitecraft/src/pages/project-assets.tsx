@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import { assetsService, Asset } from "@/services/assets";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Upload,
   Image as ImageIcon,
@@ -14,14 +15,20 @@ import {
   Trash2,
   Check,
   Search,
-  ExternalLink
+  Plus
 } from "lucide-react";
 
 export default function ProjectAssets() {
+  const { id } = useParams<{ id?: string }>();
   const [activeCategory, setActiveCategory] = useState<Asset['category'] | 'all'>('all');
   const [search, setSearch] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    assetsService.fetchAssets(id).then(() => setRefresh(r => r + 1));
+  }, [id]);
 
   const assets = assetsService.getAssets(activeCategory as any).filter(a =>
     a.name.toLowerCase().includes(search.toLowerCase())
@@ -30,6 +37,7 @@ export default function ProjectAssets() {
   const handleCopyUrl = (asset: Asset) => {
     navigator.clipboard.writeText(asset.url);
     setCopiedId(asset.id);
+    toast.success("Asset URL copied to clipboard");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -37,12 +45,37 @@ export default function ProjectAssets() {
     if (confirm("Are you sure you want to delete this asset?")) {
       assetsService.delete(id);
       setRefresh(r => r + 1);
+      toast.success("Asset deleted");
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    let category: Asset['category'] = 'documents';
+    if (file.type.startsWith('image/')) category = 'images';
+    else if (file.type.startsWith('video/')) category = 'videos';
+    else if (file.name.endsWith('.svg')) category = 'icons';
+    else if (file.name.endsWith('.woff') || file.name.endsWith('.woff2') || file.name.endsWith('.ttf')) category = 'fonts';
+
+    const url = URL.createObjectURL(file);
+    assetsService.addUploadedAsset(url, file.name, category);
+    setRefresh(r => r + 1);
+    toast.success(`Uploaded "${file.name}" to asset library`);
+    e.target.value = '';
   };
 
   return (
     <ProjectWorkspaceLayout activeTab="assets">
       <div className="p-6 space-y-6 max-w-6xl mx-auto h-full overflow-y-auto">
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={handleFileUpload}
+          accept="image/*,video/*,.svg,.woff,.woff2,.ttf,.pdf"
+        />
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -51,7 +84,11 @@ export default function ProjectAssets() {
             <p className="text-xs text-muted-foreground">Upload and manage visual assets, brand icons, and fonts</p>
           </div>
 
-          <Button size="sm" className="h-9 text-xs font-semibold gap-1.5 shrink-0">
+          <Button
+            size="sm"
+            className="h-9 text-xs font-semibold gap-1.5 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <Upload className="h-3.5 w-3.5" /> Upload Asset
           </Button>
         </div>
@@ -79,51 +116,70 @@ export default function ProjectAssets() {
           </div>
         </div>
 
-        {/* Asset Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {assets.map(asset => (
-            <div
-              key={asset.id}
-              className="group rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-1 flex flex-col justify-between"
-              style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
-            >
-              <div className="aspect-video w-full bg-black/40 relative overflow-hidden flex items-center justify-center p-2 border-b" style={{ borderColor: 'var(--surface-border)' }}>
-                {asset.category === 'images' ? (
-                  <img src={asset.url} alt={asset.name} className="w-full h-full object-cover rounded-lg" />
-                ) : (
-                  <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center text-primary">
-                    <FileText className="h-6 w-6" />
-                  </div>
-                )}
-
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => handleCopyUrl(asset)}
-                    className="p-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors"
-                    title="Copy URL"
-                  >
-                    {copiedId === asset.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(asset.id)}
-                    className="p-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                    title="Delete Asset"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-3 space-y-1">
-                <p className="font-bold text-xs text-foreground truncate">{asset.name}</p>
-                <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground">
-                  <span>{asset.size}</span>
-                  <span>{asset.createdAt}</span>
-                </div>
-              </div>
+        {/* Asset Grid / Empty State */}
+        {assets.length === 0 ? (
+          <div className="p-12 rounded-3xl border border-dashed text-center space-y-4 max-w-md mx-auto my-12" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mx-auto">
+              <ImageIcon className="h-6 w-6" />
             </div>
-          ))}
-        </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">No Assets Uploaded Yet</h3>
+              <p className="text-xs text-muted-foreground mt-1">Upload brand images, logos, fonts, or media to use in your website build.</p>
+            </div>
+            <Button
+              size="sm"
+              className="h-9 text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Plus className="h-4 w-4" /> Add Your First Asset
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {assets.map(asset => (
+              <div
+                key={asset.id}
+                className="group rounded-2xl border overflow-hidden transition-all duration-200 hover:-translate-y-1 flex flex-col justify-between"
+                style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
+              >
+                <div className="aspect-video w-full bg-black/40 relative overflow-hidden flex items-center justify-center p-2 border-b" style={{ borderColor: 'var(--surface-border)' }}>
+                  {asset.category === 'images' ? (
+                    <img src={asset.url} alt={asset.name} className="w-full h-full object-cover rounded-lg" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-xl bg-white/5 flex items-center justify-center text-primary">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                  )}
+
+                  <div className="absolute inset-0 bg-black/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => handleCopyUrl(asset)}
+                      className="p-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-colors"
+                      title="Copy URL"
+                    >
+                      {copiedId === asset.id ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(asset.id)}
+                      className="p-2 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                      title="Delete Asset"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 space-y-1">
+                  <p className="font-bold text-xs text-foreground truncate">{asset.name}</p>
+                  <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+                    <span>{asset.size}</span>
+                    <span>{asset.createdAt}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       </div>
     </ProjectWorkspaceLayout>
