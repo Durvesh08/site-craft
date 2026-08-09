@@ -112,7 +112,7 @@ export default function ProjectPreview() {
           <div className={`transition-all duration-300 rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-black ${getViewportWidth()}`}>
             <iframe
               key={key}
-              src="/"
+              src={`/preview-frame/${projectId}`}
               title={project.name}
               className="w-full h-full border-none"
             />

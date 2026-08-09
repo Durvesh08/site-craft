@@ -53,6 +53,11 @@ const CATALOG: Connector[] = [
   { id: 'zapier', name: 'Zapier', description: '5,000+ app workflow webhooks & triggers', category: 'Automation', icon: 'Workflow', brandColor: '#FF4A00', status: 'Available', authType: 'Webhook', capabilities: ['Zaps Trigger', 'Custom Payload'] },
 ];
 
+export const connectorRegistry: Record<string, Connector> = CATALOG.reduce((acc, curr) => {
+  acc[curr.id] = curr;
+  return acc;
+}, {} as Record<string, Connector>);
+
 class ConnectorsService {
   private connectors: Connector[] = [...CATALOG];
 

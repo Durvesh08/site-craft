@@ -76,7 +76,30 @@ export default function ProjectEditor() {
     setEditInstruction("");
     setIsBuilding(true);
 
-    // Simulate Agent Task Execution
+    // PLAN MODE: Create plan proposal requiring user approval
+    if (agentMode === 'Plan') {
+      setTimeout(() => {
+        const planMsg: ChatMessage = {
+          id: `ai-plan-${Date.now()}`,
+          sender: 'ai',
+          mode: 'Plan',
+          text: `Proposed Architecture Plan for: "${promptText}". Click [Approve Plan] to begin file modifications.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          filesChanged: ['src/components/Hero.tsx', 'src/types/schema.ts', 'src/routes.ts'],
+          tasks: [
+            { label: 'Objective: Refactor component architecture', status: 'done' },
+            { label: 'Files affected: 3 components', status: 'done' },
+            { label: 'Dependencies: 0 new packages', status: 'done' },
+            { label: 'Risks: Low (no breaking API changes)', status: 'done' },
+          ],
+        };
+        setMessages(prev => [...prev, planMsg]);
+        setIsBuilding(false);
+      }, 1500);
+      return;
+    }
+
+    // BUILD MODE / OTHER MODES: Execute immediately
     setTimeout(() => {
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
@@ -97,6 +120,30 @@ export default function ProjectEditor() {
       setIframeKey(k => k + 1);
       toast.success("AI Agent updated codebase successfully.");
     }, 2000);
+  };
+
+  const handleApprovePlan = (planMsgId: string) => {
+    setIsBuilding(true);
+    setTimeout(() => {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `ai-approved-${Date.now()}`,
+          sender: 'ai',
+          mode: 'Build',
+          text: `Plan approved! Executed file edits and compiled Vite bundle.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          filesChanged: ['src/components/Hero.tsx', 'src/types/schema.ts', 'src/routes.ts'],
+          tasks: [
+            { label: 'Editing files per approved plan', status: 'done' },
+            { label: 'Running build & type check', status: 'done' },
+          ]
+        }
+      ]);
+      setIsBuilding(false);
+      setIframeKey(k => k + 1);
+      toast.success("Approved plan executed successfully.");
+    }, 1500);
   };
 
   return (
@@ -166,7 +213,7 @@ export default function ProjectEditor() {
             }`}>
               <iframe
                 key={iframeKey}
-                src="/"
+                src={`/preview-frame/${projectId}`}
                 title={project.name}
                 className="w-full h-full border-none"
               />
@@ -246,12 +293,24 @@ export default function ProjectEditor() {
                       ))}
                     </div>
                     <div className="flex items-center gap-2 pt-1">
-                      <Button size="sm" variant="outline" className="h-7 text-[11px] border-white/10 gap-1">
-                        Review Changes
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-[11px] border-white/10 gap-1 text-muted-foreground hover:text-foreground">
-                        <Undo2 className="h-3 w-3" /> Undo
-                      </Button>
+                      {msg.mode === 'Plan' ? (
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprovePlan(msg.id)}
+                          className="h-7 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white gap-1"
+                        >
+                          <CheckCircle2 className="h-3 w-3" /> Approve Plan →
+                        </Button>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="outline" className="h-7 text-[11px] border-white/10 gap-1">
+                            Review Changes
+                          </Button>
+                          <Button size="sm" variant="outline" className="h-7 text-[11px] border-white/10 gap-1 text-muted-foreground hover:text-foreground">
+                            <Undo2 className="h-3 w-3" /> Undo
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

@@ -27,6 +27,7 @@ import ProjectSettingsPage from '@/pages/project-settings-page';
 import TemplatesPage from '@/pages/templates-page';
 import BillingPage from '@/pages/billing-page';
 import SettingsPage from '@/pages/settings';
+import StandalonePreviewRoute from '@/pages/standalone-preview-route';
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
+
+      {/* Isolated Standalone Project Preview Frame (Zero Zovaix Platform Shell) */}
+      <Route path="/preview-frame/:id" component={StandalonePreviewRoute} />
 
       {/* Protected Product Routes */}
       <Route path="/dashboard">
