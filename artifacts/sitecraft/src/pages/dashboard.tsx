@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { projectsService, Project } from "@/services/projects";
 import { generationService } from "@/services/generation";
 import { DetailedBriefWizard } from "@/components/dashboard/detailed-brief-wizard";
+import { extractCleanBusinessName } from "./new-project";
 import { ImportProjectModal } from "@/components/dashboard/import-project-modal";
 import { AttachmentsModal, AttachmentFile } from "@/components/dashboard/attachments-modal";
 import { Button } from "@/components/ui/button";
@@ -86,8 +87,9 @@ export default function Dashboard() {
   const handleConfirmBuild = async () => {
     setPlanModalOpen(false);
     try {
+      const cleanTitle = extractCleanBusinessName(prompt, `${selectedCategory} Project`);
       const newProj = await projectsService.createRemoteProject(
-        prompt.slice(0, 30),
+        cleanTitle,
         selectedCategory as any,
         prompt
       );

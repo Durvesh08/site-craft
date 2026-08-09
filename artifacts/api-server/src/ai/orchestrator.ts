@@ -2003,7 +2003,16 @@ img, svg, canvas {
 }
 
 export function buildSynthesizedWebsiteHtml(projectName: string, description: string): string {
-  const cleanName = projectName || "AI Application";
+  let rawName = projectName || "AI Application";
+  rawName = rawName
+    .replace(/^act\s+as\s+an?\s+expert\s+web\s+designer\s*/i, "")
+    .replace(/^act\s+as\s+an?\s+expert\s*/i, "")
+    .replace(/^create\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
+    .replace(/^build\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
+    .trim();
+
+  const words = rawName.split(/\s+/).slice(0, 4);
+  const cleanName = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ") || "AI Application";
   const cleanDesc = description || "Next-generation web application built with AI.";
   const initial = cleanName.charAt(0).toUpperCase();
 

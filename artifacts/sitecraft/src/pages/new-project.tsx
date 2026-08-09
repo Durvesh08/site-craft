@@ -14,6 +14,26 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+export function extractCleanBusinessName(prompt: string, defaultFallback: string = "AI Application"): string {
+  if (!prompt || !prompt.trim()) return defaultFallback;
+
+  let cleaned = prompt
+    .replace(/^act\s+as\s+an?\s+expert\s+web\s+designer\s*/i, "")
+    .replace(/^act\s+as\s+an?\s+expert\s*/i, "")
+    .replace(/^create\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
+    .replace(/^build\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
+    .replace(/^design\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
+    .replace(/^make\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
+    .trim();
+
+  if (!cleaned) return defaultFallback;
+
+  const words = cleaned.split(/\s+/).slice(0, 4);
+  const nameCandidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+
+  return nameCandidate.length > 2 ? nameCandidate : defaultFallback;
+}
+
 // ── Type definitions ────────────────────────────────────────────────────────────
 type PageTypeId = "landing" | "portfolio" | "ecommerce" | "restaurant" | "saas" | "nonprofit" | "agency" | "event";
 type ToneOption = "Minimal" | "Bold" | "Luxury" | "Playful" | "Corporate" | "Warm" | "Dark" | "Editorial";
@@ -164,15 +184,16 @@ export default function NewProject() {
   }
 
   async function handleQuickSubmit() {
-    if (!quickBusinessName.trim() || !quickBrief.trim()) {
-      toast.error("Please enter a business name and brief.");
+    if (!quickBrief.trim()) {
+      toast.error("Please enter a project brief.");
       return;
     }
     setIsSubmitting(true);
     try {
+      const finalName = quickBusinessName.trim() || extractCleanBusinessName(quickBrief);
       const project = await createProject.mutateAsync({
         data: {
-          name: quickBusinessName,
+          name: finalName,
           businessDescription: quickBrief,
         },
       });
@@ -292,7 +313,7 @@ export default function NewProject() {
             <div className="flex justify-end pt-2">
               <Button
                 onClick={handleQuickSubmit}
-                disabled={isSubmitting || !quickBusinessName.trim() || quickBrief.trim().length < 20}
+                disabled={isSubmitting || !quickBrief.trim()}
                 size="lg"
                 className="gap-2 px-8 h-12 text-lg shadow-lg shadow-primary/20"
                 data-testid="button-quick-generate"
