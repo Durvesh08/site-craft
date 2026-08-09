@@ -70,9 +70,6 @@ function Router() {
       <Route path="/projects">
         {() => <ProtectedRoute component={ProjectsList} />}
       </Route>
-      <Route path="/projects/:id">
-        {() => <ProtectedRoute component={ProjectEditor} />}
-      </Route>
       <Route path="/projects/:id/build">
         {() => <ProtectedRoute component={ProjectEditor} />}
       </Route>
@@ -91,9 +88,6 @@ function Router() {
       <Route path="/projects/:id/assets">
         {() => <ProtectedRoute component={ProjectAssets} />}
       </Route>
-      <Route path="/projects/:id/connectors">
-        {() => <ProtectedRoute component={ConnectorsPage} />}
-      </Route>
       <Route path="/projects/:id/domains">
         {() => <ProtectedRoute component={DomainsPage} />}
       </Route>
@@ -108,6 +102,9 @@ function Router() {
       </Route>
       <Route path="/projects/:id/settings">
         {() => <ProtectedRoute component={ProjectSettingsPage} />}
+      </Route>
+      <Route path="/projects/:id">
+        {() => <ProtectedRoute component={ProjectEditor} />}
       </Route>
 
       <Route path="/connectors">

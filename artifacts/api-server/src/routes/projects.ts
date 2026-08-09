@@ -441,20 +441,27 @@ router.delete("/projects/:id/files/delete", async (req: Request, res: Response) 
   }
 });
 
+async function findProjectByIdOrSlug(userId: string, idOrSlug: string) {
+  const projects = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.userId, userId));
+
+  const cleanTarget = idOrSlug.trim().toLowerCase();
+  return projects.find((p) =>
+    p.id === idOrSlug ||
+    p.id.toLowerCase() === cleanTarget ||
+    p.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") === cleanTarget ||
+    p.name.toLowerCase().replace(/[^a-z0-9]/g, "") === cleanTarget.replace(/[^a-z0-9]/g, "")
+  ) || null;
+}
+
 // GET /projects/:id
 router.get("/projects/:id", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
-    const params = GetProjectParams.safeParse(req.params);
-    if (!params.success) {
-      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
-      return;
-    }
-
-    const [project] = await db
-      .select()
-      .from(projectsTable)
-      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+    const rawId = String(req.params.id);
+    const project = await findProjectByIdOrSlug(req.user!.id, rawId);
 
     if (!project) {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
@@ -473,16 +480,8 @@ router.get("/projects/:id", async (req: Request, res: Response) => {
 router.get("/projects/:id/preview", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
-    const params = GetProjectParams.safeParse(req.params);
-    if (!params.success) {
-      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
-      return;
-    }
-
-    const [project] = await db
-      .select()
-      .from(projectsTable)
-      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+    const rawId = String(req.params.id);
+    const project = await findProjectByIdOrSlug(req.user!.id, rawId);
 
     if (!project) {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
@@ -1161,86 +1160,31 @@ Slug: ${slug}
 router.patch("/projects/:id", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
-    const params = UpdateProjectParams.safeParse(req.params);
-    const body = UpdateProjectBody.safeParse(req.body);
-    if (!params.success || !body.success) {
-      res.status(400).json({ error: "BadRequest", message: "Invalid request" });
-      return;
-    }
-
-    const [existing] = await db
-      .select()
-      .from(projectsTable)
-      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+    const rawId = String(req.params.id);
+    const existing = await findProjectByIdOrSlug(req.user!.id, rawId);
 
     if (!existing) {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
       return;
     }
 
+    const rawBody = req.body || {};
+
     const updates: Partial<typeof projectsTable.$inferInsert> = {
       updatedAt: new Date(),
     };
-    if (body.data.name !== undefined) updates.name = body.data.name;
-    if (body.data.description !== undefined) {
-      updates.description = body.data.description;
-      updates.businessDescription = body.data.description;
-    }
-    if (body.data.pixelCode !== undefined) updates.pixelCode = body.data.pixelCode;
 
-    // Update the generated HTML directly if it exists, so name, description, and pixelCode take effect instantly without AI regeneration
-    // Uses mapAllPages to apply changes across ALL pages of multi-page sites
-    if (existing.generatedHtml) {
-      const patchName = body.data.name;
-      const patchDesc = body.data.description;
-      const patchPixel = body.data.pixelCode;
-
-      updates.generatedHtml = mapAllPages(existing.generatedHtml, (pageHtml) => {
-        let html = pageHtml;
-
-        if (patchName !== undefined) {
-          html = html.replace(/<title>[^<]*<\/title>/i, `<title>${patchName}</title>`);
-        }
-
-        if (patchDesc !== undefined) {
-          const cleanDesc = patchDesc.replace(/"/g, '&quot;');
-          html = html.replace(/<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i, `<meta name="description" content="${cleanDesc}" />`);
-        }
-
-        if (patchPixel !== undefined) {
-          const startTag = "<!-- PIXEL_CODE_START -->";
-          const endTag   = "<!-- PIXEL_CODE_END -->";
-          const pixelContent = patchPixel || "";
-          if (html.includes(startTag) && html.includes(endTag)) {
-            // Tags already exist — replace only the content between them
-            const startIndex = html.indexOf(startTag) + startTag.length;
-            const endIndex   = html.indexOf(endTag);
-            html = html.slice(0, startIndex) + pixelContent + html.slice(endIndex);
-          } else {
-            // No tags yet — inject block before </head> (case-insensitive match)
-            const headMatch = html.match(/<\/head>/i);
-            if (headMatch && headMatch.index !== undefined) {
-              const injection = `\n  ${startTag}${pixelContent}${endTag}\n`;
-              html = html.slice(0, headMatch.index) + injection + html.slice(headMatch.index);
-            } else {
-              // Fallback: inject before </body>
-              const bodyMatch = html.match(/<\/body>/i);
-              if (bodyMatch && bodyMatch.index !== undefined) {
-                const injection = `\n  ${startTag}${pixelContent}${endTag}\n`;
-                html = html.slice(0, bodyMatch.index) + injection + html.slice(bodyMatch.index);
-              }
-            }
-          }
-        }
-
-        return html;
-      });
-    }
+    if (rawBody.name !== undefined) updates.name = String(rawBody.name);
+    if (rawBody.businessDescription !== undefined) updates.businessDescription = String(rawBody.businessDescription);
+    if (rawBody.pixelCode !== undefined) updates.pixelCode = String(rawBody.pixelCode);
+    if (rawBody.status !== undefined) updates.status = rawBody.status as any;
+    if (rawBody.isStarred !== undefined) updates.isStarred = Boolean(rawBody.isStarred);
+    if (rawBody.generatedHtml !== undefined) updates.generatedHtml = String(rawBody.generatedHtml);
 
     const [updated] = await db
       .update(projectsTable)
       .set(updates)
-      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)))
+      .where(eq(projectsTable.id, existing.id))
       .returning();
 
     res.json(toProjectResponse(updated));
@@ -1290,18 +1234,15 @@ router.post("/projects/:id/pixel", async (req: Request, res: Response) => {
 router.delete("/projects/:id", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
-    const params = DeleteProjectParams.safeParse(req.params);
-    if (!params.success) {
-      res.status(400).json({ error: "BadRequest", message: "Invalid project ID" });
+    const rawId = String(req.params.id);
+    const existing = await findProjectByIdOrSlug(req.user!.id, rawId);
+
+    if (!existing) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
       return;
     }
 
-    const [existing] = await db
-      .select()
-      .from(projectsTable)
-      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
-
-    await db.delete(projectsTable).where(eq(projectsTable.id, params.data.id));
+    await db.delete(projectsTable).where(eq(projectsTable.id, existing.id));
     res.json({ message: "Project deleted" });
   } catch (err) {
     req.log.error({ err }, "Failed to delete project");

@@ -63,7 +63,6 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
     { id: 'domains', label: 'Domains', href: `/projects/${projectId}/domains`, icon: Globe },
     { id: 'deployments', label: 'Deployments', href: `/projects/${projectId}/deployments`, icon: Rocket },
     { id: 'versions', label: 'Versions', href: `/projects/${projectId}/versions`, icon: History },
-    { id: 'security', label: 'Security', href: `/projects/${projectId}/security`, icon: ShieldCheck },
     { id: 'settings', label: 'Settings', href: `/projects/${projectId}/settings`, icon: Settings },
   ];
 
