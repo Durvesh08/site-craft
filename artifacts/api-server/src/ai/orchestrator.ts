@@ -22,6 +22,8 @@ import {
   stripModuleStatements,
   type SectionCode,
 } from "./sectionAssembler";
+import { getArchetypeForIndustry, getArchetypeForIndustry as getArchetype, DesignArchetype } from "./designArchetypes";
+import { extractDominantColor } from "../lib/colorExtractor";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // gemini-2.0-flash-lite, gemini-2.0-flash, and gemini-2.5-pro are unavailable
@@ -199,6 +201,25 @@ export function resolveCtaLabelAndHref(
   return { label: copyLabel || "Get Started", href: "#" };
 }
 
+function cleanPII(text: string): string {
+  if (!text) return "";
+  // Strip emails
+  let cleaned = text.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[EMAIL]");
+  // Strip phone numbers
+  cleaned = cleaned.replace(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g, "[PHONE]");
+  return cleaned;
+}
+
+function generateTypographicWordmark(companyName: string, primaryColor = "#6366f1"): string {
+  const initial = companyName ? companyName.charAt(0).toUpperCase() : "S";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+    <rect width="100" height="100" rx="24" fill="${primaryColor}"/>
+    <text x="50" y="65" font-family="system-ui, sans-serif" font-size="48" font-weight="bold" fill="#ffffff" text-anchor="middle">${initial}</text>
+  </svg>`;
+  const base64 = Buffer.from(svg).toString("base64");
+  return `data:image/svg+xml;base64,${base64}`;
+}
+
 // ── Main generation pipeline ──────────────────────────────────────────────────
 
 export async function runGeneration(
@@ -213,6 +234,13 @@ export async function runGeneration(
     logoUrl?: string;
   },
 ): Promise<void> {
+  // Normalize and clean inputs (Phase 1)
+  input.businessDescription = cleanPII(input.businessDescription.trim());
+  if (input.targetAudience) input.targetAudience = cleanPII(input.targetAudience.trim());
+  if (input.primaryCta) input.primaryCta = cleanPII(input.primaryCta.trim());
+  if (input.additionalInstructions) input.additionalInstructions = cleanPII(input.additionalInstructions.trim());
+  if (input.logoUrl) input.logoUrl = input.logoUrl.trim();
+
   logger.info({ jobId, projectId }, "Starting generation pipeline");
 
   try {
@@ -253,9 +281,18 @@ export async function runGeneration(
     const logoToUse = input.logoUrl || project?.logoUrl || undefined;
     if (logoToUse) {
       branding["logo_url"] = logoToUse;
+      const logoColor = await extractDominantColor(logoToUse);
+      if (logoColor) {
+        logger.info({ logoColor }, "Extracted dominant brand color from logo");
+        branding["primary_color"] = logoColor;
+      }
+    } else {
+      const primaryColor = branding["primary_color"] || "#6366f1";
+      branding["logo_url"] = generateTypographicWordmark(branding["company_name"], primaryColor);
     }
 
     const agentOutputs: Record<string, string> = {};
+    let archetype: DesignArchetype | undefined = undefined;
 
     let currentPhase = "";
     
@@ -491,6 +528,19 @@ ${html.slice(0, 60000)}`;
           continue;
         }
 
+        // Resolve archetype if business-analyzer was pre-computed
+        if (!archetype && agentOutputs["business-analyzer"]) {
+          try {
+            const bizAnalysis = JSON.parse(agentOutputs["business-analyzer"]);
+            const indKey = bizAnalysis.industryKey || "saas";
+            const playful = !!bizAnalysis.personalityAxes?.isPlayful;
+            const bold = !!bizAnalysis.personalityAxes?.isBold;
+            archetype = getArchetypeForIndustry(indKey, { isPlayful: playful, isBold: bold });
+          } catch {
+            archetype = getArchetypeForIndustry("saas");
+          }
+        }
+
         // ── Standard planning steps ────────────────────────────────────────────
         const contextSummary = Object.entries(agentOutputs)
           .map(([k, v]) => {
@@ -500,7 +550,7 @@ ${html.slice(0, 60000)}`;
           })
           .join("\n\n");
 
-        const defaultPrompt = buildAgentPrompt(step.agent, { ...input, previousOutputs: contextSummary }, branding);
+        const defaultPrompt = buildAgentPrompt(step.agent, { ...input, previousOutputs: contextSummary }, branding, archetype);
 
         const promptParams = {
           businessDescription: input.businessDescription,
@@ -538,6 +588,14 @@ ${html.slice(0, 60000)}`;
               agentOutputs["business-analyzer"] = JSON.stringify(parsed.businessAnalysis);
               agentOutputs["audience-strategist"] = JSON.stringify(parsed.audienceProfiling);
               agentOutputs["brand-strategist"] = JSON.stringify(parsed.brandStrategy);
+              
+              // Resolve Design Archetype
+              const indKey = parsed.businessAnalysis.industryKey || "saas";
+              const playful = !!parsed.businessAnalysis.personalityAxes?.isPlayful;
+              const bold = !!parsed.businessAnalysis.personalityAxes?.isBold;
+              archetype = getArchetypeForIndustry(indKey, { isPlayful: playful, isBold: bold });
+              logger.info({ archetypeKey: archetype.key }, "Resolved Design Archetype for project");
+
               output = agentOutputs["business-analyzer"];
               parsingSucceeded = true;
               logger.info("Successfully parsed and populated Business, Audience, and Brand strategy outputs");
@@ -573,6 +631,49 @@ ${html.slice(0, 60000)}`;
           } catch (err) {
             logger.warn("Failed to parse merged motion-designer output, falling back to sequential steps");
           }
+        } else if (step.agent === "image-director") {
+          try {
+            const parsed = JSON.parse(cleanedOutput);
+            const imageProvider = await AIProviderFactory.getImageProviderForUser(userId);
+            
+            // Resolve hero image
+            let heroImageUrl = "";
+            if (parsed.heroImageType === "photography") {
+              heroImageUrl = `https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80`;
+            } else {
+              try {
+                heroImageUrl = await imageProvider.generateImage(`Premium professional ${parsed.heroImageDescription || "business visuals"}, high-resolution, design style ${archetype?.imageryStyle || "abstract"}`, { aspectRatio: "16:9" });
+              } catch (err) {
+                logger.error({ err }, "Failed to generate hero image via Imagen, falling back to stock");
+                heroImageUrl = "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80";
+              }
+            }
+            parsed.heroImageUrl = heroImageUrl;
+
+            // Resolve section imagery
+            if (parsed.sectionImagery && Array.isArray(parsed.sectionImagery)) {
+              await Promise.all(
+                parsed.sectionImagery.map(async (img: any) => {
+                  if (img.imageType === "photography") {
+                    img.url = `https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80`;
+                  } else {
+                    try {
+                      img.url = await imageProvider.generateImage(`Minimal flat icon illustration of ${img.description || "feature icon"}, design style ${archetype?.imageryStyle || "abstract-illustration"}`, { aspectRatio: "1:1" });
+                    } catch (err) {
+                      img.url = "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80";
+                    }
+                  }
+                })
+              );
+            }
+
+            output = JSON.stringify(parsed);
+            agentOutputs["image-director"] = output;
+            parsingSucceeded = true;
+            logger.info("Successfully resolved image-director manifest with real URLs");
+          } catch (err) {
+            logger.error({ err }, "Failed to parse/resolve image-director manifest");
+          }
         }
 
         if (!parsingSucceeded) {
@@ -597,7 +698,41 @@ ${html.slice(0, 60000)}`;
     // ── Persist result ─────────────────────────────────────────────────────────
     let generatedHtml = agentOutputs["assembler"] ?? buildPlaceholder("Generation Incomplete");
     const reviewOutput  = agentOutputs["qa-reviewer"] ?? "";
-    let scores          = extractQualityScores(reviewOutput);
+    
+    let auditScore = 85;
+    let auditIssues: string[] = [];
+    if (agentOutputs["accessibility-auditor"]) {
+      try {
+        const parsed = JSON.parse(agentOutputs["accessibility-auditor"].replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim());
+        if (typeof parsed.overallScore === "number") {
+          auditScore = parsed.overallScore;
+        }
+        if (Array.isArray(parsed.issues)) {
+          auditIssues = parsed.issues.map((i: any) => `[A11y] ${i.element || "element"}: ${i.description}`);
+        }
+      } catch {}
+    }
+
+    let perfScore = 85;
+    let perfIssues: string[] = [];
+    if (agentOutputs["performance-optimizer"]) {
+      try {
+        const parsed = JSON.parse(agentOutputs["performance-optimizer"].replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim());
+        if (typeof parsed.overallScore === "number") {
+          perfScore = parsed.overallScore;
+        }
+        if (Array.isArray(parsed.issues)) {
+          perfIssues = parsed.issues.map((i: any) => `[Perf] ${i.description}`);
+        }
+      } catch {}
+    }
+
+    let scores = extractQualityScores(reviewOutput);
+    scores.accessibility = Math.min(scores.accessibility, auditScore);
+    scores.performance = Math.min(scores.performance, perfScore);
+    scores.issues = [...scores.issues, ...auditIssues, ...perfIssues];
+    scores.overall = Math.round((scores.visual + scores.seo + scores.accessibility + scores.performance) / 4);
+    scores.qualityPassed = scores.overall >= 85 && scores.issues.length === 0;
 
     // Phase 4: Visual QA & Auto-Correction (Max 3 iterations)
     let iteration = 0;
@@ -1215,6 +1350,7 @@ function buildAgentPrompt(
     previousOutputs?: string;
   },
   branding?: Record<string, string>,
+  archetype?: DesignArchetype,
 ): string {
   let brandingCtx = "";
   if (branding && Object.keys(branding).length > 0) {
@@ -1226,10 +1362,25 @@ ${branding["primary_color"] ? `- Primary Color: ${branding["primary_color"]}` : 
 ${branding["favicon_url"]   ? `- Favicon URL: ${branding["favicon_url"]}` : ""}`;
   }
 
+  let archetypeCtx = "";
+  if (archetype) {
+    archetypeCtx = `
+Design Archetype Configuration (MANDATORY CONSTRAINT):
+- Archetype Name: ${archetype.name}
+- Palette Mood: ${archetype.paletteMood}
+- Preferred Hero Types: ${archetype.preferredHeroTypes.join(", ")}
+- Imagery Style: ${archetype.imageryStyle}
+- Motion Intensity: ${archetype.motionIntensity}
+- Allowed 3D Scenes: ${archetype.allowed3DScenes.join(", ")}
+- Vetted Fonts: ${archetype.fontPairPool.map(pair => `${pair.headline} (Headline) + ${pair.body} (Body)`).join(" or ")}
+- Layout/Section Menu: ${archetype.sectionMenu.join(", ")}
+`;
+  }
+
   const ctx = `Business: ${input.businessDescription}
 Target Audience: ${input.targetAudience ?? "General consumers"}
 Primary CTA: ${input.primaryCta ?? "Get Started"}
-${input.additionalInstructions ? `Additional: ${input.additionalInstructions}` : ""}${brandingCtx}
+${input.additionalInstructions ? `Additional: ${input.additionalInstructions}` : ""}${brandingCtx}${archetypeCtx}
 ${input.previousOutputs ? `\nContext from previous agents:\n${input.previousOutputs}` : ""}`;
 
   const prompts: Record<string, string> = {
@@ -1244,6 +1395,8 @@ Return ONLY valid JSON (no markdown fences) containing three keys:
   "businessAnalysis": {
     "businessType": string,
     "category": string,
+    "industryKey": string (one of: "saas", "tech", "design-agency", "marketing-agency", "creative", "food", "cafe", "restaurant", "real-estate", "property", "luxury", "ecommerce", "fashion", "portfolio", "personal", "community", "web3", "healthcare", "medical", "finance", "banking", "nonprofit", "event", "launch"),
+    "personalityAxes": { "isPlayful": boolean, "isBold": boolean },
     "products": string[],
     "audience": string,
     "currentAlternatives": string[],
@@ -1291,10 +1444,12 @@ Return ONLY valid JSON:
     "design-director": `You are an elite Design Director with deep training in color theory, typography, and visual systems. Design a COMPLETELY UNIQUE, jaw-dropping visual system for this landing page.
 ${ctx}
 
-CRITICAL: Expand background depth and card styles to prevent repetitive design layouts.
-- Choose backgrounds with rich gradients, SVG grid structures, and glowing aurora mesh overlays.
+CRITICAL:
+- Refer to "Design Archetype Configuration" in the Context.
+- You MUST select the "fontFamily" and "monoFont" strictly from the listed "Vetted Fonts" for this archetype. Do not invent any other fonts.
+- If a "Primary Color" is provided in the "Branding (MANDATORY)" section, you MUST use that exact color as your primaryColor, and design matching secondary and accent colors around it.
+- Choose backgrounds with rich gradients, SVG grid structures, and glowing aurora mesh overlays matching the archetype'sallowed 3D scenes and palette mood.
 - Define a beautiful 60/30/10 color rule with high-contrast accent buttons.
-- Select premium modern fonts (like Outfit, Syne, Space Grotesk, or DM Sans) matching the brand.
 - Design cards with frosted glassmorphism borders and custom radius choices.
 
 Return ONLY valid JSON (no markdown fences):
@@ -1328,7 +1483,11 @@ Return ONLY valid JSON (no markdown fences):
     "ux-strategist": `You are an elite UX Strategist, Information Architect, and Creative Director. Plan a premium website layout for a Stripe/Linear/Framer-tier product.
 ${ctx}
 
-MISSION: Plan 7-12 sections as individual React components. The result must look world-class — never generic. Vary the hero type and section mix based on this specific business, not a standard template.
+CRITICAL:
+- Refer to "Design Archetype Configuration" in the Context.
+- You MUST select the "heroType" strictly from the listed "Preferred Hero Types" for this archetype. Do not invent any other hero types.
+- You MUST select all section types strictly from the listed "Layout/Section Menu" for this archetype. Do not invent section types outside this allowed menu.
+- Plan 7-12 sections as individual React components. The result must look world-class — never generic.
 
 MULTI-PAGE DECISION:
 - For simple products, portfolios, or landing pages: plan a single-page site (all sections on "index.html").
@@ -1442,6 +1601,12 @@ Return ONLY valid JSON (no markdown fences):
 
     "component-planner": `You are a Component Planner mapping the layout to premium React sections.
 ${ctx}
+
+CRITICAL:
+- Refer to "Design Archetype Configuration" in the Context.
+- You MUST ensure all mapped sections conform strictly to the archetype's allowed section type menu.
+- Ensure the planned layout uses the preferred hero styles and vetted fonts for this archetype.
+
 For each section specify:
 - id: short kebab-case identifier
 - type: exact component type from the UX layout plan
@@ -1454,9 +1619,11 @@ Return ONLY valid JSON:
     "motion-designer": `You are a Motion Designer, Animation Choreographer, and 3D Visual Effects specialist. Plan the entire animation, camera flows, particle systems, and micro-interactions.
 ${ctx}
 
-CRITICAL: Expand motion capabilities.
+CRITICAL:
+- Refer to "Design Archetype Configuration" in the Context.
+- You MUST restrict the intensity of animations to the "Motion Intensity" specified in the archetype (subtle vs bold).
+- You MUST choose the 3D scene (hero3DScene) strictly from the "Allowed 3D Scenes" of this archetype. Do not select scenes outside this allowed list.
 - Define scroll-triggered animations using Framer Motion (whileInView, once:true, staggers, and springs).
-- Design a stunning 3D scene (floating-geometry, particle-galaxy, product-stage, waveform-terrain, or aurora-sphere) using Three.js primitives.
 - Coordinate the animation sequence and color flows down the page.
 
 Return ONLY valid JSON (no markdown fences) containing three keys:
