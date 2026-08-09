@@ -11,6 +11,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { decrypt } from "../lib/encryption";
+import { createNotification } from "../routes/notifications";
 import {
   parseSectionPlan,
   toComponentName,
@@ -676,6 +677,15 @@ ${generatedHtml}
       .where(eq(aiJobsTable.id, jobId));
 
     logger.info({ userId, projectId }, "Generation complete");
+
+    await createNotification({
+      workspaceId: project.workspaceId || "default-ws",
+      userId,
+      type: "generation",
+      title: "AI Build Completed",
+      message: `Website project "${project.name}" was synthesized successfully.`,
+      severity: "success",
+    });
 
     logger.info({ jobId, projectId }, "Generation pipeline complete");
 

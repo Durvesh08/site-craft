@@ -19,12 +19,12 @@ export interface WorkspaceUsage {
 
 class WorkspaceService {
   private usage: WorkspaceUsage = {
-    aiCreditsUsed: 14200,
-    aiCreditsTotal: 50000,
-    storageUsedMB: 1900,
+    aiCreditsUsed: 0,
+    aiCreditsTotal: 500000,
+    storageUsedMB: 0,
     storageTotalMB: 10000,
-    deploymentsCount: 8,
-    deploymentsTotal: 50,
+    deploymentsCount: 0,
+    deploymentsTotal: 100,
     planName: 'Pro Creator',
   };
 

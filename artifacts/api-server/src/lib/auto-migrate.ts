@@ -178,6 +178,22 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
+    // 8. notifications (depends on workspaces, users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        severity TEXT NOT NULL DEFAULT 'info',
+        read BOOLEAN NOT NULL DEFAULT FALSE,
+        metadata_json TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
     // 8. projects (depends on users)
     await client.query(`
       CREATE TABLE IF NOT EXISTS projects (

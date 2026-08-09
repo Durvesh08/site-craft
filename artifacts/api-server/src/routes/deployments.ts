@@ -7,6 +7,7 @@ import SftpClient from "ssh2-sftp-client";
 import dns from "dns";
 import { decrypt } from "../lib/encryption";
 import { logger } from "../lib/logger";
+import { createNotification } from "./notifications";
 import {
   DeployProjectParams,
   DeployProjectBody,
@@ -698,6 +699,15 @@ async function runEdgeDeploy(deploymentId: string, projectId: string, userId: st
       .where(eq(projectsTable.id, projectId));
 
     await appendLog(deploymentId, `🚀 Deployment live at ${liveUrl}`);
+
+    await createNotification({
+      workspaceId: "default-ws",
+      userId,
+      type: "deployment",
+      title: "Deployment Successful 🚀",
+      message: `Website deployment to ${protocol.toUpperCase()} is live at ${liveUrl}`,
+      severity: "success",
+    });
   } catch (err: any) {
     logger.error({ err, deploymentId }, "Edge deployment failed");
     await appendLog(deploymentId, `❌ Error: ${err?.message || "Deployment failed"}`);
@@ -708,6 +718,15 @@ async function runEdgeDeploy(deploymentId: string, projectId: string, userId: st
         completedAt: new Date(),
       })
       .where(eq(deploymentsTable.id, deploymentId));
+
+    await createNotification({
+      workspaceId: "default-ws",
+      userId,
+      type: "deployment",
+      title: "Deployment Failed ❌",
+      message: `Deployment to ${protocol.toUpperCase()} failed: ${err?.message || "Error deploying site"}`,
+      severity: "error",
+    });
   }
 }
 

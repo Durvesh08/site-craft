@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { workspaceService } from "@/services/workspace";
 import {
@@ -8,7 +8,8 @@ import {
   ChevronDown,
   Building2,
   User,
-  Sparkles
+  Sparkles,
+  CheckCheck
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -19,6 +20,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface NotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  severity: "info" | "warning" | "error" | "success";
+  read: boolean;
+  createdAt: string;
+}
+
 interface TopCommandBarProps {
   onOpenCommandPalette?: () => void;
 }
@@ -26,6 +37,39 @@ interface TopCommandBarProps {
 export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
   const { user, logout } = useAuth();
   const usage = workspaceService.getUsage();
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/notifications", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await fetch("/api/notifications/read-all", {
+        method: "POST",
+        credentials: "include",
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch {
+      // Fallback
+    }
+  };
 
   return (
     <header className="h-14 px-4 sm:px-6 flex items-center justify-between border-b shrink-0 z-20 font-sans" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
@@ -77,34 +121,43 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
         <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />
 
         {/* Notifications Dropdown */}
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={(open) => { if (open) fetchNotifications(); }}>
           <DropdownMenuTrigger asChild>
             <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors relative outline-none" title="Notifications">
               <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+              )}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80 bg-black/95 backdrop-blur-xl border-white/10 p-0 text-xs shadow-2xl">
             <div className="p-3 border-b border-white/10 flex items-center justify-between">
               <span className="font-bold text-foreground">Notifications</span>
-              <span className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-full">3 New</span>
+              {unreadCount > 0 ? (
+                <button onClick={handleMarkAllRead} className="text-[10px] text-primary hover:underline flex items-center gap-1">
+                  <CheckCheck className="h-3 w-3" /> Mark all read
+                </button>
+              ) : (
+                <span className="text-[10px] font-mono text-muted-foreground">Up to date</span>
+              )}
             </div>
             <div className="divide-y divide-white/10 max-h-64 overflow-y-auto">
-              <div className="p-3 space-y-1 hover:bg-white/5 cursor-pointer">
-                <p className="font-semibold text-foreground text-xs">AI Build Completed</p>
-                <p className="text-[11px] text-muted-foreground">Your website project "Lumina Studio" was synthesized successfully.</p>
-                <span className="text-[10px] text-muted-foreground/60 font-mono">2 mins ago</span>
-              </div>
-              <div className="p-3 space-y-1 hover:bg-white/5 cursor-pointer">
-                <p className="font-semibold text-foreground text-xs">Domain Verification Active</p>
-                <p className="text-[11px] text-muted-foreground">DNS TXT record check initiated for custom domain.</p>
-                <span className="text-[10px] text-muted-foreground/60 font-mono">1 hour ago</span>
-              </div>
-              <div className="p-3 space-y-1 hover:bg-white/5 cursor-pointer">
-                <p className="font-semibold text-foreground text-xs">Welcome to Zovaix Production Studio</p>
-                <p className="text-[11px] text-muted-foreground">Workspace initialization complete with Gemini 2.5 Flash engine.</p>
-                <span className="text-[10px] text-muted-foreground/60 font-mono">1 day ago</span>
-              </div>
+              {notifications.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground text-xs">
+                  <Bell className="h-5 w-5 mx-auto mb-2 opacity-40" />
+                  No notifications yet
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div key={n.id} className={`p-3 space-y-1 hover:bg-white/5 cursor-pointer transition-colors ${!n.read ? 'bg-primary/5' : ''}`}>
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-foreground text-xs">{n.title}</p>
+                      <span className="text-[9px] font-mono text-muted-foreground">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">{n.message}</p>
+                  </div>
+                ))
+              )}
             </div>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -12,6 +12,7 @@ import {
   ListProjectsQueryParams,
 } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
+import { createNotification } from "./notifications";
 import {
   listProjectFiles,
   getProjectFile,
@@ -369,6 +370,15 @@ router.post("/projects", async (req: Request, res: Response) => {
 
     // Initialize real isolated project filesystem
     await initializeProjectDefaultFiles(workspaceId, project.id, project.name);
+
+    await createNotification({
+      workspaceId,
+      userId: req.user!.id,
+      type: "project",
+      title: "New Project Created",
+      message: `Created project "${project.name}".`,
+      severity: "info",
+    });
 
     res.status(201).json(toProjectResponse(project));
   } catch (err) {
