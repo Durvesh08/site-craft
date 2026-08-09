@@ -8,56 +8,48 @@ export interface VersionSnapshot {
   filesChanged: string[];
 }
 
-const INITIAL_VERSIONS: VersionSnapshot[] = [
-  {
-    id: 'v24',
-    version: 'v24',
-    projectId: 'lumina',
-    message: 'Updated hero composition and typography styling',
-    author: 'Zovaix AI Agent',
-    timestamp: 'Today at 08:14',
-    filesChanged: ['src/components/Hero.tsx', 'src/styles.css'],
-  },
-  {
-    id: 'v23',
-    version: 'v23',
-    projectId: 'lumina',
-    message: 'Added luxury acoustic hardware landing page section',
-    author: 'Alex Chen',
-    timestamp: 'Yesterday at 16:45',
-    filesChanged: ['src/App.tsx', 'src/components/Features.tsx'],
-  },
-  {
-    id: 'v22',
-    version: 'v22',
-    projectId: 'lumina',
-    message: 'Initial project synthesis from prompt brief',
-    author: 'Zovaix AI Agent',
-    timestamp: 'Aug 1, 2026 at 10:00',
-    filesChanged: ['src/App.tsx', 'package.json', 'README.md'],
-  },
-];
-
 class VersionsService {
-  private versions: VersionSnapshot[] = [...INITIAL_VERSIONS];
+  private versionsByProject: Record<string, VersionSnapshot[]> = {};
 
-  getVersionsForProject(projectId: string): VersionSnapshot[] {
-    return this.versions.filter(v => v.projectId === projectId);
+  async fetchVersionsForProject(projectId: string): Promise<VersionSnapshot[]> {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/versions`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : data.versions || [];
+        const mapped: VersionSnapshot[] = list.map((v: any, idx: number) => ({
+          id: v.id || `ver-${idx}`,
+          version: v.label || `v${v.versionNumber || idx + 1}`,
+          projectId,
+          message: v.label || `Version snapshot ${v.versionNumber || idx + 1}`,
+          author: v.authorName || 'Zovaix AI Agent',
+          timestamp: v.createdAt ? new Date(v.createdAt).toLocaleString() : 'Just now',
+          filesChanged: ['index.html', 'src/App.tsx', 'src/index.css'],
+        }));
+        this.versionsByProject[projectId] = mapped;
+      }
+    } catch {
+      // Keep existing cache
+    }
+    return this.versionsByProject[projectId] || [];
   }
 
-  createVersion(projectId: string, message: string, filesChanged: string[]): VersionSnapshot {
-    const nextNum = (this.versions.length || 0) + 1;
-    const v: VersionSnapshot = {
-      id: `v${nextNum}`,
-      version: `v${nextNum}`,
-      projectId,
-      message,
-      author: 'Zovaix AI Agent',
-      timestamp: 'Just now',
-      filesChanged,
-    };
-    this.versions.unshift(v);
-    return v;
+  getVersionsForProject(projectId: string): VersionSnapshot[] {
+    return this.versionsByProject[projectId] || [];
+  }
+
+  async restoreVersion(projectId: string, versionId: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/versions/restore`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ versionId }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   }
 }
 

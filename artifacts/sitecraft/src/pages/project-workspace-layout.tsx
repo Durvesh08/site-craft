@@ -60,14 +60,10 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
     { id: 'files', label: 'Files', href: `/projects/${projectId}/files`, icon: Folder },
     { id: 'assets', label: 'Assets', href: `/projects/${projectId}/assets`, icon: ImageIcon },
     { id: 'database', label: 'Database', href: `/projects/${projectId}/database`, icon: Database },
-    { id: 'connectors', label: 'Integrations', href: `/projects/${projectId}/connectors`, icon: Plug },
-    { id: 'secrets', label: 'Secrets', href: `/projects/${projectId}/secrets`, icon: Key },
-    { id: 'github', label: 'GitHub', href: `/projects/${projectId}/github`, icon: GitBranch },
     { id: 'domains', label: 'Domains', href: `/projects/${projectId}/domains`, icon: Globe },
     { id: 'deployments', label: 'Deployments', href: `/projects/${projectId}/deployments`, icon: Rocket },
     { id: 'versions', label: 'Versions', href: `/projects/${projectId}/versions`, icon: History },
     { id: 'security', label: 'Security', href: `/projects/${projectId}/security`, icon: ShieldCheck },
-    { id: 'logs', label: 'Logs', href: `/projects/${projectId}/logs`, icon: Terminal },
     { id: 'settings', label: 'Settings', href: `/projects/${projectId}/settings`, icon: Settings },
   ];
 

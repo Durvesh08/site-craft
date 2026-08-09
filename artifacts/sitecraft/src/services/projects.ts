@@ -139,10 +139,18 @@ class ProjectsService {
     return localProj;
   }
 
-  toggleStar(id: string): Project | undefined {
+  async toggleStar(id: string): Promise<Project | undefined> {
     const project = this.getById(id);
     if (project) {
       project.isStarred = !project.isStarred;
+      try {
+        await fetch(`/api/projects/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ isStarred: project.isStarred }),
+        });
+      } catch {}
     }
     return project;
   }
@@ -161,31 +169,54 @@ class ProjectsService {
       updatedAt: 'Just now',
     };
     this.projects.unshift(copy);
+    this.createRemoteProject(copy.name, copy.category, copy.description);
     return copy;
   }
 
-  archive(id: string): boolean {
+  async archive(id: string): Promise<boolean> {
     const project = this.getById(id);
     if (project) {
       project.isArchived = true;
+      try {
+        await fetch(`/api/projects/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ status: "archived" }),
+        });
+      } catch {}
       return true;
     }
     return false;
   }
 
-  restore(id: string): boolean {
+  async restore(id: string): Promise<boolean> {
     const project = this.projects.find(p => p.id === id);
     if (project) {
       project.isArchived = false;
+      try {
+        await fetch(`/api/projects/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ status: "draft" }),
+        });
+      } catch {}
       return true;
     }
     return false;
   }
 
-  delete(id: string): boolean {
+  async delete(id: string): Promise<boolean> {
     const idx = this.projects.findIndex(p => p.id === id);
     if (idx !== -1) {
       this.projects.splice(idx, 1);
+      try {
+        await fetch(`/api/projects/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+      } catch {}
       return true;
     }
     return false;

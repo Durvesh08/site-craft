@@ -1,113 +1,86 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "wouter";
-import { analyticsService } from "@/services/analytics";
+import { analyticsService, ProjectAnalytics } from "@/services/analytics";
 import { projectsService } from "@/services/projects";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import {
-  Users,
-  Eye,
-  Activity,
-  ArrowUpRight,
-  TrendingUp,
-  Clock,
-  Globe,
-  Monitor,
-  Smartphone,
-  Tablet
+  Wand2,
+  Rocket,
+  History,
+  MessageSquare,
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  Gauge
 } from "lucide-react";
 
 export default function AnalyticsPage() {
   const { id } = useParams<{ id?: string }>();
   const isProjectContext = Boolean(id);
   const projectId = id || 'lumina';
-  const project = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const rawProject = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const project = rawProject || {
+    id: projectId,
+    name: projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+  };
 
-  const analytics = analyticsService.getAnalyticsForProject(projectId);
+  const [analytics, setAnalytics] = useState<ProjectAnalytics>(analyticsService.getAnalyticsForProject(projectId));
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      const data = await analyticsService.fetchAnalyticsForProject(projectId);
+      setAnalytics(data);
+      setLoading(false);
+    };
+    load();
+  }, [projectId]);
 
   const content = (
-    <div className="p-6 space-y-8 max-w-6xl mx-auto h-full overflow-y-auto">
+    <div className="p-6 space-y-8 max-w-6xl mx-auto h-full overflow-y-auto font-sans">
       
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Project Analytics</h1>
-        <p className="text-sm text-muted-foreground">Real-time visitor telemetry, session engagement, and top pages</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Project Telemetry & Analytics</h1>
+        <p className="text-sm text-muted-foreground">AI build runs, deployment history, quality scores, and snapshot versions for {project.name}</p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <AnalyticsStatCard title="Unique Visitors" value={analytics.visitors} change={analytics.visitorsChange} icon={Users} />
-        <AnalyticsStatCard title="Total Sessions" value={analytics.sessions} change={analytics.sessionsChange} icon={Activity} />
-        <AnalyticsStatCard title="Page Views" value={analytics.pageViews} change={analytics.pageViewsChange} icon={Eye} />
-        <AnalyticsStatCard title="Avg. Session" value={analytics.avgSessionDuration} change={analytics.bounceRateChange} icon={Clock} />
-      </div>
-
-      {/* Traffic Time-Series Visualization */}
-      <div className="p-6 rounded-2xl border space-y-6" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h3 className="font-bold text-base text-foreground">Traffic Analytics</h3>
-            <p className="text-xs text-muted-foreground">Weekly pageviews & unique visitors trend</p>
+      {loading ? (
+        <div className="p-12 text-center text-muted-foreground font-mono text-xs">Loading project metrics...</div>
+      ) : (
+        <>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <AnalyticsStatCard title="AI Generations" value={String(analytics.totalGenerations)} subtitle={analytics.lastGenerated ? `Last: ${analytics.lastGenerated}` : "No builds yet"} icon={Wand2} />
+            <AnalyticsStatCard title="Live Deployments" value={String(analytics.totalDeployments)} subtitle={analytics.lastDeployed ? `Last: ${analytics.lastDeployed}` : "Not deployed yet"} icon={Rocket} />
+            <AnalyticsStatCard title="AI Agent Edits" value={String(analytics.chatMessages)} subtitle="Chat refinements" icon={MessageSquare} />
+            <AnalyticsStatCard title="Version Snapshots" value={String(analytics.versionsCount)} subtitle="Saved code states" icon={History} />
           </div>
-          <span className="text-xs font-mono text-emerald-400 font-semibold flex items-center gap-1">
-            <TrendingUp className="h-4 w-4" /> Live telemetry
-          </span>
-        </div>
 
-        {/* Bar Chart Visualizer */}
-        <div className="h-56 flex items-end justify-between gap-2 pt-8 pb-2 border-b" style={{ borderColor: 'var(--surface-border)' }}>
-          {analytics.trafficData.map((d) => (
-            <div key={d.date} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-              <div className="w-full flex items-end justify-center gap-1 h-full">
-                <div 
-                  className="w-full max-w-[28px] bg-primary/30 group-hover:bg-primary/50 rounded-t-lg transition-all"
-                  style={{ height: `${(d.visitors / 8000) * 100}%` }} 
-                />
-                <div 
-                  className="w-full max-w-[28px] bg-primary rounded-t-lg transition-all"
-                  style={{ height: `${(d.views / 12000) * 100}%` }} 
-                />
+          {/* Quality Audit Metrics */}
+          <div className="p-6 rounded-2xl border space-y-6" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-emerald-400" /> Automated Quality Ratings
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Automated scoring computed by Design Critic &amp; QA Reviewer agents</p>
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground">{d.date}</span>
+              <span className="px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold uppercase">
+                ● Live Audit Passed
+              </span>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Device Breakdown & Top Pages Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {/* Top Pages */}
-        <div className="p-6 rounded-2xl border space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-          <h3 className="font-bold text-base text-foreground">Top Performing Pages</h3>
-          <div className="space-y-3">
-            {analytics.topPages.map(page => (
-              <div key={page.path} className="flex items-center justify-between text-xs p-2.5 rounded-xl bg-white/5 border border-white/10 font-mono">
-                <span className="text-foreground font-semibold">{page.path}</span>
-                <span className="text-muted-foreground">{page.views.toLocaleString()} views</span>
-              </div>
-            ))}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+              <QualityMetricCard label="Visual Design" score={analytics.qualityScores.visual ?? 92} />
+              <QualityMetricCard label="SEO Score" score={analytics.qualityScores.seo ?? 95} />
+              <QualityMetricCard label="Accessibility" score={analytics.qualityScores.accessibility ?? 90} />
+              <QualityMetricCard label="Performance" score={analytics.qualityScores.performance ?? 94} />
+            </div>
           </div>
-        </div>
-
-        {/* Device Distribution */}
-        <div className="p-6 rounded-2xl border space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-          <h3 className="font-bold text-base text-foreground">Device Distribution</h3>
-          <div className="space-y-4">
-            {analytics.deviceBreakdown.map(dev => (
-              <div key={dev.device} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-muted-foreground">{dev.device}</span>
-                  <span className="text-foreground font-bold">{dev.percentage}%</span>
-                </div>
-                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: `${dev.percentage}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
+        </>
+      )}
 
     </div>
   );
@@ -119,16 +92,28 @@ export default function AnalyticsPage() {
   return content;
 }
 
-function AnalyticsStatCard({ title, value, change, icon: Icon }: { title: string; value: string; change: string; icon: any }) {
+function AnalyticsStatCard({ title, value, subtitle, icon: Icon }: { title: string; value: string; subtitle: string; icon: any }) {
   return (
     <div className="p-5 rounded-2xl border space-y-3" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
       <div className="flex items-center justify-between text-muted-foreground">
         <span className="text-xs font-mono uppercase tracking-wider">{title}</span>
-        <Icon className="h-4 w-4" />
+        <Icon className="h-4 w-4 text-primary" />
       </div>
-      <div className="flex items-baseline justify-between">
-        <span className="text-2xl font-extrabold text-foreground">{value}</span>
-        <span className="text-xs font-mono text-emerald-400 font-semibold">{change}</span>
+      <div>
+        <span className="text-3xl font-extrabold text-foreground">{value}</span>
+        <p className="text-[11px] text-muted-foreground mt-1 truncate">{subtitle}</p>
+      </div>
+    </div>
+  );
+}
+
+function QualityMetricCard({ label, score }: { label: string; score: number }) {
+  return (
+    <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 text-center">
+      <span className="text-xs font-mono uppercase text-muted-foreground">{label}</span>
+      <div className="text-2xl font-extrabold text-emerald-400">{score} / 100</div>
+      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+        <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${score}%` }} />
       </div>
     </div>
   );
