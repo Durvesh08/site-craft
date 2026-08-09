@@ -63,10 +63,19 @@ const CATALOG: ConnectorItem[] = [
   { id: 'zapier', name: 'Zapier', description: '5,000+ app workflow webhooks & triggers', category: 'Automation', icon: 'Workflow', brandColor: '#FF4A00', status: 'NOT_CONNECTED', authType: 'Webhook', capabilities: ['Zaps Trigger', 'Custom Payload'] },
 ];
 
+function requireAuth(req: Request, res: Response): boolean {
+  if (!req.isAuthenticated() || !req.workspaceId) {
+    res.status(401).json({ success: false, error: "Unauthorized", message: "Login and workspace context required" });
+    return false;
+  }
+  return true;
+}
+
 // GET /api/connectors — List all connectors & workspace status
 connectorsRouter.get("/api/connectors", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
   try {
-    const workspaceId = req.workspaceId || "default-ws";
+    const workspaceId = req.workspaceId!;
     const dbConnectors = await db
       .select()
       .from(connectorsTable)
@@ -97,9 +106,10 @@ connectorsRouter.get("/api/connectors", async (req: Request, res: Response) => {
 
 // POST /api/connectors/:id/connect — Authenticate & authorize connector with API key / credentials
 connectorsRouter.post("/api/connectors/:id/connect", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
   const { apiKey, secretKey, accountName } = req.body;
-  const workspaceId = req.workspaceId || "default-ws";
+  const workspaceId = req.workspaceId!;
 
   const catalogItem = CATALOG.find((c) => c.id === id);
   if (!catalogItem) {
@@ -183,8 +193,9 @@ connectorsRouter.post("/api/connectors/:id/connect", async (req: Request, res: R
 
 // POST /api/connectors/:id/disconnect — Disconnect & wipe credentials
 connectorsRouter.post("/api/connectors/:id/disconnect", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
-  const workspaceId = req.workspaceId || "default-ws";
+  const workspaceId = req.workspaceId!;
 
   const catalogItem = CATALOG.find((c) => c.id === id);
   if (!catalogItem) {
@@ -211,8 +222,9 @@ connectorsRouter.post("/api/connectors/:id/disconnect", async (req: Request, res
 
 // GET /api/connectors/:id/test — Health test API endpoint for connector
 connectorsRouter.get("/api/connectors/:id/test", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
-  const workspaceId = req.workspaceId || "default-ws";
+  const workspaceId = req.workspaceId!;
 
   const [dbRecord] = await db
     .select()

@@ -1026,12 +1026,7 @@ router.post("/projects/:id/deploy/netlify", async (req: Request, res: Response) 
   if (!requireAuth(req, res)) return;
   try {
     const projectId = String(req.params.id);
-    const { netlifyToken } = req.body as { netlifyToken?: string };
-
-    if (!netlifyToken) {
-      res.status(400).json({ error: "BadRequest", message: "Netlify Personal Access Token is required." });
-      return;
-    }
+    const { netlifyToken, webhookUrl } = req.body as { netlifyToken?: string; webhookUrl?: string };
 
     const [project] = await db
       .select()
@@ -1040,6 +1035,23 @@ router.post("/projects/:id/deploy/netlify", async (req: Request, res: Response) 
 
     if (!project) {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    if (webhookUrl) {
+      // Trigger Netlify Build Webhook
+      const hookRes = await fetch(webhookUrl, { method: "POST" });
+      if (!hookRes.ok) {
+        throw new Error(`Netlify build hook returned status ${hookRes.status}`);
+      }
+      const liveUrl = project.liveUrl || `https://${project.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}.netlify.app`;
+      await db.update(projectsTable).set({ status: "deployed", liveUrl, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
+      res.json({ success: true, liveUrl, provider: "netlify" });
+      return;
+    }
+
+    if (!netlifyToken) {
+      res.status(400).json({ error: "BadRequest", message: "Netlify Personal Access Token or Webhook URL is required." });
       return;
     }
 
@@ -1070,12 +1082,6 @@ router.post("/projects/:id/deploy/netlify", async (req: Request, res: Response) 
     }
 
     const site = await createRes.json() as { id: string; subdomain: string };
-
-    // 2. Build minimal ZIP in memory (using Node's built-in zlib + tar approach)
-    //    We use a simple approach: create a FormData-style ZIP using archiver-compatible Buffer
-    //    Since we can't import archiver here, we use a base64-encoded minimal ZIP structure.
-    //    The simplest reliable approach: use Netlify's "file digest" deploy API instead.
-    //    We upload individual files by hash.
 
     const htmlContent = patchHtmlForDeployment(project.generatedHtml);
     const encoder = new TextEncoder();
@@ -1355,41 +1361,6 @@ router.post("/domains/verify", async (req: Request, res: Response) => {
   } catch (err: any) {
     req.log.error({ err }, "DNS verification failed");
     res.status(500).json({ error: "InternalError", message: "DNS verification failed" });
-  }
-});
-
-// ── SiteCraft V4 Goal 6: Universal Deployment Direct Hooks ─────────────────────
-
-// POST /projects/:id/deploy/netlify
-router.post("/projects/:id/deploy/netlify", async (req: Request, res: Response) => {
-  if (!requireAuth(req, res)) return;
-  try {
-    const projectId = String(req.params.id);
-    const { webhookUrl } = req.body as { webhookUrl?: string };
-
-    const [project] = await db.select().from(projectsTable)
-      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
-
-    if (!project) {
-      res.status(404).json({ error: "NotFound", message: "Project not found" });
-      return;
-    }
-
-    if (webhookUrl) {
-      // Trigger Netlify Build Webhook
-      const hookRes = await fetch(webhookUrl, { method: "POST" });
-      if (!hookRes.ok) {
-        throw new Error(`Netlify build hook returned status ${hookRes.status}`);
-      }
-    }
-
-    const liveUrl = project.liveUrl || `https://${project.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}.netlify.app`;
-    await db.update(projectsTable).set({ status: "deployed", liveUrl, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
-
-    res.json({ success: true, provider: "netlify", liveUrl });
-  } catch (err: any) {
-    req.log.error({ err }, "Netlify deploy failed");
-    res.status(500).json({ error: "InternalError", message: err?.message || "Netlify deployment failed" });
   }
 });
 

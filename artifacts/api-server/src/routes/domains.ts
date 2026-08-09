@@ -6,10 +6,19 @@ import crypto from "crypto";
 
 const domainsRouter: IRouter = Router();
 
+function requireAuth(req: Request, res: Response): boolean {
+  if (!req.isAuthenticated() || !req.workspaceId || !(req as any).user?.id) {
+    res.status(401).json({ success: false, error: "Unauthorized", message: "Login and workspace context required" });
+    return false;
+  }
+  return true;
+}
+
 // GET /api/domains — List custom domains
 domainsRouter.get("/api/domains", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
   try {
-    const workspaceId = req.workspaceId || "default-ws";
+    const workspaceId = req.workspaceId!;
     const domains = await db
       .select()
       .from(domainsTable)
@@ -40,9 +49,10 @@ domainsRouter.get("/api/domains", async (req: Request, res: Response) => {
 
 // POST /api/domains — Register new custom domain
 domainsRouter.post("/api/domains", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
   const { hostname, projectId, projectName } = req.body;
-  const workspaceId = req.workspaceId || "default-ws";
-  const userId = (req as any).user?.id || "user-1";
+  const workspaceId = req.workspaceId!;
+  const userId = (req as any).user.id;
 
   if (!hostname) {
     return res.status(400).json({ success: false, error: "Hostname is required" });
@@ -95,8 +105,9 @@ domainsRouter.post("/api/domains", async (req: Request, res: Response) => {
 
 // POST /api/domains/:id/verify — Perform real DNS lookup verification
 domainsRouter.post("/api/domains/:id/verify", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
-  const workspaceId = req.workspaceId || "default-ws";
+  const workspaceId = req.workspaceId!;
 
   try {
     const [domain] = await db
@@ -192,8 +203,9 @@ domainsRouter.post("/api/domains/:id/verify", async (req: Request, res: Response
 
 // DELETE /api/domains/:id — Remove custom domain
 domainsRouter.delete("/api/domains/:id", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
-  const workspaceId = req.workspaceId || "default-ws";
+  const workspaceId = req.workspaceId!;
 
   try {
     await db
