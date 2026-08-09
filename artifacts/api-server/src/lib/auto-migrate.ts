@@ -1,7 +1,7 @@
 import { pool } from "@workspace/db";
 
 /**
- * Auto-migrate: create all tables and enums if they don't already exist.
+ * Auto-migrate: create all tables, enums, and schema updates if they don't already exist.
  * This runs raw SQL so we don't depend on drizzle-kit at runtime.
  * Safe to call repeatedly — every statement uses IF NOT EXISTS.
  */
@@ -65,6 +65,18 @@ export async function autoMigrate(): Promise<void> {
       EXCEPTION WHEN duplicate_object THEN NULL;
       END $$;
     `);
+    await client.query(`
+      DO $$ BEGIN
+        CREATE TYPE member_role AS ENUM ('OWNER','ADMIN','MEMBER');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        CREATE TYPE invitation_status AS ENUM ('pending','accepted','expired','revoked');
+      EXCEPTION WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
 
     // ── Tables (order matters for foreign keys) ──────────────────────
 
@@ -94,11 +106,84 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 3. projects (depends on users)
+    // 3. workspaces (depends on users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS workspaces (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        slug TEXT NOT NULL UNIQUE,
+        owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        avatar_url TEXT,
+        default_ai_provider TEXT DEFAULT 'google',
+        default_ai_model TEXT DEFAULT 'gemini-2.5-flash',
+        timezone TEXT DEFAULT 'UTC',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 4. workspace_members (depends on workspaces, users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS workspace_members (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role member_role NOT NULL DEFAULT 'MEMBER',
+        joined_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 5. team_invitations (depends on workspaces, users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS team_invitations (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        email TEXT NOT NULL,
+        role member_role NOT NULL DEFAULT 'MEMBER',
+        token TEXT NOT NULL UNIQUE,
+        status invitation_status NOT NULL DEFAULT 'pending',
+        invited_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 6. user_sessions (depends on users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        session_token TEXT NOT NULL UNIQUE,
+        ip_address TEXT,
+        user_agent TEXT,
+        expires_at TIMESTAMP NOT NULL,
+        last_active_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 7. audit_logs (depends on workspaces, users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        action TEXT NOT NULL,
+        resource TEXT NOT NULL,
+        resource_id TEXT,
+        ip_address TEXT,
+        user_agent TEXT,
+        metadata_json TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 8. projects (depends on users)
     await client.query(`
       CREATE TABLE IF NOT EXISTS projects (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         description TEXT,
         business_description TEXT,
@@ -120,7 +205,7 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 4. ai_jobs (depends on projects, users)
+    // 9. ai_jobs (depends on projects, users)
     await client.query(`
       CREATE TABLE IF NOT EXISTS ai_jobs (
         id TEXT PRIMARY KEY,
@@ -138,7 +223,7 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 5. ai_job_steps (depends on ai_jobs)
+    // 10. ai_job_steps (depends on ai_jobs)
     await client.query(`
       CREATE TABLE IF NOT EXISTS ai_job_steps (
         id TEXT PRIMARY KEY,
@@ -153,10 +238,11 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 6. settings (depends on users)
+    // 11. settings (depends on users, workspaces)
     await client.query(`
       CREATE TABLE IF NOT EXISTS settings (
         id TEXT PRIMARY KEY,
+        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         key TEXT NOT NULL,
         value TEXT NOT NULL,
@@ -167,7 +253,7 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 7. assets (depends on users, projects)
+    // 12. assets (depends on users, projects)
     await client.query(`
       CREATE TABLE IF NOT EXISTS assets (
         id TEXT PRIMARY KEY,
@@ -182,7 +268,7 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 8. versions (depends on projects)
+    // 13. versions (depends on projects)
     await client.query(`
       CREATE TABLE IF NOT EXISTS versions (
         id TEXT PRIMARY KEY,
@@ -196,7 +282,7 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 9. activity_logs (depends on users, projects)
+    // 14. activity_logs (depends on users, projects)
     await client.query(`
       CREATE TABLE IF NOT EXISTS activity_logs (
         id TEXT PRIMARY KEY,
@@ -209,12 +295,13 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 10. deployments (depends on projects, users)
+    // 15. deployments (depends on projects, users)
     await client.query(`
       CREATE TABLE IF NOT EXISTS deployments (
         id TEXT PRIMARY KEY,
         project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
         status deployment_status NOT NULL DEFAULT 'pending',
         environment deployment_environment NOT NULL DEFAULT 'production',
         protocol deployment_protocol NOT NULL DEFAULT 'ftp',
@@ -232,9 +319,7 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // ── Column migrations: add new columns to existing tables without DROP ──
-    // These are safe to run repeatedly — they no-op if the column already exists.
-
+    // ── Column migrations: add missing columns safely ──
     const addColumnIfMissing = async (table: string, column: string, definition: string) => {
       await client.query(`
         DO $$ BEGIN
@@ -248,27 +333,22 @@ export async function autoMigrate(): Promise<void> {
       `);
     };
 
-    // deployments table — columns added after initial release
-    // NOTE: For existing databases, we add protocol as TEXT (safer than trying
-    // to ALTER to the enum on a live DB). Drizzle is happy writing enum values
-    // to TEXT columns in Postgres (explicit cast happens at the driver level).
-    await addColumnIfMissing("deployments", "protocol",         "TEXT NOT NULL DEFAULT 'ftp'");
-    await addColumnIfMissing("deployments", "ftp_port",         "INTEGER NOT NULL DEFAULT 21");
-    await addColumnIfMissing("deployments", "upload_progress",  "INTEGER NOT NULL DEFAULT 0");
-    await addColumnIfMissing("deployments", "deployment_log",   "TEXT");
-
-    // projects table — logo_url added after initial release
+    await addColumnIfMissing("settings", "workspace_id", "TEXT REFERENCES workspaces(id) ON DELETE CASCADE");
+    await addColumnIfMissing("projects", "workspace_id", "TEXT REFERENCES workspaces(id) ON DELETE CASCADE");
+    await addColumnIfMissing("deployments", "workspace_id", "TEXT REFERENCES workspaces(id) ON DELETE CASCADE");
+    await addColumnIfMissing("deployments", "protocol", "TEXT NOT NULL DEFAULT 'ftp'");
+    await addColumnIfMissing("deployments", "ftp_port", "INTEGER NOT NULL DEFAULT 21");
+    await addColumnIfMissing("deployments", "upload_progress", "INTEGER NOT NULL DEFAULT 0");
+    await addColumnIfMissing("deployments", "deployment_log", "TEXT");
     await addColumnIfMissing("projects", "logo_url", "TEXT");
-
-    // ai_jobs table — payload_json added for async job queue architecture
     await addColumnIfMissing("ai_jobs", "payload_json", "TEXT");
 
-
-    // 11. domains (depends on users, projects)
+    // 16. domains (depends on users, projects)
     await client.query(`
       CREATE TABLE IF NOT EXISTS domains (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
         project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
         domain TEXT NOT NULL,
         verified BOOLEAN NOT NULL DEFAULT FALSE,
@@ -277,7 +357,7 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
-    // 12. prompt_templates (depends on users)
+    // 17. prompt_templates (depends on users)
     await client.query(`
       CREATE TABLE IF NOT EXISTS prompt_templates (
         id TEXT PRIMARY KEY,
@@ -297,7 +377,7 @@ export async function autoMigrate(): Promise<void> {
     `);
 
     await client.query("COMMIT");
-    console.log("[auto-migrate] All tables created / verified successfully.");
+    console.log("[auto-migrate] All workspace, user_sessions, audit_logs, and settings tables created successfully.");
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("[auto-migrate] Migration failed:", err);
