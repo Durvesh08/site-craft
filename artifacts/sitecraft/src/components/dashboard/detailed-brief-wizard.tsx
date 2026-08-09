@@ -73,12 +73,12 @@ export function DetailedBriefWizard({ isOpen, onClose }: DetailedBriefWizardProp
         projectType as any,
         projDesc
       );
-      await generationService.startGeneration(proj.id, {
+      const genRes = await generationService.startGeneration(proj.id, {
         businessDescription: projDesc,
         category: projectType,
       });
       onClose();
-      setLocation(`/projects/${proj.id}/build`);
+      setLocation(`/projects/${proj.id}/generate${genRes?.jobId ? `?jobId=${genRes.jobId}` : ''}`);
     } catch {
       onClose();
     }

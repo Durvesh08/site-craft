@@ -39,7 +39,7 @@ export default function GenerateProject() {
     query: { enabled: !!id, queryKey: [] as unknown[] }
   });
 
-  const activeJobId = jobId || project?.activeJobId;
+  const activeJobId = (jobId && jobId !== "undefined" && jobId !== "null") ? jobId : project?.activeJobId;
 
   const { data: job } = useGetJob(activeJobId!, {
     query: {

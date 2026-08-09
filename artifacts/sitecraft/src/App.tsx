@@ -100,6 +100,9 @@ function Router() {
       <Route path="/projects/:id/analytics">
         {() => <ProtectedRoute component={AnalyticsPage} />}
       </Route>
+      <Route path="/projects/:id/generate">
+        {() => <ProtectedRoute component={GenerateProject} />}
+      </Route>
       <Route path="/projects/:id/settings">
         {() => <ProtectedRoute component={ProjectSettingsPage} />}
       </Route>
@@ -125,9 +128,6 @@ function Router() {
 
       <Route path="/new">
         {() => <ProtectedRoute component={NewProject} />}
-      </Route>
-      <Route path="/projects/:id/generate">
-        {() => <ProtectedRoute component={GenerateProject} />}
       </Route>
 
       <Route component={NotFound} />

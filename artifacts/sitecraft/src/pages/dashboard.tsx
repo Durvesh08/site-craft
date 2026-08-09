@@ -91,13 +91,13 @@ export default function Dashboard() {
         selectedCategory as any,
         prompt
       );
-      await generationService.startGeneration(newProj.id, {
+      const genRes = await generationService.startGeneration(newProj.id, {
         businessDescription: prompt,
         category: selectedCategory,
         attachments,
       });
       toast.success("Generation started! Redirecting to building studio...");
-      setLocation(`/projects/${newProj.id}/build`);
+      setLocation(`/projects/${newProj.id}/generate${genRes?.jobId ? `?jobId=${genRes.jobId}` : ''}`);
     } catch (err: any) {
       toast.error(err.message || "Failed to start project build");
     }

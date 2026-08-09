@@ -146,7 +146,7 @@ export default function NewProject() {
         },
       });
 
-      const job = await generateProject.mutateAsync({
+      const jobRes: any = await generateProject.mutateAsync({
         id: project.id,
         data: {
           businessDescription: composedDesc,
@@ -154,8 +154,9 @@ export default function NewProject() {
         },
       });
 
+      const jobId = jobRes?.job?.id || jobRes?.id;
       toast.success("Generation started!");
-      setLocation(`/projects/${project.id}/generate?jobId=${job.id}`);
+      setLocation(`/projects/${project.id}/generate${jobId ? `?jobId=${jobId}` : ''}`);
     } catch {
       toast.error("Failed to create project. Please try again.");
       setIsSubmitting(false);
@@ -176,7 +177,7 @@ export default function NewProject() {
         },
       });
 
-      const job = await generateProject.mutateAsync({
+      const jobRes: any = await generateProject.mutateAsync({
         id: project.id,
         data: {
           businessDescription: quickBrief,
@@ -184,8 +185,9 @@ export default function NewProject() {
         },
       });
 
+      const jobId = jobRes?.job?.id || jobRes?.id;
       toast.success("Generation started!");
-      setLocation(`/projects/${project.id}/generate?jobId=${job.id}`);
+      setLocation(`/projects/${project.id}/generate${jobId ? `?jobId=${jobId}` : ''}`);
     } catch {
       toast.error("Failed to create project. Please try again.");
       setIsSubmitting(false);
