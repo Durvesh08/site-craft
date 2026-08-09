@@ -20,28 +20,9 @@ export interface Folder {
   count: number;
 }
 
-const INITIAL_PROJECTS: Project[] = [
-  {
-    id: 'lumina',
-    name: 'Lumina Interior Architecture',
-    description: 'Bespoke high-end residential interior architecture showcase',
-    category: 'Portfolio',
-    status: 'published',
-    domain: 'lumina.zovaix.site',
-    thumbnail: undefined,
-    isStarred: true,
-    isArchived: false,
-    folderId: 'clients',
-    createdAt: '2026-08-01T10:00:00Z',
-    updatedAt: '10 mins ago',
-  },
-];
+const INITIAL_PROJECTS: Project[] = [];
 
-const INITIAL_FOLDERS: Folder[] = [
-  { id: 'clients', name: 'Client Projects', color: '#8B5CF6', count: 1 },
-  { id: 'saas', name: 'SaaS Products', color: '#3B82F6', count: 0 },
-  { id: 'ecommerce', name: 'E-Commerce', color: '#10B981', count: 0 },
-];
+const INITIAL_FOLDERS: Folder[] = [];
 
 class ProjectsService {
   private projects: Project[] = [...INITIAL_PROJECTS];

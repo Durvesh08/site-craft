@@ -247,21 +247,33 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* Project Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {recentProjects.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onStar={(e) => handleStar(project.id, e)}
-              onDuplicate={(e) => handleDuplicate(project.id, e)}
-              onDelete={(e) => handleDelete(project.id, e)}
-              onOpen={() => setLocation(`/projects/${project.id}/build`)}
-              onPreview={() => setLocation(`/projects/${project.id}/preview`)}
-              onCode={() => setLocation(`/projects/${project.id}/code`)}
-            />
-          ))}
-        </div>
+        {/* Project Cards Grid / Empty State */}
+        {recentProjects.length === 0 ? (
+          <div className="p-10 rounded-2xl border text-center space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+            <div className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground mx-auto">
+              <Layers className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-base text-foreground">No projects yet</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">Describe what you want to build in the Quick Build composer above to launch your first project.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {recentProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onStar={(e) => handleStar(project.id, e)}
+                onDuplicate={(e) => handleDuplicate(project.id, e)}
+                onDelete={(e) => handleDelete(project.id, e)}
+                onOpen={() => setLocation(`/projects/${project.id}/build`)}
+                onPreview={() => setLocation(`/projects/${project.id}/preview`)}
+                onCode={() => setLocation(`/projects/${project.id}/code`)}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
     </div>
