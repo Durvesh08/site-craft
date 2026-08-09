@@ -10,12 +10,22 @@ import NotFound from '@/pages/not-found';
 import Home from '@/pages/home';
 import Login from '@/pages/login';
 import Dashboard from '@/pages/dashboard';
+import ProjectsList from '@/pages/projects-list';
 import NewProject from '@/pages/new-project';
 import GenerateProject from '@/pages/generate';
 import ProjectEditor from '@/pages/editor';
-import ProjectVersions from '@/pages/versions';
-import Deployments from '@/pages/deployments';
-import Prompts from '@/pages/prompts';
+import ProjectPreview from '@/pages/project-preview';
+import ProjectCode from '@/pages/project-code';
+import ProjectFiles from '@/pages/project-files';
+import ProjectAssets from '@/pages/project-assets';
+import ConnectorsPage from '@/pages/connectors-page';
+import DomainsPage from '@/pages/domains-page';
+import DeploymentsPage from '@/pages/deployments-page';
+import VersionsPage from '@/pages/versions-page';
+import AnalyticsPage from '@/pages/analytics-page';
+import ProjectSettingsPage from '@/pages/project-settings-page';
+import TemplatesPage from '@/pages/templates-page';
+import BillingPage from '@/pages/billing-page';
 import SettingsPage from '@/pages/settings';
 
 const queryClient = new QueryClient();
@@ -49,33 +59,74 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
 
-      {/* Protected Routes */}
+      {/* Protected Product Routes */}
       <Route path="/dashboard">
         {() => <ProtectedRoute component={Dashboard} />}
       </Route>
+      <Route path="/projects">
+        {() => <ProtectedRoute component={ProjectsList} />}
+      </Route>
+      <Route path="/projects/:id">
+        {() => <ProtectedRoute component={ProjectEditor} />}
+      </Route>
+      <Route path="/projects/:id/build">
+        {() => <ProtectedRoute component={ProjectEditor} />}
+      </Route>
+      <Route path="/projects/:id/editor">
+        {() => <ProtectedRoute component={ProjectEditor} />}
+      </Route>
+      <Route path="/projects/:id/preview">
+        {() => <ProtectedRoute component={ProjectPreview} />}
+      </Route>
+      <Route path="/projects/:id/code">
+        {() => <ProtectedRoute component={ProjectCode} />}
+      </Route>
+      <Route path="/projects/:id/files">
+        {() => <ProtectedRoute component={ProjectFiles} />}
+      </Route>
+      <Route path="/projects/:id/assets">
+        {() => <ProtectedRoute component={ProjectAssets} />}
+      </Route>
+      <Route path="/projects/:id/connectors">
+        {() => <ProtectedRoute component={ConnectorsPage} />}
+      </Route>
+      <Route path="/projects/:id/domains">
+        {() => <ProtectedRoute component={DomainsPage} />}
+      </Route>
+      <Route path="/projects/:id/deployments">
+        {() => <ProtectedRoute component={DeploymentsPage} />}
+      </Route>
+      <Route path="/projects/:id/versions">
+        {() => <ProtectedRoute component={VersionsPage} />}
+      </Route>
+      <Route path="/projects/:id/analytics">
+        {() => <ProtectedRoute component={AnalyticsPage} />}
+      </Route>
+      <Route path="/projects/:id/settings">
+        {() => <ProtectedRoute component={ProjectSettingsPage} />}
+      </Route>
+
+      <Route path="/connectors">
+        {() => <ProtectedRoute component={ConnectorsPage} />}
+      </Route>
+      <Route path="/domains">
+        {() => <ProtectedRoute component={DomainsPage} />}
+      </Route>
+      <Route path="/templates">
+        {() => <ProtectedRoute component={TemplatesPage} />}
+      </Route>
+      <Route path="/billing">
+        {() => <ProtectedRoute component={BillingPage} />}
+      </Route>
+      <Route path="/settings">
+        {() => <ProtectedRoute component={SettingsPage} />}
+      </Route>
+
       <Route path="/new">
         {() => <ProtectedRoute component={NewProject} />}
       </Route>
       <Route path="/projects/:id/generate">
         {() => <ProtectedRoute component={GenerateProject} />}
-      </Route>
-      <Route path="/projects/:id/editor">
-        {() => <ProtectedRoute component={ProjectEditor} />}
-      </Route>
-      <Route path="/projects/:id/versions">
-        {() => <ProtectedRoute component={ProjectVersions} />}
-      </Route>
-      <Route path="/deployments">
-        {() => <ProtectedRoute component={Deployments} />}
-      </Route>
-      <Route path="/projects/:id/deployments">
-        {() => <ProtectedRoute component={Deployments} />}
-      </Route>
-      <Route path="/prompts">
-        {() => <ProtectedRoute component={Prompts} />}
-      </Route>
-      <Route path="/settings">
-        {() => <ProtectedRoute component={SettingsPage} />}
       </Route>
 
       <Route component={NotFound} />

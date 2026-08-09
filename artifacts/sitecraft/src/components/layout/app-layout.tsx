@@ -1,9 +1,9 @@
 import { ReactNode, useState } from "react";
 import { Sidebar } from "./sidebar";
-import { Menu, Sparkles, Command, Search } from "lucide-react";
+import { Menu, Sparkles, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LivingBackground } from "@/components/ui/living-background";
-import { CommandPalette } from "@/components/ui/command-palette";
+import { CommandPalette } from "@/components/layout/command-palette";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -15,10 +15,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <LivingBackground variant="aurora" />
 
       {/* Global ⌘K Command Palette */}
-      <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+      <CommandPalette isOpen={cmdOpen} onClose={() => setCmdOpen(false)} />
 
       {/* Desktop Sidebar */}
-      <Sidebar className="hidden md:flex shrink-0 z-20" />
+      <Sidebar 
+        className="hidden md:flex shrink-0 z-20" 
+        onOpenCommandPalette={() => setCmdOpen(true)} 
+      />
 
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
@@ -28,7 +31,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
             onClick={() => setIsMobileOpen(false)}
           />
           <div className={cn("absolute left-0 top-0 h-full w-[280px] z-50 shadow-2xl", "animate-slide-in-right")}>
-            <Sidebar className="flex h-full w-full" onNavigate={() => setIsMobileOpen(false)} />
+            <Sidebar 
+              className="flex h-full w-full" 
+              onNavigate={() => setIsMobileOpen(false)} 
+              onOpenCommandPalette={() => { setIsMobileOpen(false); setCmdOpen(true); }}
+            />
           </div>
         </div>
       )}
@@ -61,7 +68,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               onClick={() => setCmdOpen(true)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-semibold hover:bg-primary/20 transition-colors"
             >
-              <Sparkles className="h-3.5 w-3.5" /> OS Studio v6.0
+              <Sparkles className="h-3.5 w-3.5" /> Zovaix Platform v6.0
             </button>
           </div>
         </header>
