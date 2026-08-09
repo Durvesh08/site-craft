@@ -1167,7 +1167,10 @@ export async function runChatEdit(
     }
 
     if (!refinedHtml || refinedHtml.length < 200) {
-      refinedHtml = input.currentHtml ?? buildPlaceholder("Edited Page");
+      const [proj] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
+      refinedHtml = (input.currentHtml && input.currentHtml.length > 200)
+        ? input.currentHtml
+        : buildSynthesizedWebsiteHtml(proj?.name || "AI Application", input.message);
     }
 
     const existingVersions = await db.select().from(versionsTable).where(eq(versionsTable.projectId, projectId));
