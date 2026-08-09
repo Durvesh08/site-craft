@@ -25,20 +25,15 @@ export class GeminiProvider implements AIProvider {
   }
 
   getFallbackModel(model: string): string | null {
-    if (model !== "gemini-2.5-flash") return "gemini-2.5-flash";
+    if (model !== "gemini-1.5-flash") return "gemini-1.5-flash";
     return null;
   }
 
   async generateContent(model: string, prompt: string, options?: GenerateOptions): Promise<string> {
     logger.info({ model, promptLen: prompt.length }, "Calling Gemini via GeminiProvider");
 
-    const isFlash25 = model.startsWith("gemini-2.5-flash");
-    const isPro25   = model.startsWith("gemini-2.5-pro");
-    const thinkingConfig = isFlash25
-      ? { thinkingBudget: 0 }
-      : isPro25
-        ? { thinkingBudget: 1024 }
-        : undefined;
+    const isPro = model.includes("pro");
+    const thinkingConfig = isPro ? { thinkingBudget: 1024 } : undefined;
 
     try {
       const response = await this.genai.models.generateContent({

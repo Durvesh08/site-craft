@@ -28,10 +28,10 @@ import {
 // on Tier 1 / new-user AI Studio accounts.
 // All constants now resolve to gemini-2.5-flash — the best universally
 // available workhorse model. Thinking budget is configured per call site.
-const FLASH_LITE = "gemini-2.5-flash"; // fast, zero thinking overhead
-const FLASH_FAST = "gemini-2.5-flash"; // alias — use where speed matters most
-const FLASH      = "gemini-2.5-flash"; // thinking disabled at call site
-const PRO        = "gemini-2.5-flash"; // was gemini-2.5-pro; unavailable on Tier 1
+const FLASH_LITE = "gemini-2.0-flash";
+const FLASH_FAST = "gemini-2.0-flash";
+const FLASH      = "gemini-2.0-flash";
+const PRO        = "gemini-1.5-pro";
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.
