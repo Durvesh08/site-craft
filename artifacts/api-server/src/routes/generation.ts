@@ -79,19 +79,14 @@ async function createJob(
   return { job, steps };
 }
 
+import { findProjectByIdOrSlug } from "./projects";
+
 // POST /projects/:id/generate
 router.post("/projects/:id/generate", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
-    const params = GenerateProjectParams.safeParse(req.params);
-    const body = GenerateProjectBody.safeParse(req.body);
-    if (!params.success || !body.success) {
-      res.status(400).json({ error: "BadRequest", message: "Invalid request" });
-      return;
-    }
-
-    const [project] = await db.select().from(projectsTable)
-      .where(and(eq(projectsTable.id, params.data.id), eq(projectsTable.userId, req.user!.id)));
+    const rawId = String(req.params.id);
+    const project = await findProjectByIdOrSlug(req.user!.id, rawId);
 
     if (!project) {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
@@ -103,34 +98,39 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
       return;
     }
 
+    const rawBody = req.body || {};
+    const businessDesc = String(rawBody.businessDescription || project.businessDescription || project.description || project.name || "Web Application");
+
     const payload = {
-      businessDescription: body.data.businessDescription,
-      targetAudience: body.data.targetAudience,
-      primaryCta: body.data.primaryCta,
-      additionalInstructions: body.data.additionalInstructions,
-      logoUrl: body.data.logoUrl ?? undefined,
+      businessDescription: businessDesc,
+      targetAudience: rawBody.targetAudience ? String(rawBody.targetAudience) : undefined,
+      primaryCta: rawBody.primaryCta ? String(rawBody.primaryCta) : undefined,
+      additionalInstructions: rawBody.additionalInstructions ? String(rawBody.additionalInstructions) : undefined,
+      logoUrl: rawBody.logoUrl ? String(rawBody.logoUrl) : undefined,
     };
-    const { job, steps } = await createJob(params.data.id, req.user!.id, "generate", GENERATION_STEPS, JSON.stringify(payload));
+    const { job, steps } = await createJob(project.id, req.user!.id, "generate", GENERATION_STEPS, JSON.stringify(payload));
 
     // Update project to generating status
     await db.update(projectsTable)
       .set({
         status: "generating",
         activeJobId: job.id,
-        businessDescription: body.data.businessDescription,
-        logoUrl: body.data.logoUrl ?? null,
+        businessDescription: businessDesc,
+        logoUrl: rawBody.logoUrl ? String(rawBody.logoUrl) : project.logoUrl,
         updatedAt: new Date(),
       })
-      .where(eq(projectsTable.id, params.data.id));
+      .where(eq(projectsTable.id, project.id));
 
     // Dispatch generation asynchronously so it works on both serverless & traditional nodes
-    runGeneration(job.id, params.data.id, req.user!.id, payload).catch((err) =>
+    runGeneration(job.id, project.id, req.user!.id, payload).catch((err) =>
       logger.error({ err, jobId: job.id }, "Generation dispatch failed")
     );
 
-    res.status(202).json(toJobResponse(job, steps));
+    res.status(202).json({
+      job: toJobResponse(job, steps),
+    });
   } catch (err) {
-    req.log.error({ err }, "Failed to start generation");
+    logger.error({ err }, "Failed to start generation");
     res.status(500).json({ error: "InternalError", message: "Failed to start generation" });
   }
 });

@@ -49,6 +49,7 @@ export default function ProjectEditor() {
     status: 'draft',
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [isSectionsOpen, setIsSectionsOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string | null>("Hero Section");
@@ -358,17 +359,25 @@ export default function ProjectEditor() {
               />
               <div className="p-2 border-t flex items-center justify-between bg-white/[0.02]" style={{ borderColor: 'var(--surface-border)' }}>
                 <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <button
-                    onClick={() => {
-                      const sample = ["migration-v2.sql", "backend-schema.json", "auth-config.ts"];
-                      const next = sample[attachments.length % sample.length];
-                      setAttachments(prev => [...prev, next]);
-                      toast.success(`Attached ${next} to AI context`);
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setAttachments(prev => [...prev, file.name]);
+                        toast.success(`Attached ${file.name} to AI prompt context`);
+                      }
                     }}
+                    className="hidden"
+                    accept="image/*,.ts,.tsx,.js,.jsx,.json,.css,.html,.sql,.md"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
                     className="p-1 rounded-lg hover:text-foreground hover:bg-white/10 transition-colors flex items-center gap-1 text-[11px] font-mono"
-                    title="Attach Code / Migration File"
+                    title="Attach Image or Source File"
                   >
-                    <Paperclip className="h-3.5 w-3.5 text-primary" /> Attach File
+                    <Paperclip className="h-3.5 w-3.5 text-primary" /> Attach Image / File
                   </button>
                 </div>
 
