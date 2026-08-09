@@ -18,6 +18,38 @@ export interface WorkspaceUsage {
 }
 
 class WorkspaceService {
+  private usage: WorkspaceUsage = {
+    aiCreditsUsed: 14200,
+    aiCreditsTotal: 50000,
+    storageUsedMB: 1900,
+    storageTotalMB: 10000,
+    deploymentsCount: 8,
+    deploymentsTotal: 50,
+    planName: 'Pro Creator',
+  };
+
+  constructor() {
+    this.syncFromBackend();
+  }
+
+  async syncFromBackend(): Promise<WorkspaceUsage> {
+    try {
+      const res = await fetch('/api/workspace/usage');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.usage) {
+          this.usage = {
+            ...data.usage,
+            planName: 'Pro Creator'
+          };
+        }
+      }
+    } catch (_err) {
+      // Local fallback
+    }
+    return this.usage;
+  }
+
   getMembers(): WorkspaceMember[] {
     return [
       { id: 'mem-1', name: 'Durvesh Narkhede', email: 'durvesh@zovaix.site', role: 'Owner', status: 'active' },
@@ -27,15 +59,7 @@ class WorkspaceService {
   }
 
   getUsage(): WorkspaceUsage {
-    return {
-      aiCreditsUsed: 4250,
-      aiCreditsTotal: 10000,
-      storageUsedMB: 1850,
-      storageTotalMB: 10000,
-      deploymentsCount: 42,
-      deploymentsTotal: 100,
-      planName: 'Pro Creator',
-    };
+    return this.usage;
   }
 }
 
