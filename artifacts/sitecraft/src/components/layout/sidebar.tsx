@@ -12,19 +12,17 @@ import {
   Star,
   Clock,
   PlusCircle,
-  Sparkles,
   Plug,
   Globe,
   Users,
-  CreditCard,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Layers,
-  Zap,
-  HardDrive,
-  Rocket
+  ShieldCheck,
+  Activity,
+  HardDrive
 } from "lucide-react";
 
 interface SidebarProps {
@@ -48,7 +46,7 @@ export function Sidebar({ className, onNavigate, onOpenCommandPalette }: Sidebar
   return (
     <aside
       className={cn(
-        "flex h-full flex-col border-r relative transition-all duration-300 select-none z-30",
+        "flex h-full flex-col border-r relative transition-all duration-200 select-none z-30 font-sans",
         collapsed ? "w-[72px]" : "w-[260px]",
         className
       )}
@@ -59,7 +57,7 @@ export function Sidebar({ className, onNavigate, onOpenCommandPalette }: Sidebar
     >
       {/* Top Header & Collapse Toggle */}
       <div 
-        className="flex h-16 shrink-0 items-center justify-between px-4 border-b"
+        className="flex h-14 shrink-0 items-center justify-between px-4 border-b"
         style={{ borderColor: 'var(--surface-border)' }}
       >
         <Link href="/dashboard" className="flex items-center gap-3 group outline-none overflow-hidden">
@@ -112,7 +110,7 @@ export function Sidebar({ className, onNavigate, onOpenCommandPalette }: Sidebar
           
           {!collapsed && (
             <div className="pt-1 pl-3 space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60 px-3">Folders</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60 px-3 block mb-1">Folders</span>
               {folders.map(f => (
                 <Link
                   key={f.id}
@@ -134,7 +132,6 @@ export function Sidebar({ className, onNavigate, onOpenCommandPalette }: Sidebar
         {/* SECTION: CREATE */}
         <NavGroup title="CREATE" collapsed={collapsed}>
           <NavItem href="/new" icon={PlusCircle} label="New Project" active={location === "/new"} collapsed={collapsed} onNavigate={onNavigate} highlight />
-          <NavItem href="/templates" icon={Sparkles} label="Templates" active={location === "/templates"} collapsed={collapsed} onNavigate={onNavigate} />
         </NavGroup>
 
         {/* SECTION: CONNECT */}
@@ -145,34 +142,31 @@ export function Sidebar({ className, onNavigate, onOpenCommandPalette }: Sidebar
 
         {/* SECTION: WORKSPACE */}
         <NavGroup title="WORKSPACE" collapsed={collapsed}>
-          <NavItem href="/billing" icon={CreditCard} label="Billing & Usage" active={location === "/billing"} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavItem href="/billing" icon={Activity} label="Usage & Account" active={location === "/billing"} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavItem href="/settings?tab=security" icon={ShieldCheck} label="Security" active={location.includes("tab=security")} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavItem href="/settings?tab=team" icon={Users} label="Team" active={location.includes("tab=team")} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/settings" icon={Settings} label="Settings" active={location === "/settings"} collapsed={collapsed} onNavigate={onNavigate} />
         </NavGroup>
       </div>
 
-      {/* Bottom Footer & Usage */}
+      {/* Bottom Footer & Account Summary */}
       <div 
         className="p-3 border-t space-y-3 shrink-0"
         style={{ borderColor: 'var(--surface-border)' }}
       >
         {!collapsed && (
-          <div className="p-3 rounded-xl space-y-2.5 text-xs" style={{ background: 'var(--surface-0)', border: '1px solid var(--surface-border)' }}>
+          <div className="p-3 rounded-xl space-y-2 text-xs" style={{ background: 'var(--surface-0)', border: '1px solid var(--surface-border)' }}>
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase text-muted-foreground">AI Credits</span>
+              <span className="font-mono text-[10px] uppercase text-muted-foreground">Resource Quota</span>
               <span className="font-mono text-[11px] font-medium text-foreground">
-                {usage.aiCreditsUsed.toLocaleString()} / {usage.aiCreditsTotal.toLocaleString()}
+                {(usage.storageUsedMB / 1000).toFixed(1)} GB Storage
               </span>
             </div>
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary rounded-full transition-all"
-                style={{ width: `${(usage.aiCreditsUsed / usage.aiCreditsTotal) * 100}%` }} 
+                style={{ width: `${(usage.storageUsedMB / usage.storageTotalMB) * 100}%` }} 
               />
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] pt-1">
-              <span className="text-muted-foreground">{usage.planName}</span>
-              <Link href="/billing" className="text-primary hover:underline font-medium">Upgrade</Link>
             </div>
           </div>
         )}
@@ -181,7 +175,7 @@ export function Sidebar({ className, onNavigate, onOpenCommandPalette }: Sidebar
         {user ? (
           <div className={cn("rounded-xl p-2 flex items-center justify-between", collapsed && "justify-center")} style={{ background: 'var(--surface-0)', border: '1px solid var(--surface-border)' }}>
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="h-8 w-8 shrink-0 rounded-full bg-primary/20 border border-primary/20 flex items-center justify-center text-primary font-semibold text-xs overflow-hidden">
+              <div className="h-8 w-8 shrink-0 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-semibold text-xs overflow-hidden">
                 {user.profileImageUrl ? (
                   <img src={user.profileImageUrl} alt="Avatar" className="h-full w-full object-cover" />
                 ) : (
@@ -191,7 +185,7 @@ export function Sidebar({ className, onNavigate, onOpenCommandPalette }: Sidebar
               {!collapsed && (
                 <div className="flex flex-col truncate text-left">
                   <span className="text-xs font-medium truncate text-foreground">
-                    {user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : "User"}
+                    {user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : "Developer"}
                   </span>
                   <span className="text-[10px] text-muted-foreground truncate">{user.email}</span>
                 </div>
@@ -251,7 +245,7 @@ function NavItem({
       className={cn(
         "group flex items-center gap-3 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-150 outline-none",
         active
-          ? "bg-primary/10 text-primary font-semibold"
+          ? "bg-primary/15 text-primary font-semibold"
           : highlight
           ? "bg-primary text-primary-foreground hover:bg-primary/90"
           : "text-muted-foreground hover:text-foreground hover:bg-white/5",

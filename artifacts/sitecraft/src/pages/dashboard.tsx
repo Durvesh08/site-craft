@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { projectsService, Project } from "@/services/projects";
+import { DetailedBriefWizard } from "@/components/dashboard/detailed-brief-wizard";
+import { ImportProjectModal } from "@/components/dashboard/import-project-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -18,12 +20,14 @@ import {
   ExternalLink,
   Edit,
   Trash2,
-  FolderPlus,
-  CheckCircle2,
-  Clock,
   Code,
   Eye,
-  Rocket
+  Rocket,
+  FileCode,
+  GitBranch,
+  Layers,
+  Clock,
+  ListFilter
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,17 +40,36 @@ import {
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+
+  // Mode Selection State
+  const [composerMode, setComposerMode] = useState<'quick' | 'brief' | 'import'>('quick');
   const [prompt, setPrompt] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("SaaS");
+
+  // Modals
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+
+  // Pre-generation plan modal
+  const [planModalOpen, setPlanModalOpen] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
 
   const projects = projectsService.getAll();
   const recentProjects = projectsService.getRecent(4);
 
-  const handleBuildAI = (e: React.FormEvent) => {
+  const handleQuickBuildSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
-    const newProj = projectsService.create(prompt.slice(0, 30), selectedCategory as any, prompt);
+    setPlanModalOpen(true);
+  };
+
+  const handleConfirmBuild = () => {
+    setPlanModalOpen(false);
+    const newProj = projectsService.create(
+      prompt.slice(0, 30),
+      selectedCategory as any,
+      prompt
+    );
     setLocation(`/projects/${newProj.id}/build`);
   };
 
@@ -71,110 +94,153 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-10 pb-16">
+    <div className="space-y-10 pb-16 font-sans">
       
-      {/* ── DASHBOARD HERO — AI PROMPT COMPOSER ── */}
+      {/* ── MODALS ── */}
+      <DetailedBriefWizard isOpen={briefOpen} onClose={() => setBriefOpen(false)} />
+      <ImportProjectModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
+
+      {/* Lightweight Pre-Generation Plan Review Modal */}
+      {planModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-lg rounded-2xl border p-6 space-y-6 shadow-2xl" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs font-mono text-primary font-bold uppercase">
+                <Sparkles className="h-4 w-4" /> Lightweight Architecture Plan
+              </div>
+              <h3 className="font-bold text-base text-foreground">Plan Review Before Build</h3>
+            </div>
+
+            <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-3 font-mono text-xs text-white/90">
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-muted-foreground">Category:</span>
+                <span className="text-primary font-bold">{selectedCategory}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-muted-foreground">Generated Pages:</span>
+                <span>Home, About, Features, Contact</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Architecture:</span>
+                <span>React 18 + Vite + Tailwind CSS + Responsive</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setPlanModalOpen(false)} className="h-9 text-xs border-white/10">Modify Request</Button>
+              <Button onClick={handleConfirmBuild} className="h-9 text-xs font-semibold gap-1.5 bg-primary text-primary-foreground">
+                Build Now →
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DASHBOARD HERO — CREATION COMPOSER ── */}
       <section className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            What are you building today{user?.firstName ? `, ${user.firstName}` : ''}? 👋
+            What are you building today{user?.firstName ? `, ${user.firstName}` : ''}?
           </h1>
           <p className="text-sm text-muted-foreground">
-            Describe your vision. Zovaix AI generates bespoke code, design systems, and responsive layouts.
+            Describe an idea, import an existing project, or start from a detailed brief.
           </p>
         </div>
 
-        {/* Large AI Prompt Composer Card */}
-        <form 
-          onSubmit={handleBuildAI}
-          className="relative rounded-2xl p-4 sm:p-6 space-y-4 shadow-2xl transition-all border"
-          style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
-        >
-          {/* Prompt TextArea */}
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe the website you want to create... (e.g. A luxury architectural studio with editorial typography, dark mode, and fluid scroll interactions)"
-            className="w-full h-32 bg-transparent text-sm text-foreground outline-none resize-none placeholder:text-muted-foreground/50 leading-relaxed font-sans"
-          />
+        {/* Creation Modes Bar */}
+        <div className="flex items-center gap-2 p-1.5 rounded-2xl w-fit border" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+          <button
+            onClick={() => setComposerMode('quick')}
+            className={cn(
+              "px-4 py-1.5 rounded-xl text-xs font-semibold transition-all",
+              composerMode === 'quick' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Quick Build
+          </button>
+          <button
+            onClick={() => setBriefOpen(true)}
+            className="px-4 py-1.5 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+          >
+            Detailed Brief Wizard
+          </button>
+          <button
+            onClick={() => setImportOpen(true)}
+            className="px-4 py-1.5 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
+          >
+            Import Project
+          </button>
+        </div>
 
-          {/* Controls & Category Selectors */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t" style={{ borderColor: 'var(--surface-border)' }}>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
-              >
-                <Paperclip className="h-3.5 w-3.5" /> Attach
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
-              >
-                <ImageIcon className="h-3.5 w-3.5" /> Images
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
-              >
-                <LayoutTemplate className="h-3.5 w-3.5" /> References
-              </button>
+        {/* Quick Build Composer Card */}
+        {composerMode === 'quick' && (
+          <form 
+            onSubmit={handleQuickBuildSubmit}
+            className="relative rounded-2xl p-4 sm:p-6 space-y-4 shadow-2xl transition-all border"
+            style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
+          >
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe the website or web application you want to create... (e.g. Create a luxury architecture studio with editorial typography and fluid scroll interactions)"
+              className="w-full h-32 bg-transparent text-sm text-foreground outline-none resize-none placeholder:text-muted-foreground/50 leading-relaxed font-sans"
+            />
 
-              <div className="h-4 w-[1px] bg-white/10 mx-1 hidden sm:block" />
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t" style={{ borderColor: 'var(--surface-border)' }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
+                >
+                  <Paperclip className="h-3.5 w-3.5" /> Attach
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" /> Images
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5" /> References
+                </button>
 
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="bg-white/5 text-xs text-foreground px-3 py-1.5 rounded-lg border border-white/10 outline-none cursor-pointer"
+                <div className="h-4 w-[1px] bg-white/10 mx-1 hidden sm:block" />
+
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="bg-white/5 text-xs text-foreground px-3 py-1.5 rounded-lg border border-white/10 outline-none cursor-pointer"
+                >
+                  <option value="SaaS" className="bg-black">SaaS</option>
+                  <option value="Portfolio" className="bg-black">Portfolio</option>
+                  <option value="E-Commerce" className="bg-black">E-Commerce</option>
+                  <option value="Agency" className="bg-black">Agency</option>
+                  <option value="Web App" className="bg-black">Web App</option>
+                  <option value="Dashboard" className="bg-black">Dashboard</option>
+                </select>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={!prompt.trim()}
+                className="h-10 px-6 rounded-xl text-xs font-semibold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
               >
-                <option value="SaaS" className="bg-black">SaaS</option>
-                <option value="Portfolio" className="bg-black">Portfolio</option>
-                <option value="E-Commerce" className="bg-black">E-Commerce</option>
-                <option value="Agency" className="bg-black">Agency</option>
-                <option value="Restaurant" className="bg-black">Restaurant</option>
-                <option value="Web3" className="bg-black">Web3</option>
-              </select>
+                <Sparkles className="h-4 w-4" /> Build with AI →
+              </Button>
             </div>
-
-            <Button
-              type="submit"
-              disabled={!prompt.trim()}
-              className="h-10 px-6 rounded-xl text-xs font-semibold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
-            >
-              <Sparkles className="h-4 w-4" /> Build with AI →
-            </Button>
-          </div>
-        </form>
+          </form>
+        )}
       </section>
 
-      {/* ── QUICK TEMPLATES BANNER ── */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <QuickActionCard
-          title="Start From Template"
-          description="Browse curated SaaS, portfolio & ecommerce themes"
-          icon={LayoutTemplate}
-          onClick={() => setLocation("/templates")}
-        />
-        <QuickActionCard
-          title="Connectors Catalog"
-          description="Integrate Stripe, Supabase, OpenAI, Resend & Slack"
-          icon={Globe}
-          onClick={() => setLocation("/connectors")}
-        />
-        <QuickActionCard
-          title="Domain Setup Wizard"
-          description="Link custom domains with 1-click SSL setup"
-          icon={Rocket}
-          onClick={() => setLocation("/domains")}
-        />
-      </section>
-
-      {/* ── RECENT PROJECTS PORTFOLIO SHOWCASE ── */}
+      {/* ── RECENT PROJECTS WORKSPACE SHOWCASE ── */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h2 className="text-xl font-bold tracking-tight text-foreground">Recent Projects</h2>
-            <p className="text-xs text-muted-foreground">Your active website workspaces & deployments</p>
+            <p className="text-xs text-muted-foreground">Your active development workspaces & deployments</p>
           </div>
           <Link href="/projects" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
             View All Projects ({projects.length}) <ArrowRight className="h-3.5 w-3.5" />
@@ -182,7 +248,7 @@ export default function Dashboard() {
         </div>
 
         {/* Project Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {recentProjects.map((project) => (
             <ProjectCard
               key={project.id}
@@ -198,22 +264,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-    </div>
-  );
-}
-
-function QuickActionCard({ title, description, icon: Icon, onClick }: { title: string; description: string; icon: any; onClick: () => void }) {
-  return (
-    <div
-      onClick={onClick}
-      className="p-5 rounded-2xl border cursor-pointer group transition-all duration-200 hover:-translate-y-1"
-      style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
-    >
-      <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-3 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-        <Icon className="h-4 w-4" />
-      </div>
-      <h3 className="text-sm font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{title}</h3>
-      <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -240,27 +290,25 @@ export function ProjectCard({
   return (
     <div
       onClick={onOpen}
-      className="group relative rounded-2xl overflow-hidden border transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
+      className="group relative rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
       style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
     >
-      {/* Thumbnail Area */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/40 border-b" style={{ borderColor: 'var(--surface-border)' }}>
-        <img
-          src={project.thumbnail}
-          alt={project.name}
-          className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-105"
-        />
+      {/* Thumbnail Area — Neutral Code Placeholder (No stock images!) */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#090A0C] border-b p-4 flex flex-col justify-between" style={{ borderColor: 'var(--surface-border)' }}>
+        
+        {/* Top Header of Code Mockup */}
+        <div className="flex items-center justify-between text-xs font-mono text-muted-foreground z-10">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+            <span className="ml-2 text-[11px] text-white/50">{project.name.toLowerCase().replace(/\s+/g, '-')}/src</span>
+          </div>
 
-        {/* Top Badges & Actions Overlay */}
-        <div className="absolute inset-x-3 top-3 flex items-center justify-between pointer-events-none">
-          <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-semibold tracking-wider bg-black/70 backdrop-blur-md border border-white/10 text-white uppercase">
-            {project.category}
-          </span>
-
-          <div className="flex items-center gap-1.5 pointer-events-auto">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={onStar}
-              className="p-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-white/70 hover:text-amber-400 transition-colors"
+              className="p-1.5 rounded-full bg-black/60 border border-white/10 text-white/70 hover:text-amber-400 transition-colors"
               title={project.isStarred ? "Unstar" : "Star"}
             >
               <Star className={cn("h-3.5 w-3.5", project.isStarred && "fill-amber-400 text-amber-400")} />
@@ -268,7 +316,7 @@ export function ProjectCard({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <button className="p-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/10 text-white/70 hover:text-white transition-colors">
+                <button className="p-1.5 rounded-full bg-black/60 border border-white/10 text-white/70 hover:text-white transition-colors">
                   <MoreVertical className="h-3.5 w-3.5" />
                 </button>
               </DropdownMenuTrigger>
@@ -300,19 +348,33 @@ export function ProjectCard({
           </div>
         </div>
 
-        {/* Hover Quick Actions Bar */}
-        <div className="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+        {/* Center Code Symbol & Category */}
+        <div className="my-auto flex flex-col items-center justify-center space-y-2 text-center select-none z-10">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <FileCode className="h-5 w-5" />
+          </div>
+          <span className="text-[11px] font-mono text-white/50 uppercase tracking-widest">{project.category} Project</span>
+        </div>
+
+        {/* Bottom Status Bar */}
+        <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground z-10">
+          <span>{project.domain}</span>
+          <span className="uppercase text-emerald-400">● {project.status}</span>
+        </div>
+
+        {/* Hover Action Overlay */}
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3 z-20 pointer-events-none">
           <Button
             size="sm"
-            className="h-8 px-4 rounded-xl text-xs font-semibold gap-1.5 bg-white text-black hover:bg-white/90 shadow-xl pointer-events-auto"
+            className="h-8 px-4 rounded-xl text-xs font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 pointer-events-auto shadow-lg"
             onClick={(e) => { e.stopPropagation(); onOpen(); }}
           >
-            Open Project
+            Open Workspace
           </Button>
           <Button
             size="sm"
             variant="outline"
-            className="h-8 px-3 rounded-xl text-xs font-semibold gap-1.5 bg-black/80 backdrop-blur-md border-white/20 text-white hover:bg-black pointer-events-auto"
+            className="h-8 px-3 rounded-xl text-xs font-semibold gap-1.5 border-white/20 text-white hover:bg-white/10 pointer-events-auto"
             onClick={(e) => { e.stopPropagation(); onPreview(); }}
           >
             <Eye className="h-3.5 w-3.5" /> Preview
@@ -320,18 +382,12 @@ export function ProjectCard({
         </div>
       </div>
 
-      {/* Card Info Footer */}
+      {/* Card Body */}
       <div className="p-4 space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
             {project.name}
           </h3>
-          <span className={cn(
-            "text-[10px] font-mono font-medium px-2 py-0.5 rounded-full border shrink-0 uppercase",
-            project.status === "published" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-amber-500/10 border-amber-500/20 text-amber-400"
-          )}>
-            ● {project.status}
-          </span>
         </div>
 
         <p className="text-xs text-muted-foreground line-clamp-1">
@@ -339,7 +395,7 @@ export function ProjectCard({
         </p>
 
         <div className="flex items-center justify-between text-[11px] text-muted-foreground/70 pt-1 font-mono">
-          <span>{project.domain}</span>
+          <span>{project.category}</span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" /> {project.updatedAt}
           </span>

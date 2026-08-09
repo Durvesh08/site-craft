@@ -9,20 +9,21 @@ import {
   Code,
   Folder,
   Image as ImageIcon,
+  Database,
   Plug,
+  Key,
+  GitBranch,
   Globe,
   Rocket,
   History,
-  BarChart2,
-  Settings,
-  Share2,
-  CheckCircle2,
+  ShieldCheck,
   Terminal,
+  Settings,
+  CheckCircle2,
   AlertCircle,
   FileText,
   ChevronDown,
-  ChevronUp,
-  Maximize2
+  ChevronUp
 } from "lucide-react";
 
 export function ProjectWorkspaceLayout({ children, activeTab }: { children: React.ReactNode; activeTab: string }) {
@@ -40,16 +41,20 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
     { id: 'code', label: 'Code', href: `/projects/${projectId}/code`, icon: Code },
     { id: 'files', label: 'Files', href: `/projects/${projectId}/files`, icon: Folder },
     { id: 'assets', label: 'Assets', href: `/projects/${projectId}/assets`, icon: ImageIcon },
-    { id: 'connectors', label: 'Connectors', href: `/projects/${projectId}/connectors`, icon: Plug },
+    { id: 'database', label: 'Database', href: `/projects/${projectId}/database`, icon: Database },
+    { id: 'connectors', label: 'Integrations', href: `/projects/${projectId}/connectors`, icon: Plug },
+    { id: 'secrets', label: 'Secrets', href: `/projects/${projectId}/secrets`, icon: Key },
+    { id: 'github', label: 'GitHub', href: `/projects/${projectId}/github`, icon: GitBranch },
     { id: 'domains', label: 'Domains', href: `/projects/${projectId}/domains`, icon: Globe },
     { id: 'deployments', label: 'Deployments', href: `/projects/${projectId}/deployments`, icon: Rocket },
     { id: 'versions', label: 'Versions', href: `/projects/${projectId}/versions`, icon: History },
-    { id: 'analytics', label: 'Analytics', href: `/projects/${projectId}/analytics`, icon: BarChart2 },
+    { id: 'security', label: 'Security', href: `/projects/${projectId}/security`, icon: ShieldCheck },
+    { id: 'logs', label: 'Logs', href: `/projects/${projectId}/logs`, icon: Terminal },
     { id: 'settings', label: 'Settings', href: `/projects/${projectId}/settings`, icon: Settings },
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] w-full overflow-hidden bg-background text-foreground -m-4 md:-m-8">
+    <div className="flex flex-col h-[calc(100vh-64px)] w-full overflow-hidden bg-background text-foreground -m-4 md:-m-8 font-sans">
       
       {/* ── IDE TOP WORKSPACE HEADER ── */}
       <header className="h-14 px-4 flex items-center justify-between shrink-0 border-b z-20" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
@@ -73,7 +78,7 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
         </div>
 
         {/* Center Sub-Navigation Tabs */}
-        <nav className="hidden lg:flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
+        <nav className="hidden xl:flex items-center gap-0.5 p-1 rounded-xl bg-white/5 border border-white/10">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -81,7 +86,7 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                   isActive
                     ? 'bg-primary text-primary-foreground font-semibold'
                     : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
@@ -121,7 +126,7 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
       </header>
 
       {/* Mobile Subnav for smaller screens */}
-      <div className="lg:hidden flex items-center gap-2 overflow-x-auto p-2 border-b bg-surface-1 text-xs shrink-0" style={{ borderColor: 'var(--surface-border)' }}>
+      <div className="xl:hidden flex items-center gap-1.5 overflow-x-auto p-2 border-b bg-surface-1 text-xs shrink-0" style={{ borderColor: 'var(--surface-border)' }}>
         {tabs.map((tab) => (
           <Link
             key={tab.id}
@@ -143,7 +148,6 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
 
         {/* ── BOTTOM CONSOLE & LOGS DRAWER ── */}
         <div className="shrink-0 border-t z-30" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-          {/* Console Header Bar */}
           <div className="h-8 px-4 flex items-center justify-between text-xs text-muted-foreground border-b select-none" style={{ borderColor: 'var(--surface-border)' }}>
             <div className="flex items-center gap-4 font-mono text-[11px]">
               <button
@@ -156,13 +160,13 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
                 onClick={() => { setConsoleOpen(!consoleOpen); setConsoleTab('problems'); }}
                 className={`flex items-center gap-1.5 hover:text-foreground ${consoleTab === 'problems' && consoleOpen ? 'text-primary font-semibold' : ''}`}
               >
-                <AlertCircle className="h-3.5 w-3.5 text-amber-400" /> 0 Problems
+                <AlertCircle className="h-3.5 w-3.5 text-emerald-400" /> 0 Problems
               </button>
               <button
                 onClick={() => { setConsoleOpen(!consoleOpen); setConsoleTab('logs'); }}
                 className={`flex items-center gap-1.5 hover:text-foreground ${consoleTab === 'logs' && consoleOpen ? 'text-primary font-semibold' : ''}`}
               >
-                <FileText className="h-3.5 w-3.5" /> Build Logs
+                <FileText className="h-3.5 w-3.5" /> Pipeline Logs
               </button>
             </div>
 
@@ -174,14 +178,12 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
             </button>
           </div>
 
-          {/* Console Drawer Body */}
           {consoleOpen && (
-            <div className="h-40 p-4 font-mono text-xs overflow-y-auto space-y-1.5 bg-black/60 text-white/80">
+            <div className="h-40 p-4 font-mono text-xs overflow-y-auto space-y-1.5 bg-black/80 text-white/80">
               {consoleTab === 'console' && (
                 <>
-                  <p className="text-emerald-400">[Zovaix VFS] Virtual File System initialized for {project.name}.</p>
+                  <p className="text-emerald-400">[Zovaix VFS] Virtual File System active for {project.name}.</p>
                   <p className="text-white/60">[HMR] Hot Module Replacement active on port 5173.</p>
-                  <p className="text-white/60">[Vite] Ready in 240ms.</p>
                 </>
               )}
               {consoleTab === 'problems' && (
@@ -189,9 +191,8 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
               )}
               {consoleTab === 'logs' && (
                 <>
-                  <p className="text-white/50">[08:14:02] Pipeline triggered for commit 85e269e.</p>
-                  <p className="text-white/50">[08:14:05] Production build completed in 2.1s.</p>
-                  <p className="text-emerald-400">[08:14:12] Deployed successfully to {project.domain}.</p>
+                  <p className="text-white/50">[10:14:02] Pipeline build triggered for commit 082481f.</p>
+                  <p className="text-emerald-400">[10:14:12] Deployed successfully to {project.domain}.</p>
                 </>
               )}
             </div>

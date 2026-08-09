@@ -10,11 +10,13 @@ import { Settings, User, Key, Server, Palette, LogOut, Check, X, Shield, Cpu, Re
 import { ImageUploader } from "@/components/ImageUploader";
 import { toast } from "sonner";
 
-type Tab = "profile" | "ftp" | "ai" | "branding";
+type Tab = "profile" | "workspace" | "team" | "security" | "api" | "ftp" | "ai" | "branding";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("profile");
+  const searchParams = new URLSearchParams(window.location.search);
+  const initialTab = (searchParams.get("tab") as Tab) || "profile";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   // Profile State
   const [firstName, setFirstName] = useState("");

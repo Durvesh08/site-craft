@@ -111,48 +111,48 @@
 
 @layer base {
   :root {
-    /* Layered Luxurious Dark Palette */
-    --background: 240 15% 3.5%;        /* #09090F — Surface-0 */
-    --foreground: 60 6% 93%;           /* #EDECE7 — warm off-white */
+    /* Graphite & Restrained Cobalt Blue Palette */
+    --background: 220 18% 4%;          /* #090A0C — Surface-0 */
+    --foreground: 240 5% 96%;          /* #F4F4F5 — warm soft ivory */
 
-    --card: 240 12% 6.5%;              /* #111118 — Surface-1 */
-    --card-foreground: 60 6% 93%;
+    --card: 220 14% 8%;                /* #121317 — Surface-1 */
+    --card-foreground: 240 5% 96%;
 
-    --popover: 240 10% 8.5%;           /* #18181F — Surface-2 */
-    --popover-foreground: 60 6% 93%;
+    --popover: 220 12% 11%;            /* #1A1C22 — Surface-2 */
+    --popover-foreground: 240 5% 96%;
 
-    --primary: 243 75% 62%;            /* Refined indigo-violet */
+    --primary: 221 83% 53%;            /* Restrained cobalt / electric blue #2563EB */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 10% 9%;           /* Surface-2 variant */
-    --secondary-foreground: 60 6% 93%;
+    --secondary: 220 12% 11%;          /* Surface-2 variant */
+    --secondary-foreground: 240 5% 96%;
 
-    --muted: 240 8% 13%;              /* Surface-3 */
-    --muted-foreground: 220 10% 55%;   /* Muted text — readable */
+    --muted: 220 10% 15%;              /* Surface-3 */
+    --muted-foreground: 240 4% 65%;    /* Neutral warm gray */
 
-    --accent: 240 8% 13%;
-    --accent-foreground: 60 6% 93%;
+    --accent: 220 10% 15%;
+    --accent-foreground: 240 5% 96%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 8% 14%;             /* Subtle, not harsh */
-    --input: 240 8% 14%;
-    --ring: 243 75% 62%;
+    --border: 220 10% 14%;             /* Subtle graphite border */
+    --input: 220 10% 14%;
+    --ring: 221 83% 53%;
 
     --radius: 0.75rem;
 
     /* ── Extended Surface Tokens ── */
-    --surface-0: #09090F;
-    --surface-1: #111118;
-    --surface-2: #18181F;
-    --surface-3: #1F2027;
-    --surface-4: #26272E;
-    --surface-border: rgba(255, 255, 255, 0.06);
-    --surface-border-hover: rgba(255, 255, 255, 0.12);
+    --surface-0: #090A0C;
+    --surface-1: #121317;
+    --surface-2: #1A1C22;
+    --surface-3: #22242C;
+    --surface-4: #2B2E38;
+    --surface-border: rgba(255, 255, 255, 0.08);
+    --surface-border-hover: rgba(255, 255, 255, 0.16);
 
     /* ── Semantic Colors ── */
-    --success: #22C55E;
+    --success: #10B981;
     --warning: #F59E0B;
     --info: #3B82F6;
     --danger: #EF4444;

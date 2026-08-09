@@ -2,10 +2,10 @@ export interface Project {
   id: string;
   name: string;
   description: string;
-  category: 'SaaS' | 'E-Commerce' | 'Portfolio' | 'Restaurant' | 'Agency' | 'Web3';
+  category: 'SaaS' | 'E-Commerce' | 'Portfolio' | 'Restaurant' | 'Agency' | 'Web3' | 'Web App' | 'Dashboard' | 'Internal Tool';
   status: 'published' | 'draft' | 'building';
   domain?: string;
-  thumbnail: string;
+  thumbnail?: string; // Real screenshot URL if available; undefined renders neutral SVG code placeholder
   isStarred: boolean;
   isArchived: boolean;
   folderId?: string;
@@ -28,7 +28,7 @@ const INITIAL_PROJECTS: Project[] = [
     category: 'Portfolio',
     status: 'published',
     domain: 'lumina.zovaix.site',
-    thumbnail: '/previews/lumina.jpg',
+    thumbnail: undefined,
     isStarred: true,
     isArchived: false,
     folderId: 'clients',
@@ -42,7 +42,7 @@ const INITIAL_PROJECTS: Project[] = [
     category: 'SaaS',
     status: 'published',
     domain: 'pulsar.zovaix.site',
-    thumbnail: '/previews/pulsar.jpg',
+    thumbnail: undefined,
     isStarred: true,
     isArchived: false,
     folderId: 'saas',
@@ -56,7 +56,7 @@ const INITIAL_PROJECTS: Project[] = [
     category: 'Agency',
     status: 'published',
     domain: 'clout.zovaix.site',
-    thumbnail: '/previews/clout.jpg',
+    thumbnail: undefined,
     isStarred: false,
     isArchived: false,
     folderId: 'clients',
@@ -70,31 +70,17 @@ const INITIAL_PROJECTS: Project[] = [
     category: 'E-Commerce',
     status: 'draft',
     domain: 'sonora.zovaix.site',
-    thumbnail: '/previews/sonora.jpg',
+    thumbnail: undefined,
     isStarred: false,
     isArchived: false,
     folderId: 'ecommerce',
     createdAt: '2026-08-06T18:00:00Z',
     updatedAt: '3 days ago',
   },
-  {
-    id: 'nova',
-    name: 'Nova Creative Atelier',
-    description: 'Editorial design studio portfolio and client inquiry engine',
-    category: 'Agency',
-    status: 'published',
-    domain: 'nova.zovaix.site',
-    thumbnail: '/previews/nova.jpg',
-    isStarred: true,
-    isArchived: false,
-    folderId: 'clients',
-    createdAt: '2026-08-07T12:00:00Z',
-    updatedAt: '4 days ago',
-  },
 ];
 
 const INITIAL_FOLDERS: Folder[] = [
-  { id: 'clients', name: 'Client Projects', color: '#8B5CF6', count: 3 },
+  { id: 'clients', name: 'Client Projects', color: '#8B5CF6', count: 2 },
   { id: 'saas', name: 'SaaS Products', color: '#3B82F6', count: 1 },
   { id: 'ecommerce', name: 'E-Commerce', color: '#10B981', count: 1 },
 ];
@@ -136,7 +122,7 @@ class ProjectsService {
       category,
       status: 'draft',
       domain: `${id}.zovaix.site`,
-      thumbnail: '/previews/lumina.jpg',
+      thumbnail: undefined, // Neutral placeholder by default, no stock images
       isStarred: false,
       isArchived: false,
       createdAt: new Date().toISOString(),

@@ -13,7 +13,10 @@ import {
   Terminal,
   Clock,
   GitCommit,
-  Layers
+  Layers,
+  X,
+  ShieldCheck,
+  Check
 } from "lucide-react";
 
 export default function DeploymentsPage() {
@@ -25,16 +28,82 @@ export default function DeploymentsPage() {
   const [refresh, setRefresh] = useState(0);
   const [selectedDep, setSelectedDep] = useState<Deployment | null>(null);
 
+  // Preflight Check Modal State
+  const [preflightOpen, setPreflightOpen] = useState(false);
+
   const deployments = isProjectContext ? deploymentsService.getByProject(projectId) : deploymentsService.getAll();
 
-  const handleTriggerDeploy = () => {
+  const handleConfirmDeploy = () => {
+    setPreflightOpen(false);
     deploymentsService.triggerBuild(project.id, project.name, "Manual production deploy");
     setRefresh(r => r + 1);
   };
 
   const content = (
-    <div className="p-6 space-y-8 max-w-6xl mx-auto h-full overflow-y-auto">
+    <div className="p-6 space-y-8 max-w-6xl mx-auto h-full overflow-y-auto font-sans">
       
+      {/* ── PRE-DEPLOYMENT PREFLIGHT CHECK MODAL ── */}
+      {preflightOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
+          <div 
+            className="w-full max-w-lg rounded-2xl border p-6 space-y-6 shadow-2xl"
+            style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}
+          >
+            <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
+              <div>
+                <span className="text-[10px] font-mono uppercase text-primary font-bold">Pipeline Verification</span>
+                <h3 className="font-bold text-base text-foreground">Production Preflight Check</h3>
+              </div>
+              <button onClick={() => setPreflightOpen(false)} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Checklist */}
+            <div className="space-y-3 font-mono text-xs">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/10">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-emerald-400" />
+                  <span>Vite Production Build Status</span>
+                </div>
+                <span className="text-emerald-400 font-bold">Passed</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/10">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-emerald-400" />
+                  <span>Environment & Secret Keys</span>
+                </div>
+                <span className="text-emerald-400 font-bold">Configured</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/10">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-emerald-400" />
+                  <span>Custom Domain SSL Verification</span>
+                </div>
+                <span className="text-emerald-400 font-bold">Ready</span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/10">
+                <div className="flex items-center gap-2 text-amber-400">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Security Audit Review</span>
+                </div>
+                <span className="text-amber-400 font-bold">Recommended</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t" style={{ borderColor: 'var(--surface-border)' }}>
+              <Button variant="outline" onClick={() => setPreflightOpen(false)} className="h-9 text-xs border-white/10">Cancel</Button>
+              <Button onClick={handleConfirmDeploy} className="h-9 text-xs font-semibold gap-1.5 bg-primary text-primary-foreground">
+                <Rocket className="h-3.5 w-3.5" /> Deploy to Production →
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -43,10 +112,10 @@ export default function DeploymentsPage() {
         </div>
 
         <Button
-          onClick={handleTriggerDeploy}
+          onClick={() => setPreflightOpen(true)}
           className="h-10 px-5 rounded-xl text-xs font-semibold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shrink-0"
         >
-          <Rocket className="h-4 w-4" /> Trigger Deployment
+          <Rocket className="h-4 w-4" /> Preflight & Deploy
         </Button>
       </div>
 
