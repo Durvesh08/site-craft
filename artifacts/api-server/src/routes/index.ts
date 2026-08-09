@@ -16,10 +16,18 @@ import connectorsRouter from "./connectors";
 import domainsRouter from "./domains";
 import workspaceRouter from "./workspace";
 
+import securityRouter from "./security";
+import notificationsRouter from "./notifications";
+import { ensureUserWorkspace } from "../middlewares/workspaceMiddleware";
+
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+
+// Apply workspace tenancy resolution for all authenticated API routes
+router.use(ensureUserWorkspace);
+
 router.use(meRouter);
 router.use(projectsRouter);
 router.use(generationRouter);
@@ -34,5 +42,7 @@ router.use(storageRouter);
 router.use(connectorsRouter);
 router.use(domainsRouter);
 router.use(workspaceRouter);
+router.use(securityRouter);
+router.use(notificationsRouter);
 
 export default router;

@@ -9,6 +9,8 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { usersTable } from "./auth";
+import { workspacesTable } from "./workspace";
+import { boolean } from "drizzle-orm/pg-core";
 
 export const projectStatusEnum = pgEnum("project_status", [
   "draft",
@@ -20,6 +22,7 @@ export const projectStatusEnum = pgEnum("project_status", [
 
 export const projectsTable = pgTable("projects", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   userId: text("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
@@ -27,6 +30,9 @@ export const projectsTable = pgTable("projects", {
   description: text("description"),
   businessDescription: text("business_description"),
   industry: text("industry"),
+  category: text("category").default("Website"),
+  folderPath: text("folder_path").default("/"),
+  isStarred: boolean("is_starred").notNull().default(false),
   status: projectStatusEnum("status").notNull().default("draft"),
   theme: text("theme"),
   previewUrl: text("preview_url"),

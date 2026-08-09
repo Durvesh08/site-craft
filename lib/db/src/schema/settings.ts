@@ -2,9 +2,11 @@ import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { usersTable } from "./auth";
+import { workspacesTable } from "./workspace";
 
 export const settingsTable = pgTable("settings", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: text("workspace_id").references(() => workspacesTable.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   key: text("key").notNull(),          // e.g. "ftp_host", "gemini_api_key", "logo_url"
   value: text("value").notNull(),       // Plain or encrypted string value

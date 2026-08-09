@@ -310,6 +310,22 @@ export default function SettingsPage() {
             FTP Server Protocols
           </Button>
           <Button
+            variant={activeTab === "security" ? "secondary" : "ghost"}
+            className={`justify-start gap-2 ${activeTab === "security" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            onClick={() => setActiveTab("security")}
+          >
+            <Shield className="h-4 w-4" />
+            Security & Audit
+          </Button>
+          <Button
+            variant={activeTab === "team" ? "secondary" : "ghost"}
+            className={`justify-start gap-2 ${activeTab === "team" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            onClick={() => setActiveTab("team")}
+          >
+            <User className="h-4 w-4" />
+            Team Members
+          </Button>
+          <Button
             variant={activeTab === "ai" ? "secondary" : "ghost"}
             className={`justify-start gap-2 ${activeTab === "ai" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("ai")}

@@ -12,6 +12,13 @@ import {
   ListProjectsQueryParams,
 } from "@workspace/api-zod";
 import { logger } from "../lib/logger";
+import {
+  listProjectFiles,
+  getProjectFile,
+  saveProjectFile,
+  deleteProjectFile,
+  initializeProjectDefaultFiles,
+} from "../lib/projectFilesystem";
 
 // ── Multi-page helpers ─────────────────────────────────────────────────────
 // generatedHtml can be either:
@@ -346,9 +353,12 @@ router.post("/projects", async (req: Request, res: Response) => {
       return;
     }
 
+    const workspaceId = req.workspaceId || "default-ws";
+
     const [project] = await db
       .insert(projectsTable)
       .values({
+        workspaceId,
         userId: req.user!.id,
         name: body.data.name,
         businessDescription: body.data.businessDescription,
@@ -357,10 +367,67 @@ router.post("/projects", async (req: Request, res: Response) => {
       })
       .returning();
 
+    // Initialize real isolated project filesystem
+    await initializeProjectDefaultFiles(workspaceId, project.id, project.name);
+
     res.status(201).json(toProjectResponse(project));
   } catch (err) {
     req.log.error({ err }, "Failed to create project");
     res.status(500).json({ error: "InternalError", message: "Failed to create project" });
+  }
+});
+
+// GET /projects/:id/files — List all isolated files in project
+router.get("/projects/:id/files", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const workspaceId = req.workspaceId || "default-ws";
+    const files = await listProjectFiles(workspaceId, projectId);
+    return res.json({ files });
+  } catch (err) {
+    req.log.error({ err }, "Failed to list project files");
+    return res.status(500).json({ error: "InternalError", message: "Failed to list files" });
+  }
+});
+
+// POST /projects/:id/files/save — Create/update a file in project
+router.post("/projects/:id/files/save", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const workspaceId = req.workspaceId || "default-ws";
+    const { filePath, content, isDir } = req.body;
+
+    if (!filePath) {
+      return res.status(400).json({ error: "BadRequest", message: "filePath is required" });
+    }
+
+    const savedFile = await saveProjectFile(workspaceId, projectId, filePath, content || "", !!isDir);
+    return res.json({ file: savedFile, success: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to save project file");
+    return res.status(500).json({ error: "InternalError", message: "Failed to save file" });
+  }
+});
+
+// DELETE /projects/:id/files/delete — Delete a file from project
+router.delete("/projects/:id/files/delete", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const projectId = String(req.params.id);
+    const workspaceId = req.workspaceId || "default-ws";
+    const { filePath } = req.body;
+
+    if (!filePath) {
+      return res.status(400).json({ error: "BadRequest", message: "filePath is required" });
+    }
+
+    await deleteProjectFile(workspaceId, projectId, filePath);
+    return res.json({ success: true, message: "File deleted" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete project file");
+    return res.status(500).json({ error: "InternalError", message: "Failed to delete file" });
   }
 });
 
