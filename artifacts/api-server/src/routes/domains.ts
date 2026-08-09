@@ -77,7 +77,7 @@ domainsRouter.post("/api/domains", (req: Request, res: Response) => {
 
   domainsStore.unshift(newDomain);
 
-  res.status(201).json({
+  return res.status(201).json({
     success: true,
     domain: newDomain,
     message: "Domain added. Configure DNS A record pointing to 76.76.21.21"
@@ -98,7 +98,7 @@ domainsRouter.post("/api/domains/:id/verify", (req: Request, res: Response) => {
   domain.dnsRecords.forEach(r => r.status = 'configured');
   domain.verifiedAt = new Date().toISOString();
 
-  res.json({
+  return res.json({
     success: true,
     domain,
     message: "DNS records verified & SSL certificate issued successfully"
@@ -110,7 +110,7 @@ domainsRouter.delete("/api/domains/:id", (req: Request, res: Response) => {
   const { id } = req.params;
   domainsStore = domainsStore.filter(d => d.id !== id);
 
-  res.json({
+  return res.json({
     success: true,
     message: "Domain removed from project routing"
   });

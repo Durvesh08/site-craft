@@ -7,7 +7,7 @@ import {
 import { db, usersTable } from '@workspace/db';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import * as oidc from 'openid-client';
-import bcrypt from 'bcryptjs';
+import { hashPassword, comparePassword } from '../lib/passwords';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { signJwt, type JwtPayload } from '../lib/jwt';
@@ -29,56 +29,52 @@ function getOrigin(req: Request): string {
 function setJwtCookie(res: Response, token: string) {
   res.cookie(TOKEN_COOKIE, token, {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    path: '/',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     maxAge: SESSION_TTL,
+    path: '/',
   });
 }
 
 function setOidcCookie(res: Response, name: string, value: string) {
   res.cookie(name, value, {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
-    path: '/',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     maxAge: OIDC_COOKIE_TTL,
+    path: '/',
   });
 }
 
-function getSafeReturnTo(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    !value.startsWith('/') ||
-    value.startsWith('//')
-  ) {
-    return '/';
+function getSafeReturnTo(param?: unknown): string {
+  if (typeof param === 'string' && param.startsWith('/') && !param.startsWith('//')) {
+    return param;
   }
-  return value;
+  return '/';
 }
 
 async function upsertUser(claims: Record<string, unknown>) {
-  const email = (claims.email as string) || null;
-  const userData = {
-    id: claims.sub as string,
-    email: email,
-    firstName: (claims.first_name as string) || (claims.given_name as string) || null,
-    lastName: (claims.last_name as string) || (claims.family_name as string) || null,
-    profileImageUrl: (claims.profile_image_url || claims.picture) as string | null,
-  };
+  const email = (claims.email as string) || (claims.sub as string);
+  const firstName = (claims.given_name as string) || (claims.name as string) || null;
+  const lastName = (claims.family_name as string) || null;
+  const profileImageUrl = (claims.picture as string) || null;
 
-  const [user] = await db
-    .insert(usersTable)
-    .values(userData)
-    .onConflictDoUpdate({
-      target: usersTable.id,
-      set: {
-        ...userData,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
-  return user;
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  if (existing) {
+    const [updated] = await db.update(usersTable)
+      .set({ firstName, lastName, profileImageUrl, updatedAt: new Date() })
+      .where(eq(usersTable.id, existing.id))
+      .returning();
+    return updated;
+  }
+
+  const [created] = await db.insert(usersTable).values({
+    email,
+    firstName,
+    lastName,
+    profileImageUrl,
+  }).returning();
+  return created;
 }
 
 router.get('/auth/user', (req: Request, res: Response) => {
@@ -115,7 +111,7 @@ router.post('/auth/register', async (req: Request, res: Response) => {
       return;
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = hashPassword(password);
     const [dbUser] = await db.insert(usersTable).values({
       email,
       passwordHash,
@@ -162,7 +158,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
       return;
     }
 
-    const passwordMatch = await bcrypt.compare(password, dbUser.passwordHash);
+    const passwordMatch = comparePassword(password, dbUser.passwordHash);
     if (!passwordMatch) {
       res.status(401).json({ error: 'Invalid email or password' });
       return;

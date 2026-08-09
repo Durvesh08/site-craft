@@ -73,7 +73,7 @@ connectorsRouter.post("/api/connectors/:id/connect", (req: Request, res: Respons
   connector.status = 'Connected';
   connector.connectedAt = new Date().toISOString();
 
-  res.json({
+  return res.json({
     success: true,
     message: `Successfully connected ${connector.name}`,
     connector
@@ -92,7 +92,7 @@ connectorsRouter.post("/api/connectors/:id/disconnect", (req: Request, res: Resp
   connector.status = 'Available';
   connector.connectedAt = undefined;
 
-  res.json({
+  return res.json({
     success: true,
     message: `Disconnected ${connector.name}`,
     connector
@@ -108,7 +108,7 @@ connectorsRouter.get("/api/connectors/:id/test", (req: Request, res: Response) =
     return res.status(404).json({ success: false, error: "Connector not found" });
   }
 
-  res.json({
+  return res.json({
     success: true,
     status: connector.status,
     latencyMs: Math.floor(Math.random() * 40) + 15,
