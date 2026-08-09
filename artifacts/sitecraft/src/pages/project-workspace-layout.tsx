@@ -57,28 +57,28 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
     <div className="flex flex-col h-[calc(100vh-64px)] w-full overflow-hidden bg-background text-foreground -m-4 md:-m-8 font-sans">
       
       {/* ── IDE TOP WORKSPACE HEADER ── */}
-      <header className="h-14 px-4 flex items-center justify-between shrink-0 border-b z-20" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+      <header className="h-14 px-4 flex items-center justify-between gap-3 shrink-0 border-b z-20 min-w-0" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
         
         {/* Left: Back & Project Info */}
-        <div className="flex items-center gap-3">
-          <Link href="/projects" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors">
+        <div className="flex items-center gap-2.5 shrink-0 max-w-[240px] lg:max-w-[300px] overflow-hidden">
+          <Link href="/projects" className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Link>
 
-          <div className="h-4 w-[1px] bg-white/10" />
+          <div className="h-4 w-[1px] bg-white/10 shrink-0" />
 
-          <div className="flex items-center gap-3">
-            <h2 className="font-extrabold text-base tracking-tight text-foreground">{project.name}</h2>
-            <span className="text-xs text-muted-foreground font-mono hidden sm:inline">{project.domain}</span>
+          <div className="flex flex-col min-w-0 overflow-hidden">
+            <h2 className="font-bold text-xs lg:text-sm text-foreground truncate whitespace-nowrap tracking-tight">{project.name}</h2>
+            <span className="text-[10px] text-muted-foreground font-mono truncate hidden sm:inline">{project.domain}</span>
           </div>
 
-          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase font-semibold hidden md:inline">
+          <span className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase font-semibold shrink-0 hidden 2xl:inline">
             ● {project.status}
           </span>
         </div>
 
-        {/* Center Sub-Navigation Tabs */}
-        <nav className="hidden xl:flex items-center gap-0.5 p-1 rounded-xl bg-white/5 border border-white/10">
+        {/* Center Sub-Navigation Tabs — Horizontally Scrollable Bar */}
+        <nav className="flex-1 min-w-0 overflow-x-auto whitespace-nowrap scrollbar-none flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mx-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -86,13 +86,13 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-sans tracking-normal font-medium transition-colors shrink-0 ${
                   isActive
-                    ? 'bg-primary text-primary-foreground font-semibold'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3.5 w-3.5 shrink-0" />
                 <span>{tab.label}</span>
               </Link>
             );

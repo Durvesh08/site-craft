@@ -42,6 +42,7 @@ export default function ProjectEditor() {
   // Agent States
   const [agentMode, setAgentMode] = useState<AgentMode>("Build");
   const [editInstruction, setEditInstruction] = useState("");
+  const [attachments, setAttachments] = useState<string[]>([]);
   const [isBuilding, setIsBuilding] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
@@ -64,16 +65,18 @@ export default function ProjectEditor() {
   const handleSendPrompt = () => {
     if (!editInstruction.trim() || isBuilding) return;
 
+    const attachedText = attachments.length > 0 ? ` [Attached: ${attachments.join(', ')}]` : '';
     const userMsg: ChatMessage = {
       id: `usr-${Date.now()}`,
       sender: 'user',
-      text: editInstruction,
+      text: editInstruction + attachedText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    const promptText = editInstruction;
+    const promptText = editInstruction + attachedText;
     setMessages(prev => [...prev, userMsg]);
     setEditInstruction("");
+    setAttachments([]);
     setIsBuilding(true);
 
     // PLAN MODE: Create plan proposal requiring user approval
@@ -207,9 +210,13 @@ export default function ProjectEditor() {
           </div>
 
           {/* Iframe Viewport Container */}
-          <div className="flex-1 min-h-0 flex items-center justify-center p-4 overflow-auto">
-            <div className={`transition-all duration-300 rounded-xl overflow-hidden border border-white/15 bg-black ${
-              viewport === 'mobile' ? 'w-[375px] h-[667px]' : viewport === 'tablet' ? 'w-[768px] h-[900px]' : 'w-full h-full'
+          <div className="flex-1 min-h-0 flex items-center justify-center p-4 overflow-auto bg-[#090A0C]">
+            <div className={`transition-all duration-300 rounded-2xl overflow-hidden border border-white/15 bg-black shadow-2xl ${
+              viewport === 'mobile'
+                ? 'w-[375px] h-[667px] max-h-full shrink-0 my-auto'
+                : viewport === 'tablet'
+                ? 'w-[768px] h-[90%] max-h-[850px] shrink-0 my-auto'
+                : 'w-full h-full'
             }`}>
               <iframe
                 key={iframeKey}
@@ -325,8 +332,21 @@ export default function ProjectEditor() {
             )}
           </div>
 
-          {/* Prompt Composer Box */}
+          {/* Prompt Composer Box with Attachment Support */}
           <div className="p-3 border-t space-y-2 shrink-0" style={{ borderColor: 'var(--surface-border)' }}>
+            
+            {/* Attachment Chips Display */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 px-1 font-mono text-[10px]">
+                {attachments.map((file, idx) => (
+                  <span key={idx} className="px-2 py-0.5 rounded-md bg-white/10 text-primary border border-primary/30 flex items-center gap-1">
+                    <Paperclip className="h-3 w-3" /> {file}
+                    <button onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="hover:text-destructive ml-1">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             <div className="relative rounded-xl border bg-black/40 overflow-hidden" style={{ borderColor: 'var(--surface-border)' }}>
               <textarea
                 value={editInstruction}
@@ -336,15 +356,32 @@ export default function ProjectEditor() {
                 className="w-full h-20 p-3 bg-transparent text-xs text-foreground outline-none resize-none placeholder:text-muted-foreground/50"
               />
               <div className="p-2 border-t flex items-center justify-between bg-white/[0.02]" style={{ borderColor: 'var(--surface-border)' }}>
-                <span className="text-[10px] font-mono text-muted-foreground">Press Enter to send</span>
-                <Button
-                  size="sm"
-                  onClick={handleSendPrompt}
-                  disabled={!editInstruction.trim() || isBuilding}
-                  className="h-7 px-3 text-xs font-semibold gap-1 bg-primary text-primary-foreground"
-                >
-                  <Send className="h-3 w-3" /> Send
-                </Button>
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <button
+                    onClick={() => {
+                      const sample = ["migration-v2.sql", "backend-schema.json", "auth-config.ts"];
+                      const next = sample[attachments.length % sample.length];
+                      setAttachments(prev => [...prev, next]);
+                      toast.success(`Attached ${next} to AI context`);
+                    }}
+                    className="p-1 rounded-lg hover:text-foreground hover:bg-white/10 transition-colors flex items-center gap-1 text-[11px] font-mono"
+                    title="Attach Code / Migration File"
+                  >
+                    <Paperclip className="h-3.5 w-3.5 text-primary" /> Attach File
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">Press Enter to send</span>
+                  <Button
+                    size="sm"
+                    onClick={handleSendPrompt}
+                    disabled={(!editInstruction.trim() && attachments.length === 0) || isBuilding}
+                    className="h-7 px-3 text-xs font-semibold gap-1 bg-primary text-primary-foreground"
+                  >
+                    <Send className="h-3 w-3" /> Send
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings, User, Key, Server, Palette, LogOut, Check, X, Shield, Cpu, RefreshCw, Globe } from "lucide-react";
+import { Settings, User, Key, Server, Palette, LogOut, Check, X, Shield, Cpu, RefreshCw, Globe, Copy } from "lucide-react";
 import { ImageUploader } from "@/components/ImageUploader";
 import { toast } from "sonner";
 
@@ -286,6 +286,14 @@ export default function SettingsPage() {
       <div className="grid gap-8 md:grid-cols-[240px_1fr]">
         <nav className="flex flex-col gap-2">
           <Button
+            variant={activeTab === "workspace" ? "secondary" : "ghost"}
+            className={`justify-start gap-2 ${activeTab === "workspace" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            onClick={() => setActiveTab("workspace")}
+          >
+            <Globe className="h-4 w-4" />
+            Workspace Settings
+          </Button>
+          <Button
             variant={activeTab === "profile" ? "secondary" : "ghost"}
             className={`justify-start gap-2 ${activeTab === "profile" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("profile")}
@@ -320,6 +328,115 @@ export default function SettingsPage() {
         </nav>
 
         <div className="space-y-6">
+          {/* TAB 0: WORKSPACE SETTINGS (Lovable Style) */}
+          {activeTab === "workspace" && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">Workspace settings</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">Workspaces allow you to collaborate on projects in real time.</p>
+                </div>
+                <a href="#" className="text-xs text-primary font-medium flex items-center gap-1 hover:underline">
+                  Open docs ↗
+                </a>
+              </div>
+
+              {/* Card 1: Workspace profile */}
+              <Card className="rounded-2xl space-y-6 p-6" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <div className="border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
+                  <h3 className="font-bold text-base text-foreground">Workspace profile</h3>
+                  <p className="text-xs text-muted-foreground">Control how this workspace appears on Zovaix.</p>
+                </div>
+
+                <div className="space-y-5 text-xs">
+                  {/* Avatar */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-foreground">Avatar</h4>
+                      <p className="text-muted-foreground text-[11px]">Set an avatar for your workspace.</p>
+                    </div>
+                    <div className="h-10 w-10 rounded-xl bg-orange-600 font-bold text-white flex items-center justify-center text-sm shadow-sm">
+                      Z
+                    </div>
+                  </div>
+
+                  {/* Name */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t" style={{ borderColor: 'var(--surface-border)' }}>
+                    <div>
+                      <h4 className="font-bold text-foreground">Name</h4>
+                      <p className="text-muted-foreground text-[11px]">Your full workspace name, as visible to others.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        defaultValue="Zovaix Production Studio"
+                        className="h-9 w-64 bg-background/50 text-xs font-medium"
+                      />
+                      <span className="text-[10px] font-mono text-muted-foreground/60">24 / 50</span>
+                    </div>
+                  </div>
+
+                  {/* Workspace ID */}
+                  <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'var(--surface-border)' }}>
+                    <div>
+                      <h4 className="font-bold text-foreground">Workspace ID</h4>
+                      <p className="text-muted-foreground text-[11px]">Unique workspace identifier.</p>
+                    </div>
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
+                      <span>da4276813087dedd48ca</span>
+                      <button className="p-1 text-muted-foreground hover:text-foreground">
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Workspace Handle */}
+                  <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'var(--surface-border)' }}>
+                    <div>
+                      <h4 className="font-bold text-foreground">Workspace handle</h4>
+                      <p className="text-muted-foreground text-[11px]">Set a handle for the workspace profile page.</p>
+                    </div>
+                    <Button size="sm" variant="outline" className="h-8 text-xs border-white/10">Set handle</Button>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Card 2: Member defaults */}
+              <Card className="rounded-2xl space-y-6 p-6" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <div className="border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
+                  <h3 className="font-bold text-base text-foreground">Member defaults</h3>
+                  <p className="text-xs text-muted-foreground">Set default limits for workspace members.</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div>
+                    <h4 className="font-bold text-foreground">Default monthly member credit limit</h4>
+                    <p className="text-muted-foreground text-[11px]">The default monthly credit limit for members of this workspace. Leave empty to use no limit.</p>
+                  </div>
+                  <Input
+                    type="number"
+                    defaultValue="1"
+                    className="h-9 w-32 bg-background/50 text-xs font-mono text-center"
+                  />
+                </div>
+              </Card>
+
+              {/* Card 3: Workspace access */}
+              <Card className="rounded-2xl space-y-6 p-6" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <div className="border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
+                  <h3 className="font-bold text-base text-foreground">Workspace access</h3>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <div>
+                    <h4 className="font-bold text-foreground">Leave workspace</h4>
+                    <p className="text-muted-foreground text-[11px]">You cannot leave your last workspace. Your account must be a member of at least one workspace.</p>
+                  </div>
+                  <Button size="sm" variant="outline" disabled className="h-8 text-xs text-destructive/50 border-destructive/20 cursor-not-allowed">Leave workspace</Button>
+                </div>
+              </Card>
+            </div>
+          )}
+
           {/* TAB 1: PROFILE */}
           {activeTab === "profile" && (
             <Card className="rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
