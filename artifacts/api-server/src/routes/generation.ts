@@ -123,7 +123,10 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
       })
       .where(eq(projectsTable.id, params.data.id));
 
-    // The background worker (src/ai/worker.ts) will pick up the 'pending' job.
+    // Dispatch generation asynchronously so it works on both serverless & traditional nodes
+    runGeneration(job.id, params.data.id, req.user!.id, payload).catch((err) =>
+      logger.error({ err, jobId: job.id }, "Generation dispatch failed")
+    );
 
     res.status(202).json(toJobResponse(job, steps));
   } catch (err) {
@@ -161,7 +164,10 @@ router.post("/projects/:id/chat-edit", async (req: Request, res: Response) => {
       .set({ activeJobId: job.id, updatedAt: new Date() })
       .where(eq(projectsTable.id, params.data.id));
 
-    // The background worker will pick up the 'pending' job.
+    // Dispatch chat edit asynchronously
+    runChatEdit(job.id, params.data.id, req.user!.id, payload).catch((err) =>
+      logger.error({ err, jobId: job.id }, "Chat edit dispatch failed")
+    );
 
     res.status(202).json(toJobResponse(job, steps));
   } catch (err) {

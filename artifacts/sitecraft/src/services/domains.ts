@@ -93,14 +93,23 @@ class DomainsService {
   async verify(id: string): Promise<DomainItem | undefined> {
     const dom = this.domains.find(d => d.id === id);
     if (dom) {
-      dom.status = 'live';
-      dom.sslStatus = 'active';
-      dom.dnsRecords.forEach(r => r.status = 'valid');
-
+      dom.status = 'checking';
       try {
-        await fetch(`/api/domains/${id}/verify`, { method: 'POST' });
+        const res = await fetch(`/api/domains/${id}/verify`, { method: 'POST', credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.verified) {
+            dom.status = 'live';
+            dom.sslStatus = 'active';
+            dom.dnsRecords.forEach(r => r.status = 'valid');
+          } else {
+            dom.status = 'error';
+          }
+        } else {
+          dom.status = 'error';
+        }
       } catch (_err) {
-        // Local fallback
+        dom.status = 'error';
       }
     }
     return dom;
