@@ -67,12 +67,12 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
 
           <div className="h-4 w-[1px] bg-white/10" />
 
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm text-foreground">{project.name}</span>
-            <span className="text-xs text-muted-foreground font-mono hidden sm:inline">({project.domain})</span>
+          <div className="flex items-center gap-3">
+            <h2 className="font-extrabold text-base tracking-tight text-foreground">{project.name}</h2>
+            <span className="text-xs text-muted-foreground font-mono hidden sm:inline">{project.domain}</span>
           </div>
 
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase hidden md:inline">
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase font-semibold hidden md:inline">
             ● {project.status}
           </span>
         </div>

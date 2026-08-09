@@ -111,45 +111,49 @@
 
 @layer base {
   :root {
-    /* Graphite & Restrained Cobalt Blue Palette */
-    --background: 220 18% 4%;          /* #090A0C — Surface-0 */
-    --foreground: 240 5% 96%;          /* #F4F4F5 — warm soft ivory */
+    /* Sophisticated Neutral Graphite & Restrained Indigo Palette */
+    --background: 220 8% 7%;           /* #111214 — Soft charcoal/graphite background */
+    --foreground: 45 6% 95%;           /* #F4F4F2 — Warm primary text */
 
-    --card: 220 14% 8%;                /* #121317 — Surface-1 */
-    --card-foreground: 240 5% 96%;
+    --card: 216 9% 10%;                /* #17191C — Surface 1 */
+    --card-foreground: 45 6% 95%;
 
-    --popover: 220 12% 11%;            /* #1A1C22 — Surface-2 */
-    --popover-foreground: 240 5% 96%;
+    --popover: 216 11% 13%;            /* #1D2024 — Elevated surface 2 */
+    --popover-foreground: 45 6% 95%;
 
-    --primary: 221 83% 53%;            /* Restrained cobalt / electric blue #2563EB */
+    --primary: 221 83% 53%;            /* Restrained blue/indigo accent #2563EB */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 12% 11%;          /* Surface-2 variant */
-    --secondary-foreground: 240 5% 96%;
+    --secondary: 216 10% 15%;          /* #23262B — Highest surface 3 */
+    --secondary-foreground: 45 6% 95%;
 
-    --muted: 220 10% 15%;              /* Surface-3 */
-    --muted-foreground: 240 4% 65%;    /* Neutral warm gray */
+    --muted: 216 10% 15%;
+    --muted-foreground: 216 5% 46%;    /* #70757D — Muted text */
 
-    --accent: 220 10% 15%;
-    --accent-foreground: 240 5% 96%;
+    --accent: 216 10% 15%;
+    --accent-foreground: 45 6% 95%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;          /* #EF4444 — Muted red */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 10% 14%;             /* Subtle graphite border */
-    --input: 220 10% 14%;
+    --border: 216 10% 19%;             /* #2B2F35 — Border */
+    --input: 216 10% 19%;
     --ring: 221 83% 53%;
 
     --radius: 0.75rem;
 
     /* ── Extended Surface Tokens ── */
-    --surface-0: #090A0C;
-    --surface-1: #121317;
-    --surface-2: #1A1C22;
-    --surface-3: #22242C;
-    --surface-4: #2B2E38;
-    --surface-border: rgba(255, 255, 255, 0.08);
-    --surface-border-hover: rgba(255, 255, 255, 0.16);
+    --surface-0: #111214;
+    --surface-1: #17191C;
+    --surface-2: #1D2024;
+    --surface-3: #23262B;
+    --surface-4: #2B2F35;
+    --surface-border: #2B2F35;
+    --surface-border-hover: #3E434B;
+
+    /* ── Typography Tokens ── */
+    --font-sans: "Geist", "Inter", system-ui, -apple-system, sans-serif;
+    --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
 
     /* ── Semantic Colors ── */
     --success: #10B981;

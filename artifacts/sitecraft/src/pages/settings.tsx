@@ -307,7 +307,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab("ai")}
           >
             <Cpu className="h-4 w-4" />
-            Gemini Core Engines
+            API Setup
           </Button>
           <Button
             variant={activeTab === "branding" ? "secondary" : "ghost"}
@@ -563,9 +563,9 @@ export default function SettingsPage() {
                     <Cpu className="h-6 w-6" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl font-bold">AI Generation Settings</CardTitle>
+                    <CardTitle className="text-xl font-bold">API Setup & Model Registry</CardTitle>
                     <CardDescription className="text-sm">
-                      Configure your preferred AI model engines. ZOVAIX SITES supports Google Gemini, OpenAI (GPT-4o), Anthropic Claude 3.5, DeepSeek Coder, and Free GLM / OpenRouter endpoints.
+                      Configure your official AI providers and explicit model registry parameters. Select workspace default model and API key credentials.
                     </CardDescription>
                   </div>
                 </div>
