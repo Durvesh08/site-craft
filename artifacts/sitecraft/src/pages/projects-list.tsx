@@ -23,6 +23,10 @@ export default function ProjectsList() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [, setRefreshCount] = useState(0);
 
+  React.useEffect(() => {
+    projectsService.fetchRemoteProjects().then(() => setRefreshCount(c => c + 1));
+  }, []);
+
   const projects = projectsService.getAll();
   const starred = projectsService.getStarred();
   const archived = projectsService.getArchived();

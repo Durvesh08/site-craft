@@ -130,6 +130,7 @@ class ProjectsService {
         const data = await res.json();
         if (data.id) {
           localProj.id = data.id;
+          this.fetchRemoteProjects().catch(() => {});
         }
       }
     } catch {

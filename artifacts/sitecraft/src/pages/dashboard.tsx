@@ -62,6 +62,10 @@ export default function Dashboard() {
   const [planModalOpen, setPlanModalOpen] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
 
+  React.useEffect(() => {
+    projectsService.fetchRemoteProjects().then(() => setRefreshCount(c => c + 1));
+  }, []);
+
   const projects = projectsService.getAll();
   const recentProjects = projectsService.getRecent(4);
 
