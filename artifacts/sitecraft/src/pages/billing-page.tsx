@@ -12,7 +12,15 @@ import {
 } from "lucide-react";
 
 export default function BillingPage() {
-  const usage = workspaceService.getUsage();
+  const [usage, setUsage] = React.useState(workspaceService.getUsage());
+
+  React.useEffect(() => {
+    const fetchUsage = async () => {
+      const data = await workspaceService.syncFromBackend();
+      setUsage({ ...data });
+    };
+    fetchUsage();
+  }, []);
 
   return (
     <div className="p-6 space-y-8 max-w-5xl mx-auto h-full overflow-y-auto pb-16">

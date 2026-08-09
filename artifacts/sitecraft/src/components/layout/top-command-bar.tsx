@@ -76,11 +76,38 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
 
         <div className="h-4 w-[1px] bg-white/10 hidden sm:block" />
 
-        {/* Notifications & Help */}
-        <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors relative" title="Notifications">
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
-        </button>
+        {/* Notifications Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors relative outline-none" title="Notifications">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80 bg-black/95 backdrop-blur-xl border-white/10 p-0 text-xs shadow-2xl">
+            <div className="p-3 border-b border-white/10 flex items-center justify-between">
+              <span className="font-bold text-foreground">Notifications</span>
+              <span className="text-[10px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded-full">3 New</span>
+            </div>
+            <div className="divide-y divide-white/10 max-h-64 overflow-y-auto">
+              <div className="p-3 space-y-1 hover:bg-white/5 cursor-pointer">
+                <p className="font-semibold text-foreground text-xs">AI Build Completed</p>
+                <p className="text-[11px] text-muted-foreground">Your website project "Lumina Studio" was synthesized successfully.</p>
+                <span className="text-[10px] text-muted-foreground/60 font-mono">2 mins ago</span>
+              </div>
+              <div className="p-3 space-y-1 hover:bg-white/5 cursor-pointer">
+                <p className="font-semibold text-foreground text-xs">Domain Verification Active</p>
+                <p className="text-[11px] text-muted-foreground">DNS TXT record check initiated for custom domain.</p>
+                <span className="text-[10px] text-muted-foreground/60 font-mono">1 hour ago</span>
+              </div>
+              <div className="p-3 space-y-1 hover:bg-white/5 cursor-pointer">
+                <p className="font-semibold text-foreground text-xs">Welcome to Zovaix Production Studio</p>
+                <p className="text-[11px] text-muted-foreground">Workspace initialization complete with Gemini 2.5 Flash engine.</p>
+                <span className="text-[10px] text-muted-foreground/60 font-mono">1 day ago</span>
+              </div>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <button className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors hidden sm:block" title="Help & Documentation">
           <HelpCircle className="h-4 w-4" />

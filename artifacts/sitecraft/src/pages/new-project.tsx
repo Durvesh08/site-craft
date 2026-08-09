@@ -40,25 +40,7 @@ const FONT_OPTIONS = [
   { value: "display", label: "Bold Display (Clash Display)" },
 ];
 
-// ── Simple Image Uploader (URL-based, no file upload server needed) ─────────
-function ImageUploader({ value, onChange, label, accept }: { value: string; onChange: (v: string) => void; label: string; accept?: string }) {
-  return (
-    <div className="space-y-2">
-      <Input
-        placeholder={`Paste ${label.toLowerCase()} URL (e.g. https://...)`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="bg-background/50 text-sm"
-      />
-      {value && (
-        <div className="flex items-center gap-3">
-          <img src={value} alt={label} className="h-10 w-10 rounded-lg object-cover border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          <button type="button" onClick={() => onChange("")} className="text-xs text-muted-foreground hover:text-foreground underline">Remove</button>
-        </div>
-      )}
-    </div>
-  );
-}
+import { ImageUploader } from "@/components/ImageUploader";
 
 
 function StepIndicator({ step, total }: { step: number; total: number }) {

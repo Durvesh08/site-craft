@@ -75,7 +75,6 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
         {/* CONNECT SECTION */}
         <NavGroup title="CONNECT" collapsed={collapsed}>
-          <NavItem href="/connectors" icon={Plug} label="Connectors" active={location === "/connectors"} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/domains" icon={Globe} label="Domains" active={location === "/domains"} collapsed={collapsed} onNavigate={onNavigate} />
         </NavGroup>
 
@@ -89,27 +88,11 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
       </div>
 
-      {/* Bottom Footer & Resource Meter */}
+      {/* Bottom Footer */}
       <div 
         className="p-3 border-t space-y-3 shrink-0"
         style={{ borderColor: 'var(--surface-border)' }}
       >
-        {!collapsed && (
-          <div className="p-3 rounded-xl space-y-2 text-xs" style={{ background: 'var(--surface-0)', border: '1px solid var(--surface-border)' }}>
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase text-muted-foreground">Storage Meter</span>
-              <span className="font-mono text-[11px] font-medium text-foreground">
-                {(usage.storageUsedMB / 1000).toFixed(1)} GB / 10 GB
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary rounded-full transition-all"
-                style={{ width: `${(usage.storageUsedMB / usage.storageTotalMB) * 100}%` }} 
-              />
-            </div>
-          </div>
-        )}
 
         {/* User Card */}
         {user ? (
