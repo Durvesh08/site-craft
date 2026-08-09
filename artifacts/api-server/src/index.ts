@@ -18,25 +18,39 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-// Run migrations before starting the server
-autoMigrate()
-  .then(() => {
-    app.listen(port, async (err) => {
-      if (err) {
-        logger.error({ err }, "Error listening on port");
-        process.exit(1);
-      }
+// Start HTTP server and background workers with migration fault tolerance
+const startServer = async () => {
+  if (process.env.DATABASE_URL) {
+    try {
+      await autoMigrate();
+      logger.info("Auto-migration completed successfully");
+    } catch (err) {
+      logger.warn({ err }, "Auto-migration encountered an issue — starting server in fallback mode");
+    }
+  } else {
+    logger.warn("DATABASE_URL not set — starting server in in-memory fallback mode");
+  }
 
-      logger.info({ port }, "Server listening");
+  app.listen(port, async (err) => {
+    if (err) {
+      logger.error({ err }, "Error listening on port");
+      process.exit(1);
+    }
 
-      // Sweep and recover any hung jobs from previous run
+    logger.info({ port }, "Server listening");
+
+    try {
       await recoverInterruptedJobs();
+    } catch (jobErr) {
+      logger.warn({ err: jobErr }, "Job recovery skipped");
+    }
 
-      // Start the AI Background Worker loop
+    try {
       startWorkerLoop();
-    });
-  })
-  .catch((err) => {
-    logger.error({ err }, "Auto-migration failed — cannot start server");
-    process.exit(1);
+    } catch (workerErr) {
+      logger.warn({ err: workerErr }, "AI worker loop skipped");
+    }
   });
+};
+
+startServer();
