@@ -4,27 +4,94 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Settings, User, Key, Server, Palette, LogOut, Check, X, Shield, Cpu, RefreshCw, Globe, Copy } from "lucide-react";
+import {
+  Settings, User, Server, Palette, LogOut, Check, X, Shield, Cpu, RefreshCw, Globe, Copy,
+  Users, Key, Trash2, Mail, UserPlus, Clock, Laptop, Activity
+} from "lucide-react";
 import { ImageUploader } from "@/components/ImageUploader";
 import { toast } from "sonner";
 
-type Tab = "profile" | "workspace" | "team" | "security" | "api" | "ftp" | "ai" | "branding";
+type Tab = "workspace" | "security" | "team" | "api" | "ftp" | "ai" | "branding";
+
+interface WorkspaceInfo {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  defaultAiProvider?: string;
+  defaultAiModel?: string;
+}
+
+interface UserSession {
+  id: string;
+  userId: string;
+  ipAddress: string;
+  userAgent: string;
+  isCurrent: boolean;
+  lastActiveAt: string;
+  createdAt: string;
+}
+
+interface AuditLogItem {
+  id: string;
+  action: string;
+  resource: string;
+  resourceId?: string;
+  ipAddress: string;
+  userAgent: string;
+  createdAt: string;
+}
+
+interface TeamMember {
+  id: string;
+  userId: string;
+  email: string;
+  name: string;
+  role: string;
+  avatarUrl?: string;
+  joinedAt: string;
+}
+
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  expiresAt: string;
+}
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const searchParams = new URLSearchParams(window.location.search);
-  const initialTab = (searchParams.get("tab") as Tab) || "profile";
+  const initialTab = (searchParams.get("tab") as Tab) || "workspace";
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
-  // Profile State
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [profileImageUrl, setProfileImageUrl] = useState("");
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  // Workspace State
+  const [workspace, setWorkspace] = useState<WorkspaceInfo>({
+    id: "default-ws",
+    name: "Zovaix Production Studio",
+    slug: "zovaix-studio",
+    ownerId: user?.id || "user-1",
+  });
+  const [wsName, setWsName] = useState("");
+  const [wsSlug, setWsSlug] = useState("");
+  const [isSavingWs, setIsSavingWs] = useState(false);
 
-  // FTP & Free Hosting State
+  // Security State
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [isLoadingSecurity, setIsLoadingSecurity] = useState(false);
+
+  // Team State
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("MEMBER");
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [isLoadingTeam, setIsLoadingTeam] = useState(false);
+
+  // FTP & Hosting State
   const [ftpHost, setFtpHost] = useState("");
   const [ftpPort, setFtpPort] = useState("21");
   const [ftpUsername, setFtpUsername] = useState("");
@@ -54,19 +121,82 @@ export default function SettingsPage() {
   const [primaryColor, setPrimaryColor] = useState("#3b82f6");
   const [isSavingBranding, setIsSavingBranding] = useState(false);
 
-  // Loading Settings State
+  // General Loading
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
-  // Initialize fields from auth user
+  // Fetch Workspace Settings
   useEffect(() => {
-    if (user) {
-      setFirstName(user.firstName || "");
-      setLastName(user.lastName || "");
-      setProfileImageUrl(user.profileImageUrl || "");
-    }
-  }, [user]);
+    const fetchWorkspace = async () => {
+      try {
+        const res = await fetch("/api/workspace/settings", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.workspace) {
+            setWorkspace(data.workspace);
+            setWsName(data.workspace.name || "Zovaix Production Studio");
+            setWsSlug(data.workspace.slug || "zovaix-studio");
+          }
+        }
+      } catch {
+        // Fallback defaults
+        setWsName("Zovaix Production Studio");
+        setWsSlug("zovaix-studio");
+      }
+    };
+    fetchWorkspace();
+  }, []);
 
-  // Load settings on mount
+  // Fetch Security Data
+  useEffect(() => {
+    if (activeTab === "security") {
+      const fetchSecurity = async () => {
+        setIsLoadingSecurity(true);
+        try {
+          const [sessRes, logsRes] = await Promise.all([
+            fetch("/api/security/sessions", { credentials: "include" }),
+            fetch("/api/security/audit-logs", { credentials: "include" }),
+          ]);
+          if (sessRes.ok) {
+            const sessData = await sessRes.json();
+            setSessions(sessData.sessions || []);
+          }
+          if (logsRes.ok) {
+            const logsData = await logsRes.json();
+            setAuditLogs(logsData.auditLogs || []);
+          }
+        } catch {
+          toast.error("Failed to load security audit data");
+        } finally {
+          setIsLoadingSecurity(false);
+        }
+      };
+      fetchSecurity();
+    }
+  }, [activeTab]);
+
+  // Fetch Team Members
+  useEffect(() => {
+    if (activeTab === "team") {
+      const fetchTeam = async () => {
+        setIsLoadingTeam(true);
+        try {
+          const res = await fetch("/api/workspace/members", { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            setMembers(data.members || []);
+            setInvitations(data.invitations || []);
+          }
+        } catch {
+          toast.error("Failed to load team members");
+        } finally {
+          setIsLoadingTeam(false);
+        }
+      };
+      fetchTeam();
+    }
+  }, [activeTab]);
+
+  // Load platform settings on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -75,7 +205,6 @@ export default function SettingsPage() {
         const data = await res.json();
         const settings = data.settings || {};
 
-        // Deployment (FTP & Free Hosting)
         if (settings.deployment) {
           setFtpHost(settings.deployment.ftp_host || "");
           setFtpPort(settings.deployment.ftp_port || "21");
@@ -86,10 +215,8 @@ export default function SettingsPage() {
           setGithubToken(settings.deployment.github_token || "");
           const proto = settings.deployment.ftp_protocol;
           if (proto === "sftp" || proto === "ftps" || proto === "ftp") setFtpProtocol(proto);
-          else if (settings.deployment.ftp_secure === "true") setFtpProtocol("ftps");
         }
 
-        // AI Settings
         if (settings.ai) {
           setGeminiKey(settings.ai.gemini_api_key || "");
           setOpenaiKey(settings.ai.openai_api_key || "");
@@ -99,49 +226,87 @@ export default function SettingsPage() {
           setPreferredEngine(settings.ai.preferred_ai_engine || "gemini");
         }
 
-        // Branding
         if (settings.branding) {
           setCompanyName(settings.branding.company_name || "");
           setLogoUrl(settings.branding.logo_url || "");
           setFaviconUrl(settings.branding.favicon_url || "");
           setPrimaryColor(settings.branding.primary_color || "#3b82f6");
         }
-      } catch (err) {
-        toast.error("Failed to load platform configurations");
+      } catch {
+        // Fallback gracefully
       } finally {
         setIsLoadingSettings(false);
       }
     };
-
     loadSettings();
   }, []);
 
-  // Save Profile Changes
-  const handleSaveProfile = async () => {
-    setIsSavingProfile(true);
+  // Save Workspace Settings
+  const handleSaveWorkspace = async () => {
+    setIsSavingWs(true);
     try {
-      const res = await fetch("/api/auth/me", {
+      const res = await fetch("/api/workspace/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          profileImageUrl,
-        }),
+        body: JSON.stringify({ name: wsName, slug: wsSlug }),
       });
-
-      if (!res.ok) throw new Error("Failed to update profile");
-      toast.success("Profile details updated successfully");
-      window.location.reload(); // Reload to refresh header user state
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update profile");
+      if (res.ok) {
+        toast.success("Workspace settings updated successfully");
+      } else {
+        toast.error("Failed to update workspace settings");
+      }
+    } catch {
+      toast.error("Error saving workspace settings");
     } finally {
-      setIsSavingProfile(false);
+      setIsSavingWs(false);
     }
   };
 
-  // Save FTP & Free Hosting Changes
+  // Revoke Session
+  const handleRevokeSession = async (id: string) => {
+    try {
+      const res = await fetch(`/api/security/sessions/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setSessions(prev => prev.filter(s => s.id !== id));
+        toast.success("Session revoked successfully");
+      }
+    } catch {
+      toast.error("Failed to revoke session");
+    }
+  };
+
+  // Send Team Invitation
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setIsSendingInvite(true);
+    try {
+      const res = await fetch("/api/workspace/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setInvitations(prev => [...prev, data.invitation]);
+        setInviteEmail("");
+        toast.success(`Invitation sent to ${inviteEmail}`);
+      } else {
+        toast.error("Failed to send invitation");
+      }
+    } catch {
+      toast.error("Failed to invite member");
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
+
+  // Save FTP & Hosting
   const handleSaveFtp = async () => {
     setIsSavingFtp(true);
     try {
@@ -156,57 +321,15 @@ export default function SettingsPage() {
           ftp_password: ftpPassword,
           ftp_path: ftpPath,
           ftp_protocol: ftpProtocol,
-          ftp_secure: (ftpProtocol === "ftps").toString(),
           netlify_token: netlifyToken,
           github_token: githubToken,
         }),
       });
-
-      if (!res.ok) throw new Error("Failed to update hosting credentials");
-      toast.success("Hosting settings saved successfully");
+      if (res.ok) toast.success("Hosting settings saved successfully");
     } catch (err: any) {
       toast.error(err.message || "Failed to save hosting configuration");
     } finally {
       setIsSavingFtp(false);
-    }
-  };
-
-  // Test FTP Connection
-  const handleTestFtp = async () => {
-    setIsTestingFtp(true);
-    setFtpTestStatus("none");
-    setFtpTestError("");
-    try {
-      const res = await fetch("/api/settings/deployment/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          ftp_host: ftpHost,
-          ftp_port: ftpPort,
-          ftp_username: ftpUsername,
-          ftp_password: ftpPassword,
-          ftp_protocol: ftpProtocol,
-        }),
-      });
-
-      if (!res.ok) throw new Error("Connection test request failed");
-      const data = await res.json();
-
-      if (data.success) {
-        setFtpTestStatus("success");
-        toast.success("FTP Connection Successful!");
-      } else {
-        setFtpTestStatus("failed");
-        setFtpTestError(data.error || "Unknown authentication error");
-        toast.error("FTP Connection Failed");
-      }
-    } catch (err: any) {
-      setFtpTestStatus("failed");
-      setFtpTestError(err.message || "Request timeout");
-      toast.error("Connection test failed");
-    } finally {
-      setIsTestingFtp(false);
     }
   };
 
@@ -227,9 +350,7 @@ export default function SettingsPage() {
           preferred_ai_engine: preferredEngine,
         }),
       });
-
-      if (!res.ok) throw new Error("Failed to update AI configurations");
-      toast.success("AI model engine configurations saved successfully");
+      if (res.ok) toast.success("AI engine configurations saved");
     } catch (err: any) {
       toast.error(err.message || "Failed to save AI configurations");
     } finally {
@@ -237,7 +358,7 @@ export default function SettingsPage() {
     }
   };
 
-  // Save Branding
+  // Save Branding Settings
   const handleSaveBranding = async () => {
     setIsSavingBranding(true);
     try {
@@ -252,9 +373,7 @@ export default function SettingsPage() {
           primary_color: primaryColor,
         }),
       });
-
-      if (!res.ok) throw new Error("Failed to update branding settings");
-      toast.success("Branding preferences saved successfully");
+      if (res.ok) toast.success("Branding preferences saved");
     } catch (err: any) {
       toast.error(err.message || "Failed to save branding settings");
     } finally {
@@ -272,422 +391,338 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8 animate-fade-in pb-24">
+    <div className="p-8 max-w-5xl mx-auto space-y-8 animate-fade-in pb-24 font-sans">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3 text-foreground">
           <Settings className="h-8 w-8 text-primary" />
           Settings
         </h1>
-        <p className="text-muted-foreground mt-1">
-          Manage your server configurations, deployment protocols, API keys, and custom branding.
+        <p className="text-sm text-muted-foreground mt-1">
+          Manage workspace settings, security audit logs, team members, deployment protocols, and API keys.
         </p>
       </div>
 
       <div className="grid gap-8 md:grid-cols-[240px_1fr]">
-        <nav className="flex flex-col gap-2">
+        {/* Navigation Sidebar */}
+        <nav className="flex flex-col gap-1.5">
           <Button
             variant={activeTab === "workspace" ? "secondary" : "ghost"}
-            className={`justify-start gap-2 ${activeTab === "workspace" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`justify-start gap-2 text-xs font-semibold ${activeTab === "workspace" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("workspace")}
           >
             <Globe className="h-4 w-4" />
             Workspace Settings
           </Button>
-          <Button
-            variant={activeTab === "profile" ? "secondary" : "ghost"}
-            className={`justify-start gap-2 ${activeTab === "profile" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
-            onClick={() => setActiveTab("profile")}
-          >
-            <User className="h-4 w-4" />
-            Profile Configuration
-          </Button>
-          <Button
-            variant={activeTab === "ftp" ? "secondary" : "ghost"}
-            className={`justify-start gap-2 ${activeTab === "ftp" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
-            onClick={() => setActiveTab("ftp")}
-          >
-            <Server className="h-4 w-4" />
-            FTP Server Protocols
-          </Button>
+
           <Button
             variant={activeTab === "security" ? "secondary" : "ghost"}
-            className={`justify-start gap-2 ${activeTab === "security" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`justify-start gap-2 text-xs font-semibold ${activeTab === "security" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("security")}
           >
             <Shield className="h-4 w-4" />
             Security & Audit
           </Button>
+
           <Button
             variant={activeTab === "team" ? "secondary" : "ghost"}
-            className={`justify-start gap-2 ${activeTab === "team" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`justify-start gap-2 text-xs font-semibold ${activeTab === "team" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("team")}
           >
-            <User className="h-4 w-4" />
+            <Users className="h-4 w-4" />
             Team Members
           </Button>
+
           <Button
             variant={activeTab === "ai" ? "secondary" : "ghost"}
-            className={`justify-start gap-2 ${activeTab === "ai" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`justify-start gap-2 text-xs font-semibold ${activeTab === "ai" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("ai")}
           >
             <Cpu className="h-4 w-4" />
             API Setup
           </Button>
+
+          <Button
+            variant={activeTab === "ftp" ? "secondary" : "ghost"}
+            className={`justify-start gap-2 text-xs font-semibold ${activeTab === "ftp" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            onClick={() => setActiveTab("ftp")}
+          >
+            <Server className="h-4 w-4" />
+            FTP Server Protocols
+          </Button>
+
           <Button
             variant={activeTab === "branding" ? "secondary" : "ghost"}
-            className={`justify-start gap-2 ${activeTab === "branding" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
+            className={`justify-start gap-2 text-xs font-semibold ${activeTab === "branding" ? "bg-primary/10 text-primary hover:bg-primary/20" : "text-muted-foreground"}`}
             onClick={() => setActiveTab("branding")}
           >
             <Palette className="h-4 w-4" />
             Branding & Themes
           </Button>
+
+          <div className="pt-4 border-t my-2" style={{ borderColor: 'var(--surface-border)' }}>
+            <Button
+              variant="ghost"
+              onClick={() => logout()}
+              className="w-full justify-start gap-2 text-xs font-semibold text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </nav>
 
+        {/* Content Pane */}
         <div className="space-y-6">
-          {/* TAB 0: WORKSPACE SETTINGS (Lovable Style) */}
+
+          {/* ── WORKSPACE SETTINGS ── */}
           {activeTab === "workspace" && (
             <div className="space-y-6 animate-fade-in">
               <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">Workspace settings</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">Workspaces allow you to collaborate on projects in real time.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Primary workspace profile, identifier, and member permissions.</p>
                 </div>
-                <a href="#" className="text-xs text-primary font-medium flex items-center gap-1 hover:underline">
-                  Open docs ↗
-                </a>
               </div>
 
-              {/* Card 1: Workspace profile */}
-              <Card className="rounded-2xl space-y-6 p-6" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+              {/* Workspace Profile */}
+              <Card className="rounded-2xl space-y-6 p-6 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
                 <div className="border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
-                  <h3 className="font-bold text-base text-foreground">Workspace profile</h3>
-                  <p className="text-xs text-muted-foreground">Control how this workspace appears on Zovaix.</p>
+                  <h3 className="font-bold text-base text-foreground">Workspace Profile</h3>
+                  <p className="text-xs text-muted-foreground">Control workspace identification and public handle.</p>
                 </div>
 
                 <div className="space-y-5 text-xs">
-                  {/* Avatar */}
-                  <div className="flex items-center justify-between">
+                  {/* Name */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h4 className="font-bold text-foreground">Avatar</h4>
-                      <p className="text-muted-foreground text-[11px]">Set an avatar for your workspace.</p>
+                      <h4 className="font-bold text-foreground">Workspace Name</h4>
+                      <p className="text-muted-foreground text-[11px]">Your workspace title visible to collaborators.</p>
                     </div>
-                    <div className="h-10 w-10 rounded-xl bg-orange-600 font-bold text-white flex items-center justify-center text-sm shadow-sm">
-                      Z
-                    </div>
+                    <Input
+                      value={wsName}
+                      onChange={(e) => setWsName(e.target.value)}
+                      className="h-9 w-64 bg-background/50 text-xs font-medium"
+                    />
                   </div>
 
-                  {/* Name */}
+                  {/* Slug / Handle */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t" style={{ borderColor: 'var(--surface-border)' }}>
                     <div>
-                      <h4 className="font-bold text-foreground">Name</h4>
-                      <p className="text-muted-foreground text-[11px]">Your full workspace name, as visible to others.</p>
+                      <h4 className="font-bold text-foreground">Workspace Slug / Handle</h4>
+                      <p className="text-muted-foreground text-[11px]">Custom URL identifier for workspace projects.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        defaultValue="Zovaix Production Studio"
-                        className="h-9 w-64 bg-background/50 text-xs font-medium"
-                      />
-                      <span className="text-[10px] font-mono text-muted-foreground/60">24 / 50</span>
-                    </div>
+                    <Input
+                      value={wsSlug}
+                      onChange={(e) => setWsSlug(e.target.value)}
+                      className="h-9 w-64 bg-background/50 text-xs font-mono"
+                    />
                   </div>
 
                   {/* Workspace ID */}
                   <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'var(--surface-border)' }}>
                     <div>
                       <h4 className="font-bold text-foreground">Workspace ID</h4>
-                      <p className="text-muted-foreground text-[11px]">Unique workspace identifier.</p>
+                      <p className="text-muted-foreground text-[11px]">Unique database identifier.</p>
                     </div>
                     <div className="flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
-                      <span>da4276813087dedd48ca</span>
-                      <button className="p-1 text-muted-foreground hover:text-foreground">
+                      <span>{workspace.id}</span>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(workspace.id); toast.success("Copied workspace ID"); }}
+                        className="p-1 text-muted-foreground hover:text-foreground"
+                      >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
+                </div>
 
-                  {/* Workspace Handle */}
-                  <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'var(--surface-border)' }}>
-                    <div>
-                      <h4 className="font-bold text-foreground">Workspace handle</h4>
-                      <p className="text-muted-foreground text-[11px]">Set a handle for the workspace profile page.</p>
-                    </div>
-                    <Button size="sm" variant="outline" className="h-8 text-xs border-white/10">Set handle</Button>
-                  </div>
+                <div className="pt-4 border-t flex justify-end gap-3" style={{ borderColor: 'var(--surface-border)' }}>
+                  <Button onClick={handleSaveWorkspace} disabled={isSavingWs} className="h-9 text-xs font-semibold bg-primary text-primary-foreground">
+                    {isSavingWs ? "Saving..." : "Save Workspace Profile"}
+                  </Button>
                 </div>
               </Card>
 
-              {/* Card 2: Member defaults */}
-              <Card className="rounded-2xl space-y-6 p-6" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-                <div className="border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
-                  <h3 className="font-bold text-base text-foreground">Member defaults</h3>
-                  <p className="text-xs text-muted-foreground">Set default limits for workspace members.</p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              {/* Sign Out Card */}
+              <Card className="rounded-2xl p-6 border-destructive/20 bg-destructive/5 space-y-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-bold text-foreground">Default monthly member credit limit</h4>
-                    <p className="text-muted-foreground text-[11px]">The default monthly credit limit for members of this workspace. Leave empty to use no limit.</p>
+                    <h3 className="font-bold text-sm text-foreground">Session Logout</h3>
+                    <p className="text-xs text-muted-foreground">Sign out of your active workspace account session.</p>
                   </div>
-                  <Input
-                    type="number"
-                    defaultValue="1"
-                    className="h-9 w-32 bg-background/50 text-xs font-mono text-center"
-                  />
-                </div>
-              </Card>
-
-              {/* Card 3: Workspace access */}
-              <Card className="rounded-2xl space-y-6 p-6" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-                <div className="border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
-                  <h3 className="font-bold text-base text-foreground">Workspace access</h3>
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <div>
-                    <h4 className="font-bold text-foreground">Leave workspace</h4>
-                    <p className="text-muted-foreground text-[11px]">You cannot leave your last workspace. Your account must be a member of at least one workspace.</p>
-                  </div>
-                  <Button size="sm" variant="outline" disabled className="h-8 text-xs text-destructive/50 border-destructive/20 cursor-not-allowed">Leave workspace</Button>
+                  <Button variant="destructive" onClick={() => logout()} className="h-9 text-xs font-semibold gap-1.5">
+                    <LogOut className="h-3.5 w-3.5" /> Sign Out Session
+                  </Button>
                 </div>
               </Card>
             </div>
           )}
 
-          {/* TAB 1: PROFILE */}
-          {activeTab === "profile" && (
-            <Card className="rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-              <CardHeader>
-                <CardTitle>Profile Details</CardTitle>
-                <CardDescription>Configure your personal identification parameters.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center gap-6">
-                  <Avatar className="h-20 w-20 border-2 border-border shadow-sm">
-                    {profileImageUrl ? (
-                      <AvatarImage src={profileImageUrl} alt="User Avatar" />
-                    ) : null}
-                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                      {((firstName || user?.email || "?").charAt(0)).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="space-y-2 flex-1 max-w-sm">
-                    <Label htmlFor="avatar-url">Avatar Image URL</Label>
-                    <Input
-                      id="avatar-url"
-                      value={profileImageUrl}
-                      onChange={(e) => setProfileImageUrl(e.target.value)}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="bg-background/50"
-                    />
-                  </div>
+          {/* ── SECURITY & AUDIT ── */}
+          {activeTab === "security" && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
+                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <Shield className="h-6 w-6 text-primary" /> Security & Active Sessions
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Audit log history and session security management.</p>
+              </div>
+
+              {/* Active Sessions */}
+              <Card className="rounded-2xl p-6 space-y-4 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
+                  <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <Laptop className="h-4 w-4 text-primary" /> Active Sessions
+                  </h3>
+                  <span className="text-xs font-mono text-muted-foreground">{sessions.length} active</span>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 pt-4 border-t border-border/50">
-                  <div className="space-y-2">
-                    <Label htmlFor="first-name">First Name</Label>
-                    <Input
-                      id="first-name"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="last-name">Last Name</Label>
-                    <Input
-                      id="last-name"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={user?.email || ""}
-                      disabled
-                      className="bg-muted/50 cursor-not-allowed opacity-70"
-                    />
-                    <p className="text-[10px] text-muted-foreground font-mono">Managed account address, non-modifiable.</p>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30 flex justify-between">
-                <Button onClick={handleSaveProfile} disabled={isSavingProfile}>
-                  {isSavingProfile ? "Saving Profile..." : "Save Profile Details"}
-                </Button>
-                <Button variant="ghost" onClick={() => logout()} className="text-destructive hover:bg-destructive/10 gap-2">
-                  <LogOut className="h-4 w-4" />
-                  Sign Out Session
-                </Button>
-              </CardFooter>
-            </Card>
-          )}
-
-          {/* TAB 2: FTP */}
-          {activeTab === "ftp" && (
-            <Card className="rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-              <CardHeader>
-                <CardTitle>FTP Server Configuration</CardTitle>
-                <CardDescription>Setup details for automated ftp publication hosting providers (e.g. Hostinger).</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-[1fr_120px]">
-                  <div className="space-y-2">
-                    <Label htmlFor="ftp-host">FTP Server Host</Label>
-                    <Input
-                      id="ftp-host"
-                      value={ftpHost}
-                      onChange={(e) => setFtpHost(e.target.value)}
-                      placeholder="ftp.yourdomain.com"
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="ftp-port">Port</Label>
-                    <Input
-                      id="ftp-port"
-                      value={ftpPort}
-                      onChange={(e) => setFtpPort(e.target.value)}
-                      placeholder="21"
-                      className="bg-background/50"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="ftp-user">Username</Label>
-                    <Input
-                      id="ftp-user"
-                      value={ftpUsername}
-                      onChange={(e) => setFtpUsername(e.target.value)}
-                      placeholder="ftpuser@domain.com"
-                      className="bg-background/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="ftp-pass">Password</Label>
-                    <Input
-                      id="ftp-pass"
-                      type="password"
-                      value={ftpPassword}
-                      onChange={(e) => setFtpPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="bg-background/50"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ftp-path">Directory Path</Label>
-                  <Input
-                    id="ftp-path"
-                    value={ftpPath}
-                    onChange={(e) => setFtpPath(e.target.value)}
-                    placeholder="/public_html"
-                    className="bg-background/50"
-                  />
-                  <p className="text-[10px] text-muted-foreground font-mono">Publication files will be uploaded directly under this folder.</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ftp-protocol" className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-primary" />
-                    Protocol
-                  </Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["ftp", "ftps", "sftp"] as const).map(p => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setFtpProtocol(p)}
-                        className={`rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-                          ftpProtocol === p
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border bg-card/30 text-muted-foreground hover:border-primary/50"
-                        }`}
-                      >
-                        {p.toUpperCase()}
-                        <p className="text-[9px] font-normal opacity-70 mt-0.5">
-                          {p === "ftp" ? "Plain, port 21" : p === "ftps" ? "Encrypted, port 21" : "SSH, port 22"}
-                        </p>
-                      </button>
+                {sessions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No secondary active sessions detected.</p>
+                ) : (
+                  <div className="divide-y divide-white/10 text-xs">
+                    {sessions.map(s => (
+                      <div key={s.id} className="py-3 flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-foreground flex items-center gap-2">
+                            {s.userAgent}
+                            {s.isCurrent && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                Current
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-[11px] font-mono text-muted-foreground">IP: {s.ipAddress} • Last active: {new Date(s.lastActiveAt).toLocaleString()}</p>
+                        </div>
+                        {!s.isCurrent && (
+                          <Button size="sm" variant="outline" onClick={() => handleRevokeSession(s.id)} className="h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10">
+                            Revoke
+                          </Button>
+                        )}
+                      </div>
                     ))}
                   </div>
+                )}
+              </Card>
+
+              {/* Security Audit Logs */}
+              <Card className="rounded-2xl p-6 space-y-4 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
+                  <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" /> Audit Event Log
+                  </h3>
+                  <span className="text-xs font-mono text-muted-foreground">Last 50 events</span>
                 </div>
 
-                {/* Free Hosting Tokens */}
-                <div className="pt-4 border-t border-border/50 space-y-4">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-primary" />
-                      Free Hosting Integrations (Netlify & GitHub Pages)
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Deploy your generated sites for free without buying hosting.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="netlify-token" className="text-xs">Netlify Personal Access Token</Label>
-                    <Input
-                      id="netlify-token"
-                      type="password"
-                      value={netlifyToken}
-                      onChange={(e) => setNetlifyToken(e.target.value)}
-                      placeholder="nfp_..."
-                      className="bg-background/50 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Get one free at netlify.com → User Settings → Applications → Personal Access Tokens.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="github-token" className="text-xs">GitHub Personal Access Token</Label>
-                    <Input
-                      id="github-token"
-                      type="password"
-                      value={githubToken}
-                      onChange={(e) => setGithubToken(e.target.value)}
-                      placeholder="ghp_..."
-                      className="bg-background/50 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Get one free at github.com → Settings → Developer Settings → Tokens (classic). Needs <code className="bg-muted px-1 rounded">repo</code> scope.
-                    </p>
-                  </div>
-                </div>
-
-                {ftpTestStatus === "success" && (
-                  <div className="flex items-center gap-2 text-sm text-emerald-500 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
-                    <Check className="h-4 w-4 shrink-0" />
-                    <span>Connection successful! Server verified.</span>
+                {auditLogs.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-4 text-center">No security audit events recorded yet.</p>
+                ) : (
+                  <div className="divide-y divide-white/10 text-xs font-mono">
+                    {auditLogs.map(log => (
+                      <div key={log.id} className="py-2.5 flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <span className="text-primary font-bold">{log.action}</span>
+                          <p className="text-[11px] text-muted-foreground">{log.resource} {log.resourceId ? `(${log.resourceId})` : ''} • IP: {log.ipAddress}</p>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground/60">{new Date(log.createdAt).toLocaleTimeString()}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
-
-                {ftpTestStatus === "failed" && (
-                  <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-lg border border-destructive/20">
-                    <X className="h-4 w-4 shrink-0" />
-                    <span>Connection failed: {ftpTestError}</span>
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30 flex gap-4">
-                <Button onClick={handleSaveFtp} disabled={isSavingFtp}>
-                  {isSavingFtp ? "Saving Credentials..." : "Save Hosting Settings"}
-                </Button>
-                <Button variant="outline" onClick={handleTestFtp} disabled={isTestingFtp || !ftpHost || !ftpUsername || !ftpPassword}>
-                  {isTestingFtp ? "Testing Connection..." : "Test FTP Connection"}
-                </Button>
-              </CardFooter>
-            </Card>
+              </Card>
+            </div>
           )}
 
-          {/* TAB 3: AI ENGINE */}
+          {/* ── TEAM MEMBERS ── */}
+          {activeTab === "team" && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
+                <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <Users className="h-6 w-6 text-primary" /> Workspace Team Members
+                </h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Invite teammates and assign role permissions.</p>
+              </div>
+
+              {/* Invite Form */}
+              <Card className="rounded-2xl p-6 space-y-4 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-primary" /> Invite Team Member
+                </h3>
+
+                <form onSubmit={handleSendInvite} className="flex flex-col sm:flex-row items-center gap-3">
+                  <Input
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="teammate@company.com"
+                    required
+                    className="bg-background/50 text-xs"
+                  />
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    className="bg-background/50 text-xs font-medium px-3 py-2 rounded-xl border border-white/10 outline-none cursor-pointer h-9 shrink-0"
+                  >
+                    <option value="MEMBER" className="bg-black">Member</option>
+                    <option value="ADMIN" className="bg-black">Admin</option>
+                    <option value="VIEWER" className="bg-black">Viewer</option>
+                  </select>
+                  <Button type="submit" disabled={isSendingInvite} className="h-9 px-5 text-xs font-semibold bg-primary text-primary-foreground shrink-0">
+                    {isSendingInvite ? "Sending..." : "Send Invite"}
+                  </Button>
+                </form>
+              </Card>
+
+              {/* Members List */}
+              <Card className="rounded-2xl p-6 space-y-4 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <h3 className="font-bold text-sm text-foreground">Workspace Members ({members.length})</h3>
+
+                <div className="divide-y divide-white/10 text-xs">
+                  {members.map(m => (
+                    <div key={m.id} className="py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={m.avatarUrl} />
+                          <AvatarFallback className="bg-primary/20 text-primary font-bold text-xs">{m.name.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-semibold text-foreground">{m.name}</p>
+                          <p className="text-[11px] text-muted-foreground">{m.email}</p>
+                        </div>
+                      </div>
+
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-mono bg-white/5 border border-white/10 uppercase text-muted-foreground">
+                        {m.role}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Pending Invitations */}
+              {invitations.length > 0 && (
+                <Card className="rounded-2xl p-6 space-y-4 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                  <h3 className="font-bold text-sm text-foreground">Pending Invitations ({invitations.length})</h3>
+
+                  <div className="divide-y divide-white/10 text-xs">
+                    {invitations.map(inv => (
+                      <div key={inv.id} className="py-3 flex items-center justify-between font-mono">
+                        <div className="space-y-0.5">
+                          <p className="text-foreground">{inv.email}</p>
+                          <p className="text-[10px] text-muted-foreground">Role: {inv.role}</p>
+                        </div>
+                        <span className="text-[10px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                          Pending
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* ── API SETUP ── */}
           {activeTab === "ai" && (
             <Card className="rounded-2xl shadow-xl overflow-hidden" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
               <CardHeader className="pb-6 border-b" style={{ borderColor: 'var(--surface-border)', backgroundColor: 'var(--surface-2)' }}>
@@ -698,198 +733,112 @@ export default function SettingsPage() {
                   <div>
                     <CardTitle className="text-xl font-bold">API Setup & Model Registry</CardTitle>
                     <CardDescription className="text-sm">
-                      Configure your official AI providers and explicit model registry parameters. Select workspace default model and API key credentials.
+                      Configure your official AI providers and model registry credentials.
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-6 pt-6">
-                {/* Engine Selector */}
                 <div className="space-y-2">
-                  <Label htmlFor="preferred-engine" className="font-semibold text-sm">Primary AI Generation Engine</Label>
+                  <Label htmlFor="preferred-engine" className="font-semibold text-sm">Primary AI Engine</Label>
                   <select
                     id="preferred-engine"
                     value={preferredEngine}
                     onChange={(e) => setPreferredEngine(e.target.value)}
-                    className="w-full h-10 px-3 rounded-lg border border-border bg-background/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                    className="w-full h-10 px-3 rounded-lg border border-border bg-background/80 text-sm outline-none"
                   >
-                    <option value="gemini">Google Gemini 1.5 Pro / Flash (Default High-Speed Engine)</option>
-                    <option value="openai">OpenAI GPT-4o / GPT-4 Turbo (High Reasoning Engine)</option>
-                    <option value="claude">Anthropic Claude 3.5 Sonnet (Senior Creative Director Engine)</option>
-                    <option value="deepseek">DeepSeek Coder V2 (Advanced Code Generation Engine)</option>
-                    <option value="openrouter">OpenRouter / Free GLM-4 (Free Open LLM Engine)</option>
+                    <option value="gemini">Google Gemini 2.5 Flash (Default High-Speed Engine)</option>
+                    <option value="openai">OpenAI GPT-4o / GPT-4 Turbo</option>
+                    <option value="claude">Anthropic Claude 3.5 Sonnet</option>
+                    <option value="deepseek">DeepSeek Coder V2</option>
                   </select>
-                  <p className="text-xs text-muted-foreground">Selects which AI model engine powers website planning, copywriting, and code synthesis.</p>
                 </div>
 
                 <div className="grid gap-5 md:grid-cols-2 pt-4 border-t border-border/50">
-                  {/* Gemini Key */}
                   <div className="space-y-2">
-                    <Label htmlFor="gemini-key" className="text-xs font-medium flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></span>
-                      Google Gemini API Key
-                    </Label>
-                    <Input
-                      id="gemini-key"
-                      type="password"
-                      value={geminiKey}
-                      onChange={(e) => setGeminiKey(e.target.value)}
-                      placeholder="AIzaSy..."
-                      className="bg-background/50 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-muted-foreground">Used for Gemini 1.5 Pro / Flash. Free quota available at aistudio.google.com</p>
+                    <Label htmlFor="gemini-key" className="text-xs font-medium">Google Gemini API Key</Label>
+                    <Input id="gemini-key" type="password" value={geminiKey} onChange={(e) => setGeminiKey(e.target.value)} placeholder="AIzaSy..." className="bg-background/50 text-xs font-mono" />
                   </div>
-
-                  {/* OpenAI Key */}
                   <div className="space-y-2">
-                    <Label htmlFor="openai-key" className="text-xs font-medium flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                      OpenAI (ChatGPT / GPT-4o) API Key
-                    </Label>
-                    <Input
-                      id="openai-key"
-                      type="password"
-                      value={openaiKey}
-                      onChange={(e) => setOpenaiKey(e.target.value)}
-                      placeholder="sk-proj-..."
-                      className="bg-background/50 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-muted-foreground">Used for GPT-4o & GPT-4 Turbo synthesis. platform.openai.com</p>
+                    <Label htmlFor="openai-key" className="text-xs font-medium">OpenAI API Key</Label>
+                    <Input id="openai-key" type="password" value={openaiKey} onChange={(e) => setOpenaiKey(e.target.value)} placeholder="sk-proj-..." className="bg-background/50 text-xs font-mono" />
                   </div>
-
-                  {/* Claude Key */}
                   <div className="space-y-2">
-                    <Label htmlFor="claude-key" className="text-xs font-medium flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-amber-500"></span>
-                      Anthropic Claude API Key
-                    </Label>
-                    <Input
-                      id="claude-key"
-                      type="password"
-                      value={claudeKey}
-                      onChange={(e) => setClaudeKey(e.target.value)}
-                      placeholder="sk-ant-..."
-                      className="bg-background/50 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-muted-foreground">Used for Claude 3.5 Sonnet Creative Director synthesis. console.anthropic.com</p>
+                    <Label htmlFor="claude-key" className="text-xs font-medium">Anthropic Claude API Key</Label>
+                    <Input id="claude-key" type="password" value={claudeKey} onChange={(e) => setClaudeKey(e.target.value)} placeholder="sk-ant-..." className="bg-background/50 text-xs font-mono" />
                   </div>
-
-                  {/* DeepSeek Key */}
                   <div className="space-y-2">
-                    <Label htmlFor="deepseek-key" className="text-xs font-medium flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-purple-500"></span>
-                      DeepSeek Coder API Key
-                    </Label>
-                    <Input
-                      id="deepseek-key"
-                      type="password"
-                      value={deepseekKey}
-                      onChange={(e) => setDeepseekKey(e.target.value)}
-                      placeholder="sk-..."
-                      className="bg-background/50 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-muted-foreground">Used for DeepSeek V2 code generation. platform.deepseek.com</p>
-                  </div>
-
-                  {/* OpenRouter / GLM Key */}
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="openrouter-key" className="text-xs font-medium flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-pink-500"></span>
-                      OpenRouter / Free GLM API Key
-                    </Label>
-                    <Input
-                      id="openrouter-key"
-                      type="password"
-                      value={openrouterKey}
-                      onChange={(e) => setOpenrouterKey(e.target.value)}
-                      placeholder="sk-or-v1-..."
-                      className="bg-background/50 text-xs font-mono"
-                    />
-                    <p className="text-[10px] text-muted-foreground">Access free & open-source LLMs (GLM-4, Llama 3, Mistral) via OpenRouter. openrouter.ai</p>
+                    <Label htmlFor="deepseek-key" className="text-xs font-medium">DeepSeek API Key</Label>
+                    <Input id="deepseek-key" type="password" value={deepseekKey} onChange={(e) => setDeepseekKey(e.target.value)} placeholder="sk-..." className="bg-background/50 text-xs font-mono" />
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30 flex justify-between items-center">
-                <p className="text-xs text-muted-foreground">API keys are stored securely & encrypted locally for your account.</p>
-                <Button onClick={handleSaveAi} disabled={isSavingAi} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-                  {isSavingAi ? "Saving AI Configurations..." : "Save AI Configurations"}
+              <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30 flex justify-end">
+                <Button onClick={handleSaveAi} disabled={isSavingAi} className="bg-primary text-primary-foreground font-semibold">
+                  {isSavingAi ? "Saving..." : "Save AI Configurations"}
                 </Button>
               </CardFooter>
             </Card>
           )}
 
-          {/* TAB 4: BRANDING */}
+          {/* ── FTP SERVER ── */}
+          {activeTab === "ftp" && (
+            <Card className="rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+              <CardHeader>
+                <CardTitle>FTP Server Configuration</CardTitle>
+                <CardDescription>Automated publication protocols for FTP hosting.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-[1fr_120px]">
+                  <div className="space-y-2">
+                    <Label htmlFor="ftp-host">FTP Host</Label>
+                    <Input id="ftp-host" value={ftpHost} onChange={(e) => setFtpHost(e.target.value)} placeholder="ftp.domain.com" className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ftp-port">Port</Label>
+                    <Input id="ftp-port" value={ftpPort} onChange={(e) => setFtpPort(e.target.value)} placeholder="21" className="bg-background/50" />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="ftp-user">Username</Label>
+                    <Input id="ftp-user" value={ftpUsername} onChange={(e) => setFtpUsername(e.target.value)} placeholder="user@domain.com" className="bg-background/50" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ftp-pass">Password</Label>
+                    <Input id="ftp-pass" type="password" value={ftpPassword} onChange={(e) => setFtpPassword(e.target.value)} placeholder="••••••••" className="bg-background/50" />
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30 flex gap-4">
+                <Button onClick={handleSaveFtp} disabled={isSavingFtp}>Save Hosting Settings</Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          {/* ── BRANDING ── */}
           {activeTab === "branding" && (
             <Card className="rounded-2xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
               <CardHeader>
                 <CardTitle>Branding & Theme Customization</CardTitle>
-                <CardDescription>
-                  This does not change ZOVAIX SITES' own dashboard — it sets default branding (company name, logo,
-                  favicon, color) that the AI weaves into every site it generates for you, unless a project's own
-                  business description says otherwise. Handy if you're generating multiple sites for the same brand.
-                </CardDescription>
+                <CardDescription>Default brand tokens woven into every generated site.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="company-name">Company Name</Label>
-                  <Input
-                    id="company-name"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="SiteCraft Engine"
-                    className="bg-background/50"
-                  />
+                  <Input id="company-name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="SiteCraft Studio" className="bg-background/50" />
                 </div>
-
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Logo</Label>
-                    <ImageUploader
-                      value={logoUrl}
-                      onChange={setLogoUrl}
-                      label="Logo"
-                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Used in the header/nav of every generated site.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Favicon</Label>
-                    <ImageUploader
-                      value={faviconUrl}
-                      onChange={setFaviconUrl}
-                      label="Favicon"
-                      accept="image/png,image/x-icon,image/svg+xml"
-                      maxBytes={1048576}
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Browser tab icon for generated sites. Keep under 1 MB.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
+                <div className="space-y-2">
                   <Label htmlFor="primary-color">Branding Color Theme</Label>
-                  <div className="flex gap-4 items-center">
-                    <Input
-                      id="primary-color"
-                      type="color"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="h-10 w-20 p-1 cursor-pointer bg-background"
-                    />
-                    <span className="font-mono text-sm uppercase text-muted-foreground">{primaryColor}</span>
-                  </div>
+                  <Input id="primary-color" type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="h-10 w-20 p-1 cursor-pointer bg-background" />
                 </div>
               </CardContent>
               <CardFooter className="border-t border-border/50 px-6 py-4 bg-card/30">
-                <Button onClick={handleSaveBranding} disabled={isSavingBranding}>
-                  {isSavingBranding ? "Saving Branding Preferences..." : "Save Branding Settings"}
-                </Button>
+                <Button onClick={handleSaveBranding} disabled={isSavingBranding}>Save Branding Settings</Button>
               </CardFooter>
             </Card>
           )}
+
         </div>
       </div>
     </div>
