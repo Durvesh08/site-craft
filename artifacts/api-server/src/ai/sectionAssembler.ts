@@ -94,13 +94,37 @@ export function parseSectionPlan(componentPlannerOutput: string): SectionPlan[] 
 }
 
 function defaultSectionPlan(): SectionPlan[] {
+  // Randomize the middle sections to prevent identical fallback layouts
+  const middleSections = [
+    [
+      { id: "features",   type: "bento-feature-grid",     order: 2, brief: "3-column bento grid with glassmorphic cards and icon badges" },
+      { id: "social",     type: "testimonial-carousel",   order: 3, brief: "Horizontal scrolling customer testimonials with star ratings" },
+      { id: "stats",      type: "animated-stat-counters", order: 4, brief: "4 animated counter stats with bold numbers and labels" },
+    ],
+    [
+      { id: "showcase",   type: "interactive-showcase",   order: 2, brief: "Split layout with interactive product demo on the right" },
+      { id: "steps",      type: "numbered-steps-timeline",order: 3, brief: "4-step numbered timeline showing product workflow" },
+      { id: "social",     type: "testimonial-wall",       order: 4, brief: "Masonry wall of customer reviews with avatars" },
+    ],
+    [
+      { id: "features",   type: "alternating-feature-rows",order: 2, brief: "Alternating left/right feature rows with visual mockups" },
+      { id: "pricing",    type: "tiered-pricing-cards",    order: 3, brief: "3-tier pricing with glassmorphic cards and highlighted Pro tier" },
+      { id: "social",     type: "testimonial-carousel",    order: 4, brief: "Customer success stories with company logos" },
+    ],
+    [
+      { id: "bento",      type: "bento-stats",            order: 2, brief: "Large bento grid mixing stats, features, and social proof" },
+      { id: "features",   type: "bento-feature-grid",     order: 3, brief: "Dark glassmorphic feature cards with gradient borders" },
+      { id: "faq",        type: "faq-accordion",          order: 4, brief: "Animated accordion FAQ with 5 common questions" },
+    ],
+  ];
+  const chosen = middleSections[Math.floor(Math.random() * middleSections.length)];
+
   return [
-    { id: "nav",      type: "navbar",              order: 0, brief: "Sticky navbar with logo, links, CTA" },
-    { id: "hero",     type: "gradient-hero",        order: 1, brief: "Bold hero headline with CTA buttons" },
-    { id: "features", type: "bento-feature-grid",   order: 2, brief: "Key feature highlights in bento grid" },
-    { id: "social",   type: "testimonial-carousel", order: 3, brief: "Customer testimonials" },
-    { id: "cta",      type: "gradient-cta-banner",  order: 4, brief: "Full-width CTA section" },
-    { id: "footer",   type: "minimal-footer",       order: 5, brief: "Footer with links and copyright" },
+    { id: "nav",    type: "navbar",           order: 0, brief: "Sticky glassmorphic navbar with logo, nav links, and CTA button" },
+    { id: "hero",   type: "gradient-hero",    order: 1, brief: "Bold hero with animated headline, subtext, dual CTAs and aurora mesh background" },
+    ...chosen,
+    { id: "cta",    type: "gradient-cta-banner", order: 8, brief: "Full-width gradient CTA with headline and primary action button" },
+    { id: "footer", type: "footer-with-newsletter", order: 9, brief: "Footer with newsletter signup, nav links, and social icons" },
   ];
 }
 

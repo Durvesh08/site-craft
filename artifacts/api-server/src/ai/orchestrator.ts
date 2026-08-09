@@ -1410,6 +1410,36 @@ ${ctx}
 Return ONLY valid JSON:
 { "title": string, "description": string, "keywords": string[], "h1": string, "schemaType": string, "confidence": number }`,
 
+    "image-director": `You are an elite Creative Director and Art Director specializing in visual storytelling for high-converting landing pages. Your role is to define the complete visual imagery strategy.
+${ctx}
+
+MISSION: Define the exact imagery, illustration style, and visual asset direction that will make this landing page iconic and unique. Think Stripe, Linear, Framer, Vercel, or Apple — never stock photo websites.
+
+CRITICAL RULES:
+- Define a unique visual aesthetic that matches this specific brand/business
+- Specify hero imagery type (3D abstract, product screenshot, illustrated character, data visualization, geometric mesh, etc.)
+- Define icon style (line icons, filled, duotone, emoji, custom SVG)
+- Specify photography direction if real photos are needed (avoid generic stock; suggest authentic scenarios)
+- Plan section-specific visual accents (gradient blobs, grid overlays, floating cards, animated counters)
+- For SaaS/Tech: prefer dark glassmorphic product UI mockups, gradient meshes, code snippets
+- For E-commerce: editorial product photos, lifestyle shots, color-matched backgrounds
+- For Agency: bold typography, case study screenshots, team photos
+- For Personal brand: authentic portrait, project showcases, timeline visuals
+
+Return ONLY valid JSON (no markdown fences):
+{
+  "heroImageType": "3d-abstract" | "product-mockup" | "illustration" | "photography" | "geometric-mesh" | "data-viz" | "code-snippet",
+  "heroImageDescription": string,
+  "iconStyle": "line" | "filled" | "duotone" | "emoji" | "custom-svg",
+  "colorAccentElements": string[],
+  "sectionImagery": [{ "sectionId": string, "imageType": string, "description": string, "placement": "left"|"right"|"background"|"center"|"floating" }],
+  "backgroundElements": string[],
+  "illustrationStyle": string,
+  "moodBoard": string[],
+  "avoidList": string[],
+  "confidence": number
+}`,
+
     "component-planner": `You are a Component Planner mapping the layout to premium React sections.
 ${ctx}
 For each section specify:
@@ -2016,6 +2046,41 @@ export function buildSynthesizedWebsiteHtml(projectName: string, description: st
   const cleanDesc = description || "Next-generation web application built with AI.";
   const initial = cleanName.charAt(0).toUpperCase();
 
+  // Derive 3 context-aware features from the description
+  const descLower = (description || "").toLowerCase();
+  const features = (() => {
+    if (descLower.includes("saas") || descLower.includes("software") || descLower.includes("platform") || descLower.includes("dashboard")) {
+      return [
+        { num: "01", color: "indigo", title: "Smart Automation", desc: "Automate repetitive workflows and unlock real-time telemetry built specifically for your team." },
+        { num: "02", color: "emerald", title: "Team Collaboration", desc: "Invite your team, set permissions, and work together seamlessly across every project." },
+        { num: "03", color: "purple", title: "Enterprise Security", desc: "SOC2 compliant, end-to-end encrypted, and zero-trust architecture for your data." },
+      ];
+    } else if (descLower.includes("shop") || descLower.includes("store") || descLower.includes("product") || descLower.includes("ecommerce") || descLower.includes("buy")) {
+      return [
+        { num: "01", color: "rose", title: "Premium Quality", desc: "Every product is carefully curated and quality-tested before reaching your doorstep." },
+        { num: "02", color: "amber", title: "Fast Delivery", desc: "Express shipping available worldwide. Track your order in real-time." },
+        { num: "03", color: "emerald", title: "Easy Returns", desc: "30-day hassle-free returns. Your satisfaction is our guarantee." },
+      ];
+    } else if (descLower.includes("agency") || descLower.includes("design") || descLower.includes("creative") || descLower.includes("marketing")) {
+      return [
+        { num: "01", color: "violet", title: "Strategic Design", desc: "Data-driven creative strategies that convert visitors into loyal customers." },
+        { num: "02", color: "sky", title: "Full-Stack Development", desc: "From concept to launch — we build fast, scalable, and beautiful digital products." },
+        { num: "03", color: "emerald", title: "Measurable Results", desc: "Average 340% ROI across client campaigns. We track every metric that matters." },
+      ];
+    } else {
+      return [
+        { num: "01", color: "indigo", title: "Purpose Built", desc: `${cleanName} is designed from the ground up to solve real problems for real customers.` },
+        { num: "02", color: "emerald", title: "Instant Results", desc: "Get up and running in minutes. No complex setup, no technical expertise required." },
+        { num: "03", color: "purple", title: "Always Improving", desc: "Regular updates, new features, and a community of users shaping the product roadmap." },
+      ];
+    }
+  })();
+
+  const colorMap: Record<string, string> = {
+    indigo: "indigo", emerald: "emerald", purple: "purple",
+    rose: "rose", amber: "amber", violet: "violet", sky: "sky",
+  };
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2027,6 +2092,7 @@ export function buildSynthesizedWebsiteHtml(projectName: string, description: st
   <style>
     body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090A0C; color: #F4F4F5; margin: 0; padding: 0; }
     .glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(12px); }
+    .hero-bg { background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.25) 0%, transparent 60%); }
   </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -2040,8 +2106,8 @@ export function buildSynthesizedWebsiteHtml(projectName: string, description: st
     </div>
     <nav class="hidden md:flex items-center gap-8 text-sm text-zinc-400 font-medium">
       <a href="#features" class="hover:text-white transition-colors">Features</a>
-      <a href="#solutions" class="hover:text-white transition-colors">Solutions</a>
-      <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+      <a href="#about" class="hover:text-white transition-colors">About</a>
+      <a href="#cta" class="hover:text-white transition-colors">Get Started</a>
     </nav>
     <a href="#cta" class="px-5 py-2.5 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all shadow-lg">
       Get Started →
@@ -2049,42 +2115,47 @@ export function buildSynthesizedWebsiteHtml(projectName: string, description: st
   </header>
 
   <!-- Hero Section -->
-  <main class="max-w-5xl mx-auto px-6 py-20 text-center space-y-8 flex-1 flex flex-col justify-center">
-    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mx-auto uppercase tracking-widest">
-      <span class="h-2 w-2 rounded-full bg-indigo-400 animate-pulse"></span>
-      Live AI Synthesized Application
-    </div>
-    <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
-      ${cleanName}
-    </h1>
-    <p class="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
-      ${cleanDesc}
-    </p>
-    <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-      <a href="#cta" class="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-600/30">
-        Explore Platform →
-      </a>
-      <a href="#features" class="px-8 py-4 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-300 font-semibold text-sm transition-all">
-        View System Capabilities
-      </a>
+  <main class="flex-1">
+    <div class="hero-bg max-w-5xl mx-auto px-6 py-24 text-center space-y-8">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mx-auto uppercase tracking-widest">
+        <span class="h-2 w-2 rounded-full bg-indigo-400 animate-pulse"></span>
+        Now Available
+      </div>
+      <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight text-white leading-tight">
+        ${cleanName}
+      </h1>
+      <p class="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">
+        ${cleanDesc}
+      </p>
+      <div class="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+        <a href="#cta" class="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-600/30">
+          Get Started Free →
+        </a>
+        <a href="#features" class="px-8 py-4 rounded-xl border border-white/10 hover:bg-white/5 text-zinc-300 font-semibold text-sm transition-all">
+          Learn More
+        </a>
+      </div>
     </div>
 
     <!-- Feature Grid -->
-    <div id="features" class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-16 text-left">
-      <div class="glass-card p-6 rounded-2xl space-y-3 hover:border-white/20 transition-all">
-        <div class="h-10 w-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">01</div>
-        <h3 class="font-bold text-lg text-white">Smart Engine</h3>
-        <p class="text-sm text-zinc-400 leading-relaxed">Tailored real-time prediction and dynamic telemetry built specifically for your audience.</p>
+    <div id="features" class="max-w-5xl mx-auto px-6 pb-24">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+        ${features.map(f => `<div class="glass-card p-6 rounded-2xl space-y-3 hover:border-white/20 transition-all">
+          <div class="h-10 w-10 rounded-xl bg-${colorMap[f.color]}-500/20 text-${colorMap[f.color]}-400 flex items-center justify-center font-bold">${f.num}</div>
+          <h3 class="font-bold text-lg text-white">${f.title}</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">${f.desc}</p>
+        </div>`).join("\n        ")}
       </div>
-      <div class="glass-card p-6 rounded-2xl space-y-3 hover:border-white/20 transition-all">
-        <div class="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">02</div>
-        <h3 class="font-bold text-lg text-white">Instant Telemetry</h3>
-        <p class="text-sm text-zinc-400 leading-relaxed">Sub-millisecond data updates and seamless mobile-first responsive interactions.</p>
-      </div>
-      <div class="glass-card p-6 rounded-2xl space-y-3 hover:border-white/20 transition-all">
-        <div class="h-10 w-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">03</div>
-        <h3 class="font-bold text-lg text-white">Edge Infrastructure</h3>
-        <p class="text-sm text-zinc-400 leading-relaxed">Zero-trust architecture with automated edge CDN SSL certificate verification.</p>
+    </div>
+
+    <!-- CTA Section -->
+    <div id="cta" class="max-w-3xl mx-auto px-6 pb-24 text-center space-y-6">
+      <div class="glass-card p-12 rounded-3xl border-indigo-500/20 space-y-6">
+        <h2 class="text-3xl md:text-4xl font-extrabold text-white">Ready to get started?</h2>
+        <p class="text-zinc-400">Join thousands of users already using ${cleanName}.</p>
+        <a href="#" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-lg shadow-indigo-600/30">
+          Start for Free →
+        </a>
       </div>
     </div>
   </main>
@@ -2095,4 +2166,6 @@ export function buildSynthesizedWebsiteHtml(projectName: string, description: st
   </footer>
 </body>
 </html>`;
+
 }
+
