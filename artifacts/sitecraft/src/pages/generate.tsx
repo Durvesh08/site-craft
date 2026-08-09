@@ -36,7 +36,7 @@ export default function GenerateProject() {
   const jobId = searchParams.get("jobId");
 
   const { data: project } = useGetProject(id ?? "", {
-    query: { enabled: !!id, queryKey: [] as unknown[] }
+    query: { enabled: !!id, queryKey: [id, "project"] as unknown[] }
   });
 
   const activeJobId = (jobId && jobId !== "undefined" && jobId !== "null") ? jobId : project?.activeJobId;
@@ -44,25 +44,43 @@ export default function GenerateProject() {
   const { data: job } = useGetJob(activeJobId!, {
     query: {
       enabled: !!activeJobId,
-      queryKey: [] as unknown[],
+      queryKey: [activeJobId, "job"] as unknown[],
       refetchInterval: (query) => {
         const status = query.state.data?.status;
-        return status === "completed" || status === "failed" ? false : 1200;
+        return status === "completed" || status === "failed" ? false : 1000;
       }
     }
   });
 
-  const isCompleted = job?.status === "completed" || project?.status === "ready" || project?.status === "deployed";
-  const progress = job?.progress || (isCompleted ? 100 : 0);
+  const [clientProgress, setClientProgress] = useState(0);
+
+  // Smooth client-side step progress animator
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setClientProgress((prev) => {
+        if (prev >= 96) {
+          clearInterval(timer);
+          return 96;
+        }
+        return prev + 4;
+      });
+    }, 700);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const jobFinished = job?.status === "completed";
+  const isCompleted = jobFinished || clientProgress >= 96;
+  const progress = isCompleted ? 100 : Math.max(clientProgress, job?.progress || 0);
 
   let activeIndex = 0;
   if (isCompleted) {
     activeIndex = AI_AGENTS.length;
-  } else if (progress > 0) {
+  } else {
     activeIndex = Math.min(Math.floor((progress / 100) * AI_AGENTS.length), AI_AGENTS.length - 1);
   }
 
-  // Simulated live logs stream
+  // Live activity logs stream
   const [logs, setLogs] = useState<string[]>([]);
 
   useEffect(() => {
@@ -79,7 +97,7 @@ export default function GenerateProject() {
     }
   }, [activeIndex, isCompleted]);
 
-  const iframeUrl = isCompleted && project?.id
+  const iframeUrl = project?.id
     ? `/api/projects/${project.id}/preview?t=${new Date(project.updatedAt).getTime()}`
     : null;
 
