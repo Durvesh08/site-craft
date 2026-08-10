@@ -22,10 +22,10 @@ const cinematicTimeline: SceneConfig[] = [
     resolution: [3840, 1920],
   },
   {
-    id: 'scene_2',
-    pathPrefix: '/cinematic/scene_2/ezgif-frame-',
-    frameCount: 255,
-    padLength: 3, // 001 - 255
+    id: 'scene_3',
+    pathPrefix: '/cinematic/scene_3/ezgif-frame-',
+    frameCount: 285,
+    padLength: 3, // 001 - 285
     extension: 'jpg',
     scrollRange: [0.40, 0.70], // Middle 30% of scroll
     resolution: [1920, 1080],
