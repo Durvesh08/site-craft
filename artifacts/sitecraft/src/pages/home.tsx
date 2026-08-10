@@ -149,7 +149,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070707] text-[#F5F3EE] font-sans selection:bg-primary/30 relative overflow-x-hidden">
+    <div className="min-h-screen bg-transparent text-[#F5F3EE] font-sans selection:bg-primary/30 relative overflow-x-hidden">
       
       {/* Cinematic Engine - Absolute Base Layer */}
       <div className="fixed inset-0 z-0 pointer-events-none">

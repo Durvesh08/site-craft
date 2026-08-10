@@ -13,13 +13,13 @@ interface SceneConfig {
 
 const cinematicTimeline: SceneConfig[] = [
   {
-    id: 'scene_1',
-    pathPrefix: '/cinematic/scene_1/videoplayback_',
-    frameCount: 81,
-    padLength: 3, // 001 - 081
+    id: 'scene_track',
+    pathPrefix: '/cinematic/scene_track/videoplayback_',
+    frameCount: 91,
+    padLength: 3, // 001 - 091
     extension: 'jpg',
     scrollRange: [0, 0.40], // First 40% of scroll
-    resolution: [1920, 1080],
+    resolution: [3840, 1920],
   },
   {
     id: 'scene_2',
