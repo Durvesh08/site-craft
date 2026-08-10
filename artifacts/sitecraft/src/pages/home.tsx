@@ -53,19 +53,65 @@ export default function Home() {
 
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.25,
+      duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       gestureOrientation: "vertical",
       smoothWheel: true,
     });
 
+    let isSnapping = false;
+    let snapTimeout: NodeJS.Timeout;
+
+    // Normalize progress points corresponding to the slides
+    // Slide 1: 0, Slide 2: 0.25, Slide 3: 0.55, Pricing: 0.85
+    const snapPoints = [0, 0.25, 0.55, 0.85, 1.0];
+
+    const handleScroll = () => {
+      if (isSnapping) return;
+
+      clearTimeout(snapTimeout);
+      snapTimeout = setTimeout(() => {
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        if (maxScroll <= 0) return;
+        
+        const progress = window.scrollY / maxScroll;
+        
+        // Find the closest slide snap point
+        const closest = snapPoints.reduce((prev, curr) => {
+          return Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev;
+        });
+
+        // Snap smoothly if user is near a slide but not exactly aligned
+        const diff = Math.abs(closest - progress);
+        if (diff > 0.015 && diff < 0.20) {
+          isSnapping = true;
+          const targetY = closest * maxScroll;
+          
+          lenis.scrollTo(targetY, {
+            duration: 0.8,
+            immediate: false,
+            onComplete: () => {
+              isSnapping = false;
+            }
+          });
+        }
+      }, 300); // 300ms debounce
+    };
+
+    lenis.on("scroll", handleScroll);
+
     function raf(time: number) {
       lenis.raf(time);
       requestAnimationFrame(raf);
     }
     requestAnimationFrame(raf);
-    return () => lenis.destroy();
+
+    return () => {
+      lenis.off("scroll", handleScroll);
+      lenis.destroy();
+      clearTimeout(snapTimeout);
+    };
   }, []);
 
   if (isLoading) {
