@@ -177,8 +177,9 @@ export default function NewProject() {
       const jobId = jobRes?.job?.id || jobRes?.id;
       toast.success("Generation started!");
       setLocation(`/projects/${project.id}/generate${jobId ? `?jobId=${jobId}` : ''}`);
-    } catch {
-      toast.error("Failed to create project. Please try again.");
+    } catch (err) {
+      console.error("[new-project] generation failed:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to create project. Please try again.");
       setIsSubmitting(false);
     }
   }
@@ -209,8 +210,9 @@ export default function NewProject() {
       const jobId = jobRes?.job?.id || jobRes?.id;
       toast.success("Generation started!");
       setLocation(`/projects/${project.id}/generate${jobId ? `?jobId=${jobId}` : ''}`);
-    } catch {
-      toast.error("Failed to create project. Please try again.");
+    } catch (err) {
+      console.error("[new-project] generation failed:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to create project. Please try again.");
       setIsSubmitting(false);
     }
   }

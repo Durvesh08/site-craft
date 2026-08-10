@@ -23,6 +23,8 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -146,6 +148,47 @@ export class ObjectStorageService {
     } catch {
       return false;
     }
+  }
+
+  async putObject(key: string, content: string): Promise<void> {
+    const { client, bucket } = getStorageConfig();
+    await client.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: content,
+      })
+    );
+  }
+
+  async getObject(key: string): Promise<string> {
+    const { client, bucket } = getStorageConfig();
+    const command = new GetObjectCommand({ Bucket: bucket, Key: key });
+    const response = await client.send(command);
+    if (!response.Body) {
+      throw new ObjectNotFoundError();
+    }
+    return response.Body.transformToString();
+  }
+
+  async listObjects(prefix: string): Promise<string[]> {
+    const { client, bucket } = getStorageConfig();
+    const command = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+    });
+    const response = await client.send(command);
+    if (!response.Contents) return [];
+    return response.Contents.map((item) => item.Key).filter(Boolean) as string[];
+  }
+
+  async deleteObject(key: string): Promise<void> {
+    const { client, bucket } = getStorageConfig();
+    const command = new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+    await client.send(command);
   }
 
   // ── private ────────────────────────────────────────────────────────────────

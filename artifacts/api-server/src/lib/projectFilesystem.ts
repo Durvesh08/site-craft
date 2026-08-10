@@ -1,9 +1,6 @@
-import fs from "fs/promises";
 import path from "path";
 import { db, projectFilesTable } from "@workspace/db";
 import { eq, and, like } from "drizzle-orm";
-
-const STORAGE_ROOT = path.resolve(process.cwd(), "storage/projects");
 
 export interface FileItem {
   id: string;
@@ -17,9 +14,7 @@ export interface FileItem {
 }
 
 export async function getProjectPath(workspaceId: string, projectId: string): Promise<string> {
-  const dirPath = path.join(STORAGE_ROOT, workspaceId, projectId, "source");
-  await fs.mkdir(dirPath, { recursive: true });
-  return dirPath;
+  return `${workspaceId}/${projectId}/source`;
 }
 
 export async function listProjectFiles(workspaceId: string, projectId: string): Promise<FileItem[]> {
