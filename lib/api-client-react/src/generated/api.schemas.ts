@@ -360,16 +360,6 @@ export interface ProjectAnalytics {
   versionsCount: number;
 }
 
-export type PromptModel = typeof PromptModel[keyof typeof PromptModel];
-
-
-export const PromptModel = {
-  'gemini-flash': 'gemini-flash',
-  'gemini-pro': 'gemini-pro',
-  'gemini-flash-fast': 'gemini-flash-fast',
-  'gemini-15-flash': 'gemini-1.5-flash',
-} as const;
-
 export interface Prompt {
   id: string;
   name: string;
@@ -377,7 +367,8 @@ export interface Prompt {
   description: string;
   systemPrompt: string;
   userPromptTemplate: string;
-  model: PromptModel;
+  provider: string;
+  model: string;
   temperature: number;
   version: string;
   isActive: boolean;
@@ -389,41 +380,23 @@ export interface PromptListResponse {
   prompts: Prompt[];
 }
 
-export type CreatePromptRequestModel = typeof CreatePromptRequestModel[keyof typeof CreatePromptRequestModel];
-
-
-export const CreatePromptRequestModel = {
-  'gemini-flash': 'gemini-flash',
-  'gemini-pro': 'gemini-pro',
-  'gemini-flash-fast': 'gemini-flash-fast',
-  'gemini-15-flash': 'gemini-1.5-flash',
-} as const;
-
 export interface CreatePromptRequest {
   name: string;
   agentRole: string;
   description?: string;
   systemPrompt: string;
   userPromptTemplate: string;
-  model: CreatePromptRequestModel;
+  provider: string;
+  model: string;
   temperature?: number;
 }
-
-export type UpdatePromptRequestModel = typeof UpdatePromptRequestModel[keyof typeof UpdatePromptRequestModel];
-
-
-export const UpdatePromptRequestModel = {
-  'gemini-flash': 'gemini-flash',
-  'gemini-pro': 'gemini-pro',
-  'gemini-flash-fast': 'gemini-flash-fast',
-  'gemini-15-flash': 'gemini-1.5-flash',
-} as const;
 
 export interface UpdatePromptRequest {
   name?: string;
   systemPrompt?: string;
   userPromptTemplate?: string;
-  model?: UpdatePromptRequestModel;
+  provider?: string;
+  model?: string;
   temperature?: number;
   changelog?: string;
 }

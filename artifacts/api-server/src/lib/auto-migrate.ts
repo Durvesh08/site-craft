@@ -383,13 +383,56 @@ export async function autoMigrate(): Promise<void> {
         description TEXT NOT NULL DEFAULT '',
         system_prompt TEXT NOT NULL,
         user_prompt_template TEXT NOT NULL,
-        model prompt_model NOT NULL DEFAULT 'gemini-flash',
+        provider TEXT NOT NULL DEFAULT 'gemini',
+        model TEXT NOT NULL DEFAULT 'gemini-2.0-flash',
         temperature REAL NOT NULL DEFAULT 0.7,
         version TEXT NOT NULL DEFAULT '1.0.0',
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+    `);
+
+    // Migration: Migrate prompt_templates from prompt_model enum to provider/model text columns
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'prompt_templates'
+            AND column_name = 'model'
+            AND data_type = 'USER-DEFINED'
+        ) THEN
+          -- Step 1: add provider column
+          ALTER TABLE prompt_templates ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'gemini';
+
+          -- Step 2: add temp column for new model values
+          ALTER TABLE prompt_templates ADD COLUMN IF NOT EXISTS new_model TEXT;
+
+          -- Step 3: backfill from the (still-enum) old model column
+          UPDATE prompt_templates SET new_model = CASE
+            WHEN model::text = 'gemini-flash' THEN 'gemini-2.0-flash'
+            WHEN model::text = 'gemini-pro' THEN 'gemini-1.5-pro'
+            WHEN model::text = 'gemini-flash-fast' THEN 'gemini-2.0-flash'
+            WHEN model::text = 'gemini-1.5-flash' THEN 'gemini-1.5-flash'
+            ELSE 'gemini-2.0-flash'
+          END WHERE new_model IS NULL;
+
+          -- Step 4: enforce default/not-null
+          ALTER TABLE prompt_templates ALTER COLUMN new_model SET DEFAULT 'gemini-2.0-flash';
+          UPDATE prompt_templates SET new_model = 'gemini-2.0-flash' WHERE new_model IS NULL;
+          ALTER TABLE prompt_templates ALTER COLUMN new_model SET NOT NULL;
+
+          -- Step 5: drop the old enum column
+          ALTER TABLE prompt_templates DROP COLUMN model;
+
+          -- Step 6: rename into place
+          ALTER TABLE prompt_templates RENAME COLUMN new_model TO model;
+
+          -- Step 7: drop the now-orphaned enum type
+          DROP TYPE IF EXISTS prompt_model;
+        END IF;
+      END $$;
     `);
 
     await client.query("COMMIT");

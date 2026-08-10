@@ -5,7 +5,6 @@
  * SiteCraft AI Website Generation Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { CreatePromptRequestModel } from './createPromptRequestModel';
 
 export interface CreatePromptRequest {
   name: string;
@@ -13,6 +12,7 @@ export interface CreatePromptRequest {
   description?: string;
   systemPrompt: string;
   userPromptTemplate: string;
-  model: CreatePromptRequestModel;
+  provider: string;
+  model: string;
   temperature?: number;
 }

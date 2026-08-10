@@ -3,15 +3,6 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { usersTable } from "./auth";
 
-export const promptModelEnum = pgEnum("prompt_model", [
-  // Legacy values — kept for backward compat with existing rows
-  "gemini-flash",      // → gemini-2.5-flash (thinking disabled)
-  "gemini-pro",        // → gemini-2.5-pro
-  // New explicit options
-  "gemini-flash-fast", // → gemini-2.0-flash — zero thinking overhead, cheapest & fastest
-  "gemini-1.5-flash",  // → gemini-1.5-flash — legacy but still available, no thinking
-]);
-
 export const promptTemplatesTable = pgTable("prompt_templates", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
@@ -20,7 +11,8 @@ export const promptTemplatesTable = pgTable("prompt_templates", {
   description: text("description").notNull().default(""),
   systemPrompt: text("system_prompt").notNull(),
   userPromptTemplate: text("user_prompt_template").notNull(),
-  model: promptModelEnum("model").notNull().default("gemini-flash"),
+  provider: text("provider").notNull().default("gemini"),
+  model: text("model").notNull().default("gemini-2.0-flash"),
   temperature: real("temperature").notNull().default(0.7),
   version: text("version").notNull().default("1.0.0"),
   isActive: boolean("is_active").notNull().default(true),

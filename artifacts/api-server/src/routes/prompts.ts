@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { promptTemplatesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreatePromptBody, UpdatePromptBody, UpdatePromptParams } from "@workspace/api-zod";
+import { ALLOWED_PROVIDERS, ALLOWED_MODELS } from "../ai/providers/modelRegistry";
 
 const router: IRouter = Router();
 
@@ -22,6 +23,7 @@ function toPromptResponse(p: typeof promptTemplatesTable.$inferSelect) {
     description: p.description,
     systemPrompt: p.systemPrompt,
     userPromptTemplate: p.userPromptTemplate,
+    provider: p.provider,
     model: p.model,
     temperature: p.temperature,
     version: p.version,
@@ -57,6 +59,15 @@ router.post("/prompts", async (req: Request, res: Response) => {
       return;
     }
 
+    if (!ALLOWED_PROVIDERS.includes(body.data.provider as any)) {
+      res.status(422).json({ error: "ValidationError", message: `Unsupported provider. Must be one of: ${ALLOWED_PROVIDERS.join(", ")}` });
+      return;
+    }
+    if (!ALLOWED_MODELS.includes(body.data.model as any)) {
+      res.status(422).json({ error: "ValidationError", message: `Unsupported model. Must be one of: ${ALLOWED_MODELS.join(", ")}` });
+      return;
+    }
+
     const [prompt] = await db
       .insert(promptTemplatesTable)
       .values({
@@ -66,6 +77,7 @@ router.post("/prompts", async (req: Request, res: Response) => {
         description: body.data.description ?? "",
         systemPrompt: body.data.systemPrompt,
         userPromptTemplate: body.data.userPromptTemplate,
+        provider: body.data.provider,
         model: body.data.model,
         temperature: body.data.temperature ?? 0.7,
         version: "1.0.0",
@@ -105,6 +117,15 @@ router.patch("/prompts/:id", async (req: Request, res: Response) => {
     const [major, minor, patch] = existing.version.split(".").map(Number);
     const newVersion = `${major}.${minor}.${(patch ?? 0) + 1}`;
 
+    if (body.data.provider !== undefined && !ALLOWED_PROVIDERS.includes(body.data.provider as any)) {
+      res.status(422).json({ error: "ValidationError", message: `Unsupported provider. Must be one of: ${ALLOWED_PROVIDERS.join(", ")}` });
+      return;
+    }
+    if (body.data.model !== undefined && !ALLOWED_MODELS.includes(body.data.model as any)) {
+      res.status(422).json({ error: "ValidationError", message: `Unsupported model. Must be one of: ${ALLOWED_MODELS.join(", ")}` });
+      return;
+    }
+
     const updates: Partial<typeof promptTemplatesTable.$inferInsert> = {
       updatedAt: new Date(),
       version: newVersion,
@@ -112,6 +133,7 @@ router.patch("/prompts/:id", async (req: Request, res: Response) => {
     if (body.data.name !== undefined) updates.name = body.data.name;
     if (body.data.systemPrompt !== undefined) updates.systemPrompt = body.data.systemPrompt;
     if (body.data.userPromptTemplate !== undefined) updates.userPromptTemplate = body.data.userPromptTemplate;
+    if (body.data.provider !== undefined) updates.provider = body.data.provider;
     if (body.data.model !== undefined) updates.model = body.data.model;
     if (body.data.temperature !== undefined) updates.temperature = body.data.temperature;
 

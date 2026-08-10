@@ -1478,9 +1478,12 @@ components:
           type: string
         userPromptTemplate:
           type: string
+        provider:
+          type: string
+          default: gemini
         model:
           type: string
-          enum: [gemini-flash, gemini-pro, gemini-flash-fast, gemini-1.5-flash]
+          default: gemini-2.0-flash
         temperature:
           type: number
         version:
@@ -1500,6 +1503,7 @@ components:
         - description
         - systemPrompt
         - userPromptTemplate
+        - provider
         - model
         - temperature
         - version
@@ -1530,9 +1534,12 @@ components:
           type: string
         userPromptTemplate:
           type: string
+        provider:
+          type: string
+          default: gemini
         model:
           type: string
-          enum: [gemini-flash, gemini-pro, gemini-flash-fast, gemini-1.5-flash]
+          default: gemini-2.0-flash
         temperature:
           type: number
       required:
@@ -1540,6 +1547,7 @@ components:
         - agentRole
         - systemPrompt
         - userPromptTemplate
+        - provider
         - model
 
     UpdatePromptRequest:
@@ -1551,9 +1559,10 @@ components:
           type: string
         userPromptTemplate:
           type: string
+        provider:
+          type: string
         model:
           type: string
-          enum: [gemini-flash, gemini-pro, gemini-flash-fast, gemini-1.5-flash]
         temperature:
           type: number
         changelog:

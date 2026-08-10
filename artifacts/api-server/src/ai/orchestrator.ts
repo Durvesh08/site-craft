@@ -99,16 +99,9 @@ async function getAgentPromptAndModel(
     .limit(1);
 
   if (template) {
-    let model = defaultModel;
-    // Map DB enum values → real Gemini API model identifiers
-    if (template.model === "gemini-flash")      model = FLASH;       // gemini-2.5-flash, thinking disabled
-    else if (template.model === "gemini-pro")   model = PRO;         // gemini-2.5-pro
-    else if (template.model === "gemini-flash-fast") model = FLASH_FAST; // gemini-2.0-flash — no thinking overhead
-    else if (template.model === "gemini-1.5-flash")  model = "gemini-1.5-flash"; // legacy, still available
-
     return {
       prompt: interpolatePrompt(template.userPromptTemplate, params),
-      model,
+      model: template.model || defaultModel,
       systemInstruction: template.systemPrompt,
       temperature: template.temperature ?? 0.7,
     };

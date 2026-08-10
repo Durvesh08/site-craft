@@ -23,11 +23,27 @@ interface PromptTemplate {
   description: string;
   systemPrompt: string;
   userPromptTemplate: string;
-  model: "gemini-flash" | "gemini-pro" | "gemini-flash-fast" | "gemini-1.5-flash";
+  provider: string;
+  model: string;
   temperature: number;
   version: string;
   isActive: boolean;
 }
+
+const PROVIDER_MODELS: Record<string, { label: string; value: string }[]> = {
+  gemini: [
+    { label: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
+    { label: "Gemini 1.5 Pro", value: "gemini-1.5-pro" },
+    { label: "Gemini 1.5 Flash", value: "gemini-1.5-flash" },
+  ],
+  anthropic: [
+    { label: "Claude 3.5 Sonnet", value: "claude-3-5-sonnet-20241022" },
+    { label: "Claude 3.5 Haiku", value: "claude-3-5-haiku-20241022" },
+  ],
+  deepseek: [
+    { label: "DeepSeek Coder", value: "deepseek-coder" },
+  ],
+};
 
 export default function Prompts() {
   const { data: promptsData, isLoading, refetch } = useListPrompts();
@@ -41,7 +57,8 @@ export default function Prompts() {
   const [description, setDescription] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [userPromptTemplate, setUserPromptTemplate] = useState("");
-  const [model, setModel] = useState<PromptTemplate["model"]>("gemini-flash");
+  const [provider, setProvider] = useState("gemini");
+  const [model, setModel] = useState("gemini-2.0-flash");
   const [temperature, setTemperature] = useState(0.7);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -60,6 +77,7 @@ export default function Prompts() {
     setDescription(prompt.description || "");
     setSystemPrompt(prompt.systemPrompt);
     setUserPromptTemplate(prompt.userPromptTemplate || "");
+    setProvider(prompt.provider || "gemini");
     setModel(prompt.model);
     setTemperature(prompt.temperature);
     setIsDialogOpen(true);
@@ -75,6 +93,7 @@ export default function Prompts() {
           name,
           systemPrompt,
           userPromptTemplate,
+          provider,
           model,
           temperature,
         },
@@ -132,7 +151,7 @@ export default function Prompts() {
                   {prompt.isActive && <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[10px] px-1.5 py-0 font-medium">ACTIVE</Badge>}
                 </div>
                 <CardDescription className="text-xs text-muted-foreground">
-                  Role: {prompt.agentRole} • Model: {prompt.model}
+                  Role: {prompt.agentRole} • Provider: {prompt.provider} • Model: {prompt.model}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1">
@@ -201,31 +220,48 @@ export default function Prompts() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">AI Model</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase">AI Provider</label>
                 <select
-                  value={model}
-                  onChange={(e) => setModel(e.target.value as PromptTemplate["model"])}
+                  value={provider}
+                  onChange={(e) => {
+                    const newProvider = e.target.value;
+                    setProvider(newProvider);
+                    setModel(PROVIDER_MODELS[newProvider]?.[0]?.value || "");
+                  }}
                   className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}
                 >
-                  <option value="gemini-flash">Gemini Pro/Flash Hybrid (thinking disabled)</option>
-                  <option value="gemini-pro">Gemini 2.5 Pro (Thinking)</option>
-                  <option value="gemini-flash-fast">Gemini 2.0 Flash (Fastest)</option>
-                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+                  <option value="gemini">Google Gemini</option>
+                  <option value="anthropic">Anthropic Claude</option>
+                  <option value="deepseek">DeepSeek</option>
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Temperature ({temperature})</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1.5"
-                  step="0.1"
-                  value={temperature}
-                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                  className="w-full h-10 accent-primary bg-transparent cursor-pointer"
-                />
+                <label className="text-xs font-semibold text-muted-foreground uppercase">AI Model</label>
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-input text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  style={{ backgroundColor: 'var(--surface-2)', borderColor: 'var(--surface-border)' }}
+                >
+                  {(PROVIDER_MODELS[provider] || []).map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground uppercase">Temperature ({temperature})</label>
+              <input
+                type="range"
+                min="0"
+                max="1.5"
+                step="0.1"
+                value={temperature}
+                onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                className="w-full h-10 accent-primary bg-transparent cursor-pointer"
+              />
             </div>
 
             <div className="space-y-1.5">

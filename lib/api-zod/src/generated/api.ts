@@ -549,7 +549,7 @@ export const deployProjectBodyOverwriteExistingDefault = true;
 
 export const DeployProjectBody = zod.object({
   "environment": zod.enum(['production', 'staging']).default(deployProjectBodyEnvironmentDefault),
-  "protocol": zod.enum(['ftp', 'ftps', 'sftp', 'vercel', 'netlify', 'cloudflare_pages']).default(deployProjectBodyProtocolDefault),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).default(deployProjectBodyProtocolDefault),
   "ftpHost": zod.string(),
   "ftpPort": zod.number().default(deployProjectBodyFtpPortDefault),
   "ftpUsername": zod.string(),
@@ -564,7 +564,7 @@ export const DeployProjectResponse = zod.object({
   "projectId": zod.string(),
   "status": zod.enum(['pending', 'uploading', 'verifying', 'live', 'failed', 'rolled_back']),
   "environment": zod.enum(['production', 'staging']),
-  "protocol": zod.enum(['ftp', 'ftps', 'sftp', 'vercel', 'netlify', 'cloudflare_pages']).optional(),
+  "protocol": zod.enum(['ftp', 'ftps', 'sftp']).optional(),
   "liveUrl": zod.string().nullish(),
   "screenshotUrl": zod.string().nullish(),
   "ftpHost": zod.string().nullish(),
@@ -798,6 +798,9 @@ export const GetProjectAnalyticsResponse = zod.object({
 /**
  * @summary List all prompt templates in the library
  */
+export const listPromptsResponsePromptsItemProviderDefault = `gemini`;
+export const listPromptsResponsePromptsItemModelDefault = `gemini-2.0-flash`;
+
 export const ListPromptsResponse = zod.object({
   "prompts": zod.array(zod.object({
   "id": zod.string(),
@@ -806,7 +809,8 @@ export const ListPromptsResponse = zod.object({
   "description": zod.string(),
   "systemPrompt": zod.string(),
   "userPromptTemplate": zod.string(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']),
+  "provider": zod.string().default(listPromptsResponsePromptsItemProviderDefault),
+  "model": zod.string().default(listPromptsResponsePromptsItemModelDefault),
   "temperature": zod.number(),
   "version": zod.string(),
   "isActive": zod.boolean(),
@@ -819,15 +823,22 @@ export const ListPromptsResponse = zod.object({
 /**
  * @summary Create a new prompt template
  */
+export const createPromptBodyProviderDefault = `gemini`;
+export const createPromptBodyModelDefault = `gemini-2.0-flash`;
+
 export const CreatePromptBody = zod.object({
   "name": zod.string(),
   "agentRole": zod.string(),
   "description": zod.string().optional(),
   "systemPrompt": zod.string(),
   "userPromptTemplate": zod.string(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']),
+  "provider": zod.string().default(createPromptBodyProviderDefault),
+  "model": zod.string().default(createPromptBodyModelDefault),
   "temperature": zod.number().optional()
 })
+
+export const createPromptResponseProviderDefault = `gemini`;
+export const createPromptResponseModelDefault = `gemini-2.0-flash`;
 
 export const CreatePromptResponse = zod.object({
   "id": zod.string(),
@@ -836,7 +847,8 @@ export const CreatePromptResponse = zod.object({
   "description": zod.string(),
   "systemPrompt": zod.string(),
   "userPromptTemplate": zod.string(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']),
+  "provider": zod.string().default(createPromptResponseProviderDefault),
+  "model": zod.string().default(createPromptResponseModelDefault),
   "temperature": zod.number(),
   "version": zod.string(),
   "isActive": zod.boolean(),
@@ -856,10 +868,14 @@ export const UpdatePromptBody = zod.object({
   "name": zod.string().optional(),
   "systemPrompt": zod.string().optional(),
   "userPromptTemplate": zod.string().optional(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']).optional(),
+  "provider": zod.string().optional(),
+  "model": zod.string().optional(),
   "temperature": zod.number().optional(),
   "changelog": zod.string().optional()
 })
+
+export const updatePromptResponseProviderDefault = `gemini`;
+export const updatePromptResponseModelDefault = `gemini-2.0-flash`;
 
 export const UpdatePromptResponse = zod.object({
   "id": zod.string(),
@@ -868,7 +884,8 @@ export const UpdatePromptResponse = zod.object({
   "description": zod.string(),
   "systemPrompt": zod.string(),
   "userPromptTemplate": zod.string(),
-  "model": zod.enum(['gemini-flash', 'gemini-pro', 'gemini-flash-fast', 'gemini-1.5-flash']),
+  "provider": zod.string().default(updatePromptResponseProviderDefault),
+  "model": zod.string().default(updatePromptResponseModelDefault),
   "temperature": zod.number(),
   "version": zod.string(),
   "isActive": zod.boolean(),

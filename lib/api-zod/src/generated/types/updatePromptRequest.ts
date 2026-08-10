@@ -5,13 +5,13 @@
  * SiteCraft AI Website Generation Platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { UpdatePromptRequestModel } from './updatePromptRequestModel';
 
 export interface UpdatePromptRequest {
   name?: string;
   systemPrompt?: string;
   userPromptTemplate?: string;
-  model?: UpdatePromptRequestModel;
+  provider?: string;
+  model?: string;
   temperature?: number;
   changelog?: string;
 }
