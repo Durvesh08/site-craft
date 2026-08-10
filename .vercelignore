@@ -1,0 +1,12 @@
+node_modules/
+.pnpm-store/
+.git/
+.agents/
+.local/
+attached_assets/
+scratch/
+tmp/
+dist/
+artifacts/api-server/node_modules/
+artifacts/sitecraft/node_modules/
+lib/object-storage-web/node_modules/
