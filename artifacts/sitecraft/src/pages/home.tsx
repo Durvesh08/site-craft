@@ -60,43 +60,67 @@ export default function Home() {
       smoothWheel: true,
     });
 
-    let isSnapping = false;
-    let snapTimeout: NodeJS.Timeout;
+    let currentSlide = 0;
+    let isTransitioning = false;
 
     // Normalize progress points corresponding to the slides
-    // Slide 1: 0, Slide 2: 0.25, Slide 3: 0.55, Pricing: 0.85
+    // Slide 1: 0, Slide 2: 0.25, Slide 3: 0.55, Pricing: 0.85, End: 1.0
     const snapPoints = [0, 0.25, 0.55, 0.85, 1.0];
 
-    const handleScroll = () => {
-      if (isSnapping) return;
+    const handleWheel = (e: WheelEvent) => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return;
 
-      clearTimeout(snapTimeout);
-      snapTimeout = setTimeout(() => {
-        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-        if (maxScroll <= 0) return;
-        
-        const progress = window.scrollY / maxScroll;
-        
-        // Find the closest slide snap point
-        const closest = snapPoints.reduce((prev, curr) => {
-          return Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev;
-        });
+      const progress = window.scrollY / maxScroll;
 
-        // Snap smoothly if user is near a slide but not exactly aligned
-        const diff = Math.abs(closest - progress);
-        if (diff > 0.015 && diff < 0.20) {
-          isSnapping = true;
-          const targetY = closest * maxScroll;
-          
+      // Intercept wheel events when we are in the cinematic sequence story
+      if (progress < 0.84 || (progress >= 0.84 && e.deltaY < 0 && window.scrollY <= 0.86 * maxScroll)) {
+        e.preventDefault();
+
+        if (isTransitioning) return;
+
+        let nextSlide = currentSlide;
+        if (e.deltaY > 0) {
+          nextSlide = Math.min(currentSlide + 1, snapPoints.length - 1);
+        } else if (e.deltaY < 0) {
+          nextSlide = Math.max(currentSlide - 1, 0);
+        }
+
+        if (nextSlide !== currentSlide) {
+          currentSlide = nextSlide;
+          isTransitioning = true;
+          const targetY = snapPoints[nextSlide] * maxScroll;
+
           lenis.scrollTo(targetY, {
-            duration: 0.8,
+            duration: 1.0,
             immediate: false,
             onComplete: () => {
-              isSnapping = false;
+              // Add brief cooldown for maximum luxury feel
+              setTimeout(() => {
+                isTransitioning = false;
+              }, 300);
             }
           });
         }
-      }, 300); // 300ms debounce
+      }
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: false });
+
+    // Track scroll events to sync the slide index in case of external scroll/navigation
+    const handleScroll = () => {
+      if (isTransitioning) return;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) return;
+      
+      const progress = window.scrollY / maxScroll;
+      
+      const closestIndex = snapPoints.reduce((prevIdx, currVal, currIdx) => {
+        const prevVal = snapPoints[prevIdx];
+        return Math.abs(currVal - progress) < Math.abs(prevVal - progress) ? currIdx : prevIdx;
+      }, 0);
+
+      currentSlide = closestIndex;
     };
 
     lenis.on("scroll", handleScroll);
@@ -108,9 +132,9 @@ export default function Home() {
     requestAnimationFrame(raf);
 
     return () => {
+      window.removeEventListener("wheel", handleWheel);
       lenis.off("scroll", handleScroll);
       lenis.destroy();
-      clearTimeout(snapTimeout);
     };
   }, []);
 
