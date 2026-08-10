@@ -31,13 +31,13 @@ const cinematicTimeline: SceneConfig[] = [
     resolution: [1920, 1080],
   },
   {
-    id: 'scene_1',
-    pathPrefix: '/cinematic/scene_1/videoplayback_',
-    frameCount: 81,
-    padLength: 3, // 001 - 081
+    id: 'scene_last',
+    pathPrefix: '/cinematic/scene_last/frame_',
+    frameCount: 70,
+    padLength: 3, // 001 - 070
     extension: 'jpg',
     scrollRange: [0.70, 1.0], // Final 30% of scroll (Pricing/Footer)
-    resolution: [3840, 1920],
+    resolution: [1920, 1080],
   },
 ];
 

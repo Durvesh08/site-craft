@@ -27,6 +27,14 @@ export default function Home() {
   const textScale = useTransform(globalScroll, [0, 0.10], [1, 1.05]);
   const textY = useTransform(globalScroll, [0, 0.10], [0, -80]);
 
+  // Slide 2 transforms (12% to 38% scroll)
+  const s2Opacity = useTransform(globalScroll, [0.12, 0.18, 0.32, 0.38], [0, 1, 1, 0]);
+  const s2Y = useTransform(globalScroll, [0.12, 0.18, 0.32, 0.38], [80, 0, 0, -80]);
+
+  // Slide 3 transforms (42% to 68% scroll)
+  const s3Opacity = useTransform(globalScroll, [0.42, 0.48, 0.62, 0.68], [0, 1, 1, 0]);
+  const s3Y = useTransform(globalScroll, [0.42, 0.48, 0.62, 0.68], [80, 0, 0, -80]);
+
   const goToLogin = () => {
     soundEngine.playPrimaryClick();
     setLocation("/login");
@@ -124,6 +132,67 @@ export default function Home() {
               </h1>
             </motion.div>
 
+            {/* Slide 2: Core Philosophy */}
+            <motion.div 
+              style={{ opacity: s2Opacity, y: s2Y }}
+              className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center select-none z-10 max-w-5xl mx-auto pointer-events-none"
+            >
+              <span className="text-xs font-mono tracking-[0.3em] text-white/50 uppercase mb-4">Core Philosophy</span>
+              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-8">
+                Bespoke Design, <br className="hidden sm:inline" />Not Cookie-Cutter Templates.
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left mt-8 w-full">
+                <div className="p-6 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-md">
+                  <div className="text-white/40 text-xs font-mono mb-2">01 / ARCHETYPES</div>
+                  <h3 className="text-base font-bold mb-2">Tailored Aesthetics</h3>
+                  <p className="text-xs sm:text-sm text-white/60 leading-relaxed">Adapt color theory, typographic hierarchy, and motion pacing specific to your industry tone.</p>
+                </div>
+                <div className="p-6 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-md">
+                  <div className="text-white/40 text-xs font-mono mb-2">02 / INTERACTION</div>
+                  <h3 className="text-base font-bold mb-2">Premium Motion</h3>
+                  <p className="text-xs sm:text-sm text-white/60 leading-relaxed">Built-in spring physics, scroll-bound sequences, and micro-animations that feel completely organic.</p>
+                </div>
+                <div className="p-6 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-md">
+                  <div className="text-white/40 text-xs font-mono mb-2">03 / CODE</div>
+                  <h3 className="text-base font-bold mb-2">Clean Exports</h3>
+                  <p className="text-xs sm:text-sm text-white/60 leading-relaxed">Production-ready React + Tailwind CSS code structured exactly as if a senior engineer wrote it.</p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Slide 3: Retrieval Engine */}
+            <motion.div 
+              style={{ opacity: s3Opacity, y: s3Y }}
+              className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center select-none z-10 max-w-5xl mx-auto pointer-events-none"
+            >
+              <span className="text-xs font-mono tracking-[0.3em] text-white/50 uppercase mb-4">Contextual Retrieval</span>
+              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-8">
+                Learning From Every Layout.
+              </h2>
+              <div className="p-6 sm:p-8 rounded-3xl border border-white/10 bg-black/50 backdrop-blur-xl max-w-2xl text-left space-y-6 mx-auto">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-mono text-white/60">RAG ENGINE ACTIVE</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-white/40">v1.2.0-core</span>
+                </div>
+                <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
+                  Zovaix uses advanced vector similarity matching to fetch approved exemplars matching your copy intent. The AI retrieves layout designs, copy structures, and animation cues that have been graded as peak-quality by senior designers.
+                </p>
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="border-l-2 border-white/20 pl-4">
+                    <div className="text-[10px] sm:text-xs text-white/40 font-mono">RETRIEVAL SPEED</div>
+                    <div className="text-sm sm:text-base font-bold">~140ms</div>
+                  </div>
+                  <div className="border-l-2 border-white/20 pl-4">
+                    <div className="text-[10px] sm:text-xs text-white/40 font-mono">SIMILARITY GUARD</div>
+                    <div className="text-sm sm:text-base font-bold">0.72 Cosine</div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
           </div>
         </div>
 
@@ -136,7 +205,7 @@ export default function Home() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="p-8 rounded-3xl border border-white/10 flex flex-col justify-between bg-white/[0.02] backdrop-blur-md">
+              <div className="p-8 rounded-3xl border border-white/10 flex flex-col justify-between bg-black/40 backdrop-blur-xl hover:border-white/20 transition-all duration-300">
                 <div>
                   <h3 className="text-lg font-bold text-white mb-2">Free</h3>
                   <div className="flex items-baseline gap-2 mb-4">
@@ -158,8 +227,8 @@ export default function Home() {
                 </Button>
               </div>
 
-              <div className="p-8 rounded-3xl border border-white/20 flex flex-col justify-between relative shadow-2xl bg-white/[0.06] backdrop-blur-md">
-                <div className="absolute top-0 inset-x-0 h-1 bg-white rounded-t-3xl" />
+              <div className="p-8 rounded-3xl border border-white/20 flex flex-col justify-between relative shadow-2xl bg-black/60 backdrop-blur-xl hover:border-white/35 transition-all duration-300">
+                <div className="absolute top-0 inset-x-0 h-1 bg-white/40 rounded-t-3xl" />
                 <div>
                   <h3 className="text-lg font-bold text-white mb-2">Pro</h3>
                   <div className="flex items-baseline gap-2 mb-4">
