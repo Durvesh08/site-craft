@@ -12,7 +12,6 @@ import versionsRouter from "./versions";
 import meRouter from "./me";
 import settingsRouter from "./settings";
 import storageRouter from "./storage";
-import connectorsRouter from "./connectors";
 import domainsRouter from "./domains";
 import workspaceRouter from "./workspace";
 
@@ -39,7 +38,6 @@ router.use(promptsRouter);
 router.use(versionsRouter);
 router.use(settingsRouter);
 router.use(storageRouter);
-router.use(connectorsRouter);
 router.use(domainsRouter);
 router.use(workspaceRouter);
 router.use(securityRouter);

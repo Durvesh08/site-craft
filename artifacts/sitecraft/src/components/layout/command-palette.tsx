@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { projectsService } from "@/services/projects";
-import { connectorsService } from "@/services/connectors";
 import { domainsService } from "@/services/domains";
 import {
   Search,
@@ -29,7 +28,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
 
   const projects = projectsService.getAll();
-  const connectors = connectorsService.getAll();
   const domains = domainsService.getAll();
 
   useEffect(() => {
@@ -55,7 +53,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   };
 
   const filteredProjects = projects.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
-  const filteredConnectors = connectors.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 4);
   const filteredDomains = domains.filter(d => d.domain.toLowerCase().includes(query.toLowerCase())).slice(0, 3);
 
   return (
@@ -71,7 +68,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command or search projects, connectors, domains..."
+            placeholder="Type a command or search projects, domains..."
             className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
             autoFocus
           />
@@ -90,8 +87,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                 Quick Actions
               </span>
               <CommandItem icon={PlusCircle} label="Create New Project" action={() => navigateTo("/new")} />
-              <CommandItem icon={Sparkles} label="Browse Templates" action={() => navigateTo("/templates")} />
-              <CommandItem icon={Plug} label="Open Connectors Directory" action={() => navigateTo("/connectors")} />
               <CommandItem icon={Globe} label="Open Domain Manager" action={() => navigateTo("/domains")} />
               <CommandItem icon={CreditCard} label="Billing & Usage" action={() => navigateTo("/billing")} />
               <CommandItem icon={Settings} label="Workspace Settings" action={() => navigateTo("/settings")} />
@@ -141,23 +136,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             </div>
           )}
 
-          {/* CONNECTORS */}
-          {filteredConnectors.length > 0 && (
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50 px-3">
-                Connectors
-              </span>
-              {filteredConnectors.map(c => (
-                <CommandItem
-                  key={c.id}
-                  icon={Plug}
-                  label={`${c.name} (${c.category})`}
-                  badge={c.status}
-                  action={() => navigateTo("/connectors")}
-                />
-              ))}
-            </div>
-          )}
+
 
           {/* DOMAINS */}
           {filteredDomains.length > 0 && (

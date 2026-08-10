@@ -30,7 +30,6 @@ export const PLATFORM_ROUTES = [
   '/projects/lumina/files',
   '/projects/lumina/assets',
   '/projects/lumina/database',
-  '/projects/lumina/connectors',
   '/projects/lumina/secrets',
   '/projects/lumina/github',
   '/projects/lumina/domains',
@@ -39,7 +38,6 @@ export const PLATFORM_ROUTES = [
   '/projects/lumina/security',
   '/projects/lumina/logs',
   '/projects/lumina/settings',
-  '/connectors',
   '/domains',
   '/usage',
   '/security',
@@ -63,7 +61,6 @@ export function runFullApplicationQA(): FullQASummary {
     { category: 'Type Safety', name: 'TypeScript Strict Checks', status: 'passed', details: 'Zero type errors found via npx tsc --noEmit.' },
     { category: 'Runtime Isolation', name: 'Project Preview Hard Sandbox', status: 'passed', details: 'Project preview iframe bound to /preview-frame/:id with zero Zovaix platform CSS/marketing leakage.' },
     { category: 'Typography', name: 'Font Governance & Weights', status: 'passed', details: 'Platform UI locked to Geist Sans/Inter with weights 400, 500, 600, 700.' },
-    { category: 'Connectors', name: 'Registry Single Source of Truth', status: 'passed', details: 'connectorRegistry configured with 25+ official brand SVGs.' },
     { category: 'Security', name: 'Secrets Exposure Scanner', status: 'passed', details: 'Environment variables strictly masked (••••••••).' },
     { category: 'Responsiveness', name: 'Device Viewport Matrix', status: 'passed', details: 'Verified layouts across Desktop (1440/1280), Tablet (1024/768), and Mobile (390/375).' },
   ];

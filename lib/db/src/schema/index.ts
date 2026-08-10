@@ -2,7 +2,6 @@ export * from "./auth";
 export * from "./workspace";
 export * from "./projects";
 export * from "./project-files";
-export * from "./connectors";
 export * from "./chat";
 export * from "./security";
 export * from "./notifications";

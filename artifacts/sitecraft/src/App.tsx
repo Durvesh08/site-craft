@@ -18,7 +18,6 @@ import ProjectPreview from '@/pages/project-preview';
 import ProjectCode from '@/pages/project-code';
 import ProjectFiles from '@/pages/project-files';
 import ProjectAssets from '@/pages/project-assets';
-import ConnectorsPage from '@/pages/connectors-page';
 import DomainsPage from '@/pages/domains-page';
 import DeploymentsPage from '@/pages/deployments-page';
 import VersionsPage from '@/pages/versions-page';
@@ -110,9 +109,7 @@ function Router() {
         {() => <ProtectedRoute component={ProjectEditor} />}
       </Route>
 
-      <Route path="/connectors">
-        {() => <ProtectedRoute component={ConnectorsPage} />}
-      </Route>
+
       <Route path="/domains">
         {() => <ProtectedRoute component={DomainsPage} />}
       </Route>
