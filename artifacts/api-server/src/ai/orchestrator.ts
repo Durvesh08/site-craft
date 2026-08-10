@@ -7,6 +7,7 @@ import {
   versionsTable,
   settingsTable,
   promptTemplatesTable,
+  layoutSkeletonsTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -541,6 +542,61 @@ ${html.slice(0, 60000)}`;
             .set({ status: "completed", completedAt: new Date(), outputJson: JSON.stringify({ output: precomputed }) })
             .where(eq(aiJobStepsTable.id, dbStep.id));
           logger.info({ stepName: step.name }, "Step bypassed — using pre-computed merged agent output");
+          continue;
+        }
+
+        // ── Deterministic Layout Skeleton Interceptor ──────────────────────────
+        if (step.agent === "ux-strategist") {
+          logger.info("Bypassing ux-strategist layout planning — using layout skeletons from database");
+          const bypassedOutput = "Layout Planning Bypassed in favor of OKS Skeleton";
+          await db.update(aiJobStepsTable)
+            .set({ status: "completed", completedAt: new Date(), outputJson: JSON.stringify({ output: bypassedOutput }) })
+            .where(eq(aiJobStepsTable.id, dbStep.id));
+          agentOutputs[step.agent] = bypassedOutput;
+          continue;
+        }
+
+        if (step.agent === "component-planner") {
+          logger.info("Resolving deterministic layout skeleton from database...");
+          let skeletonRows: any[] = [];
+          if (archetype) {
+            skeletonRows = await db
+              .select()
+              .from(layoutSkeletonsTable)
+              .where(eq(layoutSkeletonsTable.archetypeKey, archetype.key));
+          }
+          
+          let selectedSkeleton = skeletonRows[0];
+          let sections = [];
+          if (selectedSkeleton) {
+            sections = (selectedSkeleton.sectionsJson as any) || [];
+          } else {
+            // Fallback skeleton generation
+            const menu = archetype?.sectionMenu || ["Hero", "FeatureGrid", "PricingTable", "CTA"];
+            sections = menu.map((type, idx) => ({
+              type,
+              id: `${type.toLowerCase()}-${idx}`,
+              required: true,
+              brief: `Standard ${type} section matching design system styles`
+            }));
+          }
+
+          // Build component-planner output JSON structure
+          const plannerOutput = {
+            sectionPlan: sections.map((s: any, idx: number) => ({
+              id: s.id || `${s.type.toLowerCase()}-${idx}`,
+              type: s.type || "content-section",
+              order: idx,
+              brief: s.brief || `Conform to archetype's styling with standard conversion elements.`
+            }))
+          };
+          const outputString = JSON.stringify(plannerOutput);
+
+          await db.update(aiJobStepsTable)
+            .set({ status: "completed", completedAt: new Date(), outputJson: JSON.stringify(plannerOutput) })
+            .where(eq(aiJobStepsTable.id, dbStep.id));
+          agentOutputs[step.agent] = outputString;
+          logger.info({ sectionsCount: sections.length }, "Layout skeleton successfully resolved and seeded into component-planner output");
           continue;
         }
 

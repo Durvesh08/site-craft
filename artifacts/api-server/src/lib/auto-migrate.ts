@@ -393,6 +393,67 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
+    // 18. layout_skeletons
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS layout_skeletons (
+        id TEXT PRIMARY KEY,
+        archetype_key TEXT NOT NULL,
+        sections_json JSONB NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      );
+    `);
+
+    // Seed layout skeletons
+    const skeletonsToSeed = [
+      {
+        id: "skeleton-saas-technical",
+        archetypeKey: "saas-technical",
+        sectionsJson: [
+          { type: "Hero", id: "hero-sec", brief: "Hero section featuring product mockup and outcome-driven claims." },
+          { type: "LogoStrip", id: "logo-sec", brief: "Horizontal grid showing logos of trusted customers." },
+          { type: "FeatureGrid", id: "features-sec", brief: "Benefit-bridge feature grids grouped in triads." },
+          { type: "VisualShowcase", id: "showcase-sec", brief: "Product dashboard preview with highlighted metrics." },
+          { type: "IntegrationGrid", id: "integrations-sec", brief: "3x2 grid of supported technology integrations." },
+          { type: "PricingTable", id: "pricing-sec", brief: "3-tier pricing model matching anchor-decoy-target pattern." },
+          { type: "FAQ", id: "faq-sec", brief: "Objection-handling accordions for technical/security doubts." },
+          { type: "CTA", id: "cta-sec", brief: "Closing section reinforcing the value close and primary button." }
+        ]
+      },
+      {
+        id: "skeleton-saas-friendly",
+        archetypeKey: "saas-friendly",
+        sectionsJson: [
+          { type: "Hero", id: "hero-sec", brief: "Kinetic split-hero with abstract shapes and human copy." },
+          { type: "StepGuide", id: "steps-sec", brief: "3-step interactive roadmap illustrating how it works." },
+          { type: "FeatureBlocks", id: "features-sec", brief: "Friendly feature grids with clean icons and benefit bridges." },
+          { type: "TestimonialSlider", id: "social-sec", brief: "Attributed customer quotes slider showing social proof." },
+          { type: "PricingCards", id: "pricing-sec", brief: "Friendly tier cards with highlighted pro target." },
+          { type: "Newsletter", id: "newsletter-sec", brief: "Minimal input field for weekly tips updates." },
+          { type: "CTA", id: "cta-sec", brief: "Closing section with warm CTA buttons." }
+        ]
+      },
+      {
+        id: "skeleton-restaurant-warm",
+        archetypeKey: "restaurant-warm",
+        sectionsJson: [
+          { type: "Hero", id: "hero-sec", brief: "Full-bleed warm photo background featuring signature dish." },
+          { type: "MenuHighlights", id: "menu-sec", brief: "Featured chef specials menu grid with descriptions." },
+          { type: "AboutStory", id: "about-sec", brief: "Short human story detailing culinary team and roots." },
+          { type: "GalleryStrip", id: "gallery-sec", brief: "Grid showing restaurant dining layout and food shots." },
+          { type: "LocationHours", id: "location-sec", brief: "Map embed location with weekday and weekend opening hours." },
+          { type: "CTA", id: "cta-sec", brief: "Closing section facilitating reservations." }
+        ]
+      }
+    ];
+
+    for (const sk of skeletonsToSeed) {
+      await client.query(`
+        INSERT INTO layout_skeletons (id, archetype_key, sections_json, version)
+        VALUES ($1, $2, $3, 1)
+        ON CONFLICT (id) DO NOTHING;
+      `, [sk.id, sk.archetypeKey, JSON.stringify(sk.sectionsJson)]);
+    }
+
     // Migration: Migrate prompt_templates from prompt_model enum to provider/model text columns
     await client.query(`
       DO $$
