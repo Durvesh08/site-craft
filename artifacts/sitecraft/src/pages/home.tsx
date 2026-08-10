@@ -93,7 +93,6 @@ export default function Home() {
         </div>
         <nav className="hidden md:flex items-center gap-10 text-[13px] font-medium text-white/70">
           <a href="#story" className="hover:text-white transition-colors">Showcase</a>
-          <a href="#features" className="hover:text-white transition-colors">System</a>
           <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
         </nav>
         <div className="flex items-center gap-4">
@@ -145,200 +144,40 @@ export default function Home() {
               </div>
             </motion.div>
 
-            {/* Slide 2: Core Philosophy */}
+            {/* Slide 2: Aesthetic Typography Overlay */}
             <motion.div 
               style={{ opacity: s2Opacity, y: s2Y }}
-              className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center select-none z-10 max-w-5xl mx-auto pointer-events-none"
+              className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center select-none z-10"
             >
-              <span className="text-xs font-mono tracking-[0.3em] text-white/50 uppercase mb-4">Core Philosophy</span>
-              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-8">
-                Bespoke Design, <br className="hidden sm:inline" />Not Cookie-Cutter Templates.
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left mt-8 w-full">
-                <div className="p-6 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-md">
-                  <div className="text-white/40 text-xs font-mono mb-2">01 / ARCHETYPES</div>
-                  <h3 className="text-base font-bold mb-2">Tailored Aesthetics</h3>
-                  <p className="text-xs sm:text-sm text-white/60 leading-relaxed">Adapt color theory, typographic hierarchy, and motion pacing specific to your industry tone.</p>
-                </div>
-                <div className="p-6 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-md">
-                  <div className="text-white/40 text-xs font-mono mb-2">02 / INTERACTION</div>
-                  <h3 className="text-base font-bold mb-2">Premium Motion</h3>
-                  <p className="text-xs sm:text-sm text-white/60 leading-relaxed">Built-in spring physics, scroll-bound sequences, and micro-animations that feel completely organic.</p>
-                </div>
-                <div className="p-6 rounded-2xl border border-white/5 bg-black/40 backdrop-blur-md">
-                  <div className="text-white/40 text-xs font-mono mb-2">03 / CODE</div>
-                  <h3 className="text-base font-bold mb-2">Clean Exports</h3>
-                  <p className="text-xs sm:text-sm text-white/60 leading-relaxed">Production-ready React + Tailwind CSS code structured exactly as if a senior engineer wrote it.</p>
-                </div>
-              </div>
+              <h2 className="text-xs sm:text-sm font-mono tracking-[0.4em] text-white/50 mb-6 uppercase">Design Philosophy</h2>
+              <h1 className="text-[40px] sm:text-[80px] lg:text-[100px] font-black tracking-tight leading-[0.9] text-transparent bg-clip-text bg-gradient-to-r from-[#A78BFA] via-[#F472B6] to-[#F87171] flex flex-col items-center justify-center drop-shadow-2xl">
+                <span>AESTHETICS</span>
+                <span className="font-serif italic font-light text-white/95 lowercase tracking-wide my-2 sm:my-4 text-[48px] sm:text-[90px] lg:text-[120px]">become</span>
+                <span>IDENTITY.</span>
+              </h1>
+              <p className="text-white/60 text-xs sm:text-sm max-w-md mt-6 leading-relaxed font-mono tracking-wider">
+                Uncompromising typographical precision and layout balance.
+              </p>
             </motion.div>
 
-            {/* Slide 3: Retrieval Engine */}
+            {/* Slide 3: Aesthetic Typography Overlay */}
             <motion.div 
               style={{ opacity: s3Opacity, y: s3Y }}
-              className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center select-none z-10 max-w-5xl mx-auto pointer-events-none"
+              className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center select-none z-10"
             >
-              <span className="text-xs font-mono tracking-[0.3em] text-white/50 uppercase mb-4">Contextual Retrieval</span>
-              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-8">
-                Learning From Every Layout.
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full items-center text-left pointer-events-auto">
-                <div className="p-6 sm:p-8 rounded-3xl border border-white/10 bg-black/50 backdrop-blur-xl space-y-6">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-xs font-mono text-white/60">RAG ENGINE ACTIVE</span>
-                    </div>
-                    <span className="text-[10px] font-mono text-white/40">v1.2.0-core</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
-                    Zovaix uses advanced vector similarity matching to fetch approved exemplars matching your copy intent. The AI retrieves layout designs, copy structures, and animation cues that have been graded as peak-quality by senior designers.
-                  </p>
-                  <div className="grid grid-cols-2 gap-4 pt-2">
-                    <div className="border-l-2 border-white/20 pl-4">
-                      <div className="text-[10px] sm:text-xs text-white/40 font-mono">RETRIEVAL SPEED</div>
-                      <div className="text-xs sm:text-sm font-bold">~140ms</div>
-                    </div>
-                    <div className="border-l-2 border-white/20 pl-4">
-                      <div className="text-[10px] sm:text-xs text-white/40 font-mono">SIMILARITY GUARD</div>
-                      <div className="text-xs sm:text-sm font-bold">0.72 Cosine</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Animated Pipeline Simulation Card */}
-                <div className="p-6 rounded-3xl border border-white/5 bg-black/40 backdrop-blur-md space-y-4 font-mono text-[11px] leading-relaxed">
-                  <div className="text-white/40 text-[10px] uppercase tracking-wider">RAG Query Stream</div>
-                  
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-1">
-                      <span className="text-[9px] text-white/30 uppercase">INPUT PROMPT</span>
-                      <span className="text-white/80">"Developer CI/CD tool with terminal mock..."</span>
-                    </div>
-                    
-                    <div className="flex justify-center text-white/20">- - ↓ - -</div>
-                    
-                    <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between">
-                      <span className="text-primary-foreground font-semibold">VECTOR MATCHING</span>
-                      <span className="text-[9px] px-2 py-0.5 rounded bg-primary/25 text-white font-bold">0.74 SIMILARITY</span>
-                    </div>
-
-                    <div className="flex justify-center text-white/20">- - ↓ - -</div>
-
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col gap-1">
-                      <span className="text-[9px] text-emerald-400 font-semibold uppercase">INJECTED EXEMPLAR</span>
-                      <span className="text-white/80">Copy: "Deploy in Seconds..."</span>
-                      <span className="text-white/50 text-[9px]">Layout: CodeEditorMock, Dark Mode</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <h2 className="text-xs sm:text-sm font-mono tracking-[0.4em] text-white/50 mb-6 uppercase">Aesthetic Harmony</h2>
+              <h1 className="text-[40px] sm:text-[80px] lg:text-[100px] font-black tracking-tight leading-[0.9] text-transparent bg-clip-text bg-gradient-to-r from-[#60EFFF] via-[#FFD97D] to-[#FF5E62] flex flex-col items-center justify-center drop-shadow-2xl">
+                <span>MOTION</span>
+                <span className="font-serif italic font-light text-white/95 lowercase tracking-wide my-2 sm:my-4 text-[48px] sm:text-[90px] lg:text-[120px]">defines</span>
+                <span>EMOTION.</span>
+              </h1>
+              <p className="text-white/60 text-xs sm:text-sm max-w-md mt-6 leading-relaxed font-mono tracking-wider">
+                Every transition behaves like physical matter. Fluid and beautifully weighted.
+              </p>
             </motion.div>
 
           </div>
         </div>
-
-        {/* ── BENTO FEATURES GRID ── */}
-        <section id="features" className="w-full py-24 px-6 relative z-20 bg-transparent border-t border-white/10">
-          <div className="max-w-5xl mx-auto space-y-12">
-            <div className="text-center space-y-3">
-              <span className="text-xs font-mono text-white/50 tracking-widest uppercase">THE SYSTEM</span>
-              <h2 className="text-3xl font-extrabold tracking-tight">Orchestrated Capabilities</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Box 1: AI Agents */}
-              <div className="p-8 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl md:col-span-2 space-y-4 hover:border-white/20 transition-all duration-300 group">
-                <span className="text-xs font-mono text-white/40 uppercase">01 / AUTONOMOUS WORKFLOW</span>
-                <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors">Multimodal Generation Pipeline</h3>
-                <p className="text-sm text-white/60 leading-relaxed">
-                  Zovaix coordinates multiple single-purpose AI agents: copywriters, layout planners, brand strategist, and frontend code checkers. Each agent reviews the output of the previous step to guarantee aesthetic balance and clean React imports.
-                </p>
-                <div className="flex flex-wrap gap-2 pt-4 border-t border-white/5">
-                  <span className="px-3 py-1 rounded-full text-[10px] font-mono bg-white/5 border border-white/10 text-white/70">Copywriter</span>
-                  <span className="px-3 py-1 rounded-full text-[10px] font-mono bg-white/5 border border-white/10 text-white/70">Layout Planner</span>
-                  <span className="px-3 py-1 rounded-full text-[10px] font-mono bg-white/5 border border-white/10 text-white/70">Brand Agent</span>
-                  <span className="px-3 py-1 rounded-full text-[10px] font-mono bg-white/5 border border-white/10 text-white/70">A11y Auditor</span>
-                </div>
-              </div>
-
-              {/* Box 2: Spring physics sandbox */}
-              <div className="p-8 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl space-y-4 hover:border-white/20 transition-all duration-300 group flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-mono text-white/40 uppercase">02 / PHYSICS</span>
-                  <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors">Spring Physics</h3>
-                  <p className="text-xs text-white/60 leading-relaxed">
-                    Animations use realistic springs instead of basic CSS transitions.
-                  </p>
-                </div>
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-                  <div className="flex justify-between text-[10px] font-mono text-white/60">
-                    <span>STIFFNESS</span>
-                    <span>150</span>
-                  </div>
-                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full w-[60%] bg-white/40" />
-                  </div>
-                  <div className="flex justify-between text-[10px] font-mono text-white/60">
-                    <span>DAMPING</span>
-                    <span>15</span>
-                  </div>
-                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full w-[45%] bg-white/40" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Box 3: Quality auditor */}
-              <div className="p-8 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl space-y-4 hover:border-white/20 transition-all duration-300 group flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-mono text-white/40 uppercase">03 / VERIFICATION</span>
-                  <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors">Quality Checks</h3>
-                  <p className="text-xs text-white/60 leading-relaxed">
-                    Every section is audited against standard design benchmarks.
-                  </p>
-                </div>
-                <div className="space-y-2 font-mono text-[11px] text-white/50">
-                  <div className="flex justify-between items-center bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10">
-                    <span>SEO AUDIT</span>
-                    <span className="text-emerald-400">PASSED</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10">
-                    <span>A11Y CONTRAST</span>
-                    <span className="text-emerald-400">PASSED</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10">
-                    <span>TYPO CHECKS</span>
-                    <span className="text-emerald-400">PASSED</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Box 4: Multi-model router */}
-              <div className="p-8 rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl md:col-span-2 space-y-4 hover:border-white/20 transition-all duration-300 group">
-                <span className="text-xs font-mono text-white/40 uppercase">04 / ROUTER</span>
-                <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors">Optimized Model Routing</h3>
-                <p className="text-sm text-white/60 leading-relaxed">
-                  Zovaix routes sub-tasks dynamically to optimize speed and capability. Heavy reasoning jobs like planning run on Gemini Pro, while layout compilation and code syntax validation run on high-throughput models.
-                </p>
-                <div className="grid grid-cols-3 gap-2 pt-4 text-center">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                    <div className="text-[10px] font-mono text-white/40">PRO MODEL</div>
-                    <div className="text-xs font-bold mt-1 text-white/80">Claude Opus</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                    <div className="text-[10px] font-mono text-white/40">FAST MODEL</div>
-                    <div className="text-xs font-bold mt-1 text-white/80">Gemini Flash</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/5">
-                    <div className="text-[10px] font-mono text-white/40">EMBEDDINGS</div>
-                    <div className="text-xs font-bold mt-1 text-white/80">Gemini-2</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* ── PRICING & CTA ── */}
         <section id="pricing" className="w-full py-24 px-6 relative z-20 bg-transparent border-t border-white/10">
