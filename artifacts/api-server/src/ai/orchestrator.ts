@@ -26,6 +26,7 @@ import {
 import { getArchetypeForIndustry, getArchetypeForIndustry as getArchetype, DesignArchetype } from "./designArchetypes";
 import { extractDominantColor } from "../lib/colorExtractor";
 import { performVisualQa } from "../lib/visualQa.js";
+import { retrieveExemplar } from "./knowledge/retriever.js";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // gemini-2.0-flash-lite, gemini-2.0-flash, and gemini-2.5-pro are unavailable
@@ -362,6 +363,18 @@ export async function runGeneration(
           const sectionResults = await Promise.all(
             sectionPlan.map(async (section) => {
               const componentName = toComponentName(section.id);
+              let exemplar = undefined;
+              try {
+                exemplar = await retrieveExemplar(
+                  userId,
+                  section.type,
+                  archetype?.key || "saas-technical",
+                  input.businessDescription
+                );
+              } catch (err) {
+                logger.warn({ err, sectionType: section.type }, "Failed to retrieve exemplar for section prompt");
+              }
+
               const prompt = buildSectionPrompt(section, componentName, sectionPlan.length, {
                 businessDescription: input.businessDescription,
                 targetAudience: input.targetAudience ?? "General consumers",
@@ -369,6 +382,7 @@ export async function runGeneration(
                 primaryCtaHref: resolvedCta.href,
                 previousOutputs: planningContext,
                 branding,
+                exemplar,
               });
 
               try {

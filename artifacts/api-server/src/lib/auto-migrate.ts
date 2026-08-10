@@ -454,6 +454,43 @@ export async function autoMigrate(): Promise<void> {
       `, [sk.id, sk.archetypeKey, JSON.stringify(sk.sectionsJson)]);
     }
 
+    // 19. pgvector & section_exemplars table
+    try {
+      await client.query(`CREATE EXTENSION IF NOT EXISTS vector;`);
+    } catch (err) {
+      console.warn("[auto-migrate] Could not install/verify vector extension:", String(err));
+    }
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS section_exemplars (
+        id TEXT PRIMARY KEY,
+        section_type TEXT NOT NULL,
+        archetype_key TEXT NOT NULL,
+        industry_tag TEXT,
+        copy_pattern TEXT NOT NULL,
+        example_copy TEXT NOT NULL,
+        layout_notes TEXT NOT NULL,
+        quality_score INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        source_type TEXT NOT NULL,
+        embedding VECTOR(768),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    try {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS section_exemplars_embedding_hnsw_idx
+        ON section_exemplars USING hnsw (embedding vector_cosine_ops);
+      `);
+    } catch (err) {
+      console.warn("[auto-migrate] Could not create HNSW index on section_exemplars; falling back to standard index:", String(err));
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS section_exemplars_embedding_idx
+        ON section_exemplars (section_type, archetype_key);
+      `);
+    }
+
     // Migration: Migrate prompt_templates from prompt_model enum to provider/model text columns
     await client.query(`
       DO $$

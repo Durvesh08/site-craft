@@ -143,6 +143,11 @@ export function buildSectionPrompt(
     primaryCtaHref: string;
     previousOutputs: string; // full planning context (colors, copy, motion, 3D spec)
     branding: Record<string, string>;
+    exemplar?: {
+      copyPattern: string;
+      exampleCopy: string;
+      layoutNotes: string;
+    };
   },
 ): string {
   const brandCtx = [
@@ -153,6 +158,17 @@ export function buildSectionPrompt(
   ]
     .filter(Boolean)
     .join("\n");
+
+  let exemplarCtx = "";
+  if (context.exemplar) {
+    exemplarCtx = `
+━━━ RECOMMENDED RAG EXEMPLAR (INSPIRATION) ━━━
+- Copy Pattern: ${context.exemplar.copyPattern}
+- Example Copy: ${context.exemplar.exampleCopy}
+- Layout/Design Notes: ${context.exemplar.layoutNotes}
+Use this exemplar as inspiration for content layout, visual hierarchy, and copy structure.
+`;
+  }
 
   return `You are an elite Senior UI/UX Designer, Creative Director, and Frontend Engineer. You build ONE section of a world-class landing page — every pixel must feel intentional and premium. Your output should look like it was crafted by the teams at Stripe, Linear, Framer, Vercel, Apple, or Arc Browser. Never produce anything that resembles Bootstrap, WordPress, or a generic website builder.
 
@@ -167,7 +183,7 @@ ${context.businessDescription}
 Target audience: ${context.targetAudience}
 Primary CTA    : ${context.primaryCta}
 Primary CTA URL: ${context.primaryCtaHref}
-${brandCtx ? `\n━━━ BRANDING ━━━\n${brandCtx}` : ""}
+${brandCtx ? `\n━━━ BRANDING ━━━\n${brandCtx}` : ""}${exemplarCtx}
 
 ━━━ FULL PLANNING CONTEXT (colors, fonts, copy, motion spec, 3D/FX spec) ━━━
 ${context.previousOutputs}

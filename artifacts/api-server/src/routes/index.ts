@@ -14,6 +14,7 @@ import settingsRouter from "./settings";
 import storageRouter from "./storage";
 import domainsRouter from "./domains";
 import workspaceRouter from "./workspace";
+import feedbackRouter from "./feedback";
 
 import securityRouter from "./security";
 import notificationsRouter from "./notifications";
@@ -40,6 +41,7 @@ router.use(settingsRouter);
 router.use(storageRouter);
 router.use(domainsRouter);
 router.use(workspaceRouter);
+router.use(feedbackRouter);
 router.use(securityRouter);
 router.use(notificationsRouter);
 

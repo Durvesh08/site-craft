@@ -19,7 +19,8 @@
     "drizzle-zod": "^0.8.3",
     "drizzle-kit": "^0.31.10",
     "pg": "^8.22.0",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@google/genai": "^2.11.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
