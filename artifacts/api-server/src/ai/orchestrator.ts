@@ -25,6 +25,7 @@ import {
 } from "./sectionAssembler";
 import { getArchetypeForIndustry, getArchetypeForIndustry as getArchetype, DesignArchetype } from "./designArchetypes";
 import { extractDominantColor } from "../lib/colorExtractor";
+import { performVisualQa } from "../lib/visualQa.js";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // gemini-2.0-flash-lite, gemini-2.0-flash, and gemini-2.5-pro are unavailable
@@ -806,6 +807,13 @@ ${html.slice(0, 60000)}`;
     scores.overall = Math.round((scores.visual + scores.seo + scores.accessibility + scores.performance) / 4);
     scores.qualityPassed = scores.overall >= 85 && scores.issues.length === 0;
 
+    // Run visual QA check
+    const visualQaResult = performVisualQa(generatedHtml);
+    if (!visualQaResult.valid) {
+      scores.qualityPassed = false;
+      scores.issues = [...scores.issues, ...visualQaResult.errors];
+    }
+
     // Phase 4: Visual QA & Auto-Correction (Max 3 iterations)
     let iteration = 0;
     const MAX_QA_ITERATIONS = 3;
@@ -832,6 +840,13 @@ ${generatedHtml}
         const qaPrompt = buildAgentPrompt("qa-reviewer", { ...input, previousOutputs: "Auto-remediation applied. Please re-evaluate." }, branding);
         const newReviewOutput = await provider.generateContent(FLASH, qaPrompt, { maxTokens: 8192 });
         scores = extractQualityScores(newReviewOutput);
+
+        // Also re-run visual QA checks
+        const newVisualQaResult = performVisualQa(generatedHtml);
+        if (!newVisualQaResult.valid) {
+          scores.qualityPassed = false;
+          scores.issues = [...scores.issues, ...newVisualQaResult.errors];
+        }
       } catch (err) {
         logger.error({ err, iteration }, "Remediation iteration failed");
         break; // stop looping if it fails
