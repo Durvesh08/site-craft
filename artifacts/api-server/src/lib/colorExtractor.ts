@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { logger } from "./logger";
 
 export async function extractDominantColor(logoUrl: string): Promise<string | null> {
@@ -29,9 +30,25 @@ export async function extractDominantColor(logoUrl: string): Promise<string | nu
         if (sorted.length > 0) return sorted[0][0];
       }
     } else {
-      // Raster image placeholder - in a real deployment with Canvas/Vibrant we would extract it.
-      // We gracefully return null to allow design-director's default color logic.
-      logger.info({ logoUrl, contentType }, "Logo is a raster image; letting design-director choose matching tones");
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      
+      const { data } = await sharp(buffer)
+        .resize(1, 1)
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+        
+      if (data && data.length >= 3) {
+        const r = data[0];
+        const g = data[1];
+        const b = data[2];
+        const hex = "#" + [r, g, b].map(x => {
+          const hexStr = x.toString(16);
+          return hexStr.length === 1 ? "0" + hexStr : hexStr;
+        }).join("");
+        logger.info({ logoUrl, contentType, hex }, "Extracted dominant brand color from raster logo using sharp");
+        return hex;
+      }
     }
   } catch (err) {
     logger.error({ err, logoUrl }, "Failed to extract color from logo");

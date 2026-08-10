@@ -371,7 +371,19 @@ export async function runGeneration(
 
               try {
                 // Primary attempt — Gemini PRO call
-                const rawCode = await provider.generateContent(PRO, prompt, { maxTokens: 32768, temperature: 0.8 });
+                let rawCode = await provider.generateContent(PRO, prompt, { maxTokens: 32768, temperature: 0.8 });
+
+                // Validate archetype constraints
+                let attempts = 1;
+                let validation = validateSectionConstraints(rawCode, archetype);
+                while (!validation.valid && attempts < 3) {
+                  attempts++;
+                  logger.warn({ sectionId: section.id, errors: validation.errors, attempt: attempts }, "Archetype constraints violated! Retrying section generation...");
+                  const feedbackPrompt = `${prompt}\n\n[RETRY FEEDBACK]: The previous generation failed compliance validation against the Design Archetype. Please fix these errors:\n${validation.errors.map(e => `- ${e}`).join("\n")}`;
+                  rawCode = await provider.generateContent(PRO, feedbackPrompt, { maxTokens: 32768, temperature: 0.8 });
+                  validation = validateSectionConstraints(rawCode, archetype);
+                }
+
                 logger.info({ sectionId: section.id }, "Section generated successfully");
                 return { plan: section, componentName, code: cleanComponentCode(rawCode, componentName) } as SectionCode;
               } catch (err) {
@@ -379,7 +391,18 @@ export async function runGeneration(
                 // Retry once with FLASH (handles transient API overload errors)
                 try {
                   await new Promise(r => setTimeout(r, 2000)); // brief back-off
-                  const retryCode = await provider.generateContent(FLASH, prompt, { maxTokens: 32768, temperature: 0.8 });
+                  let retryCode = await provider.generateContent(FLASH, prompt, { maxTokens: 32768, temperature: 0.8 });
+
+                  let flashAttempts = 1;
+                  let flashValidation = validateSectionConstraints(retryCode, archetype);
+                  while (!flashValidation.valid && flashAttempts < 2) {
+                    flashAttempts++;
+                    logger.warn({ sectionId: section.id, errors: flashValidation.errors, attempt: flashAttempts }, "Archetype constraints violated on FLASH! Retrying section generation...");
+                    const feedbackPrompt = `${prompt}\n\n[RETRY FEEDBACK]: Please fix these errors:\n${flashValidation.errors.map(e => `- ${e}`).join("\n")}`;
+                    retryCode = await provider.generateContent(FLASH, feedbackPrompt, { maxTokens: 32768, temperature: 0.8 });
+                    flashValidation = validateSectionConstraints(retryCode, archetype);
+                  }
+
                   logger.info({ sectionId: section.id }, "Section generated on retry");
                   return { plan: section, componentName, code: cleanComponentCode(retryCode, componentName) } as SectionCode;
                 } catch (retryErr) {
@@ -2067,6 +2090,48 @@ function extractHtml(output: string, fallbackTitle: string): string {
 
   logger.warn({ outputPreview: output.slice(0, 300) }, "HTML extraction failed — using placeholder");
   return buildPlaceholder(fallbackTitle);
+}
+
+export function validateSectionConstraints(
+  code: string,
+  archetype: DesignArchetype | undefined
+): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  if (!archetype) return { valid: true, errors };
+
+  // 1. Allowed 3D Scenes validation
+  const scene3dMatches = code.matchAll(/<Scene3D\s+[^>]*type=["']([^"']+)["']/gi);
+  for (const match of scene3dMatches) {
+    const sceneType = match[1];
+    if (!archetype.allowed3DScenes.includes(sceneType)) {
+      errors.push(`3D Scene type '${sceneType}' is not allowed for archetype '${archetype.key}'. Allowed scenes: ${archetype.allowed3DScenes.length > 0 ? archetype.allowed3DScenes.join(", ") : "None"}`);
+    }
+  }
+  
+  if (archetype.allowed3DScenes.length === 0 && (/<Scene3D/i.test(code))) {
+    errors.push(`3D scenes are not allowed for archetype '${archetype.key}'.`);
+  }
+
+  // 2. Font check: check if any unvetted inline font-family is declared
+  const fontMatches = code.matchAll(/(?:font-family|fontFamily)\s*[:=]\s*["']([^"';,}]+)["']/gi);
+  const allowedFonts = archetype.fontPairPool.flatMap(pair => [pair.headline.toLowerCase(), pair.body.toLowerCase()]);
+  const standardFallbacks = ["sans-serif", "serif", "monospace", "cursive", "fantasy", "system-ui", "inherit", "initial", "revert", "unset"];
+
+  for (const match of fontMatches) {
+    const declaredFont = match[1].toLowerCase().trim().replace(/['"&]/g, "");
+    if (declaredFont.startsWith("var(") || standardFallbacks.some(f => declaredFont.includes(f))) {
+      continue;
+    }
+    const isAllowed = allowedFonts.some(f => declaredFont.includes(f));
+    if (!isAllowed) {
+      errors.push(`Font '${match[1]}' is not vetted for archetype '${archetype.key}'. Allowed fonts: ${archetype.fontPairPool.map(p => `${p.headline}/${p.body}`).join(", ")}`);
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
 }
 
 function buildPlaceholder(title: string): string {
