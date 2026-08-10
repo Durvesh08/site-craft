@@ -14,18 +14,18 @@ interface SceneConfig {
 const cinematicTimeline: SceneConfig[] = [
   {
     id: 'scene_2',
-    pathPrefix: '/cinematic/scene_2/videoplayback_',
-    frameCount: 91,
-    padLength: 3, // 001 - 091
+    pathPrefix: '/cinematic/scene_2/ezgif-frame-',
+    frameCount: 255,
+    padLength: 3, // 001 - 255
     extension: 'jpg',
     scrollRange: [0, 0.45], // First 45% of scroll
-    resolution: [3840, 1920],
+    resolution: [1920, 1080],
   },
   {
     id: 'scene_3',
-    pathPrefix: '/cinematic/scene_3/frame_',
-    frameCount: 25,
-    padLength: 3, // 001 - 025
+    pathPrefix: '/cinematic/scene_3/ezgif-frame-',
+    frameCount: 285,
+    padLength: 3, // 001 - 285
     extension: 'jpg',
     scrollRange: [0.45, 0.70], // Middle 25% of scroll
     resolution: [1920, 1080],
