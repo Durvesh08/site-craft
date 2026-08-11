@@ -12,10 +12,10 @@ async function verify() {
   });
   
   if (!regRes.ok) {
-    console.error('Registration failed:', await regRes.text());
+    console.error('Registration failed:', regRes.status, await regRes.text());
     return;
   }
-  console.log('Registration succeeded!');
+  console.log('✅ Registration succeeded!');
 
   console.log('2. Logging in...');
   const loginRes = await fetch(`${BASE_URL}/auth/login`, {
@@ -25,64 +25,69 @@ async function verify() {
   });
 
   if (!loginRes.ok) {
-    console.error('Login failed:', await loginRes.text());
+    console.error('Login failed:', loginRes.status, await loginRes.text());
     return;
   }
 
-  // Extract set-cookie token
   const cookies = loginRes.headers.get('set-cookie') || '';
   const tokenMatch = cookies.match(/token=([^;]+)/);
   if (!tokenMatch) {
-    console.error('Token not found in login response headers. Cookies:', cookies);
+    console.error('Token not found. Cookies:', cookies);
     return;
   }
   const token = tokenMatch[1];
-  console.log('Login succeeded! Token retrieved.');
+  console.log('✅ Login succeeded!');
 
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,
   };
 
-  console.log('3. Creating new project (POST /projects)...');
-  const projectBody = {
-    name: 'Verification Project',
-    businessDescription: 'A premium automated verification landing page with visual QA features.',
-  };
+  // Check if healthz-check route exists (proves new code is deployed)
+  console.log('\n3. Checking if /healthz-check exists (deployment version check)...');
+  const hcRes = await fetch(`${BASE_URL}/healthz-check`, { headers });
+  const hcStatus = hcRes.status;
+  const hcBody = await hcRes.text();
+  console.log(`   /healthz-check status: ${hcStatus}, body: ${hcBody}`);
+  if (hcStatus === 200 && hcBody.includes('v2')) {
+    console.log('✅ New code IS deployed on Render!');
+  } else {
+    console.log('⚠️  New code is NOT yet deployed on Render (old code still running)');
+  }
 
+  // Try creating a project
+  console.log('\n4. Creating new project (POST /projects)...');
   const createRes = await fetch(`${BASE_URL}/projects`, {
     method: 'POST',
     headers,
-    body: JSON.stringify(projectBody),
+    body: JSON.stringify({
+      name: 'Verification Project',
+      businessDescription: 'A premium automated verification landing page.',
+    }),
   });
 
   const createStatus = createRes.status;
-  const createData = await createRes.json();
-  console.log('POST /projects response status:', createStatus);
-  console.log('POST /projects response body:', JSON.stringify(createData, null, 2));
+  const createBody = await createRes.text();
+  console.log(`   POST /projects status: ${createStatus}`);
+  console.log(`   POST /projects body: ${createBody}`);
 
-  if (createStatus !== 201) {
-    console.error('Project creation failed with status', createStatus);
-    return;
-  }
+  if (createStatus === 201) {
+    const createData = JSON.parse(createBody);
+    const projectId = createData.id;
+    console.log('✅ Project created successfully! ID:', projectId);
 
-  const projectId = createData.id;
-  console.log(`4. Verifying project files initialized (GET /projects/${projectId}/files)...`);
-  const filesRes = await fetch(`${BASE_URL}/projects/${projectId}/files`, {
-    method: 'GET',
-    headers,
-  });
-
-  const filesStatus = filesRes.status;
-  const filesData = await filesRes.json();
-  console.log('GET /projects/:id/files response status:', filesStatus);
-  console.log('GET /projects/:id/files list count:', filesData.files?.length);
-  console.log('First file path:', filesData.files?.[0]?.filePath);
-
-  if (filesStatus === 200 && filesData.files?.length > 0) {
-    console.log('\nSUCCESS: Project created and default files initialized perfectly on live Render deployment!');
+    console.log('\n5. Listing project files...');
+    const filesRes = await fetch(`${BASE_URL}/projects/${projectId}/files`, { method: 'GET', headers });
+    const filesBody = await filesRes.json();
+    console.log(`   Files count: ${filesBody.files?.length}`);
+    if (filesBody.files?.length > 0) {
+      console.log('   Files:', filesBody.files.map(f => f.filePath).join(', '));
+      console.log('\n🎉 SUCCESS: Project creation and file initialization work perfectly!');
+    } else {
+      console.log('⚠️  No files found after creation');
+    }
   } else {
-    console.error('Files check failed');
+    console.error('❌ Project creation FAILED with status', createStatus);
   }
 }
 
