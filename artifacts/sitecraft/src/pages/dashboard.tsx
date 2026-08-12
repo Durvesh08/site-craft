@@ -1,14 +1,22 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { projectsService, Project } from "@/services/projects";
-import { generationService } from "@/services/generation";
+import { 
+  useListProjects, 
+  useCreateProject, 
+  useGenerateProject, 
+  useUpdateProject, 
+  useDeleteProject,
+  getListProjectsQueryKey 
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DetailedBriefWizard } from "@/components/dashboard/detailed-brief-wizard";
 import { extractCleanBusinessName } from "./new-project";
 import { ImportProjectModal } from "@/components/dashboard/import-project-modal";
 import { AttachmentsModal, AttachmentFile } from "@/components/dashboard/attachments-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Sparkles,
   ArrowRight,
@@ -40,7 +48,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -58,16 +66,37 @@ export default function Dashboard() {
   const [attachmentModalOpen, setAttachmentModalOpen] = useState(false);
   const [attachmentModalMode, setAttachmentModalMode] = useState<'document' | 'image' | 'reference'>('document');
 
-  // Pre-generation plan modal
   const [planModalOpen, setPlanModalOpen] = useState(false);
-  const [refreshCount, setRefreshCount] = useState(0);
 
-  React.useEffect(() => {
-    projectsService.fetchRemoteProjects().then(() => setRefreshCount(c => c + 1));
-  }, []);
+  // Pre-generation plan modal
+  const queryClient = useQueryClient();
+  const deleteProject = useDeleteProject();
+  const updateProject = useUpdateProject();
+  const createProject = useCreateProject();
+  const generateProject = useGenerateProject();
 
-  const projects = projectsService.getAll();
-  const recentProjects = projectsService.getRecent(4);
+  const { data } = useListProjects();
+  const rawProjects = data?.projects || [];
+
+  const projects = React.useMemo(() => {
+    return rawProjects
+      .filter((p) => (p.status as string) !== 'archived')
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description || p.businessDescription || `Bespoke ${p.category || 'SaaS'} web experience`,
+        category: (p.category || 'SaaS') as any,
+        status: p.status === 'deployed' ? 'published' : p.status,
+        domain: p.previewUrl || `${p.id}.zovaix.site`,
+        thumbnail: p.logoUrl || undefined,
+        isStarred: !!p.isStarred,
+        isArchived: (p.status as string) === 'archived',
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString() : 'Just now',
+      }));
+  }, [rawProjects]);
+
+  const recentProjects = React.useMemo(() => projects.slice(0, 4), [projects]);
 
   const openAttachmentModal = (mode: 'document' | 'image' | 'reference') => {
     setAttachmentModalMode(mode);
@@ -92,40 +121,75 @@ export default function Dashboard() {
     setPlanModalOpen(false);
     try {
       const cleanTitle = extractCleanBusinessName(prompt, `${selectedCategory} Project`);
-      const newProj = await projectsService.createRemoteProject(
-        cleanTitle,
-        selectedCategory as any,
-        prompt
-      );
-      const genRes = await generationService.startGeneration(newProj.id, {
-        businessDescription: prompt,
-        category: selectedCategory,
-        attachments,
+      const project = await createProject.mutateAsync({
+        data: {
+          name: cleanTitle,
+          businessDescription: prompt,
+        },
       });
+
+      queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+
+      const additionalInstructions = attachments.length > 0
+        ? `Attached files: ${attachments.map(a => `${a.name} (${a.url})`).join(", ")}`
+        : undefined;
+
+      const genRes: any = await generateProject.mutateAsync({
+        id: project.id,
+        data: {
+          businessDescription: prompt,
+          additionalInstructions,
+        },
+      });
+
       toast.success("Generation started! Redirecting to building studio...");
-      setLocation(`/projects/${newProj.id}/generate${genRes?.jobId ? `?jobId=${genRes.jobId}` : ''}`);
+      const jobId = genRes?.job?.id || genRes?.id;
+      setLocation(`/projects/${project.id}/generate${jobId ? `?jobId=${jobId}` : ''}`);
     } catch (err: any) {
       toast.error(err.message || "Failed to start project build");
     }
   };
 
-  const handleStar = (id: string, e: React.MouseEvent) => {
+  const handleStar = async (id: string, isStarred: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
-    projectsService.toggleStar(id);
-    setRefreshCount(c => c + 1);
+    try {
+      await updateProject.mutateAsync({
+        id,
+        data: { isStarred: !isStarred } as any
+      });
+      queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+      toast.success("Project updated!");
+    } catch (err: any) {
+      toast.error("Failed to update project");
+    }
   };
 
-  const handleDuplicate = (id: string, e: React.MouseEvent) => {
+  const handleDuplicate = async (p: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    projectsService.duplicate(id);
-    setRefreshCount(c => c + 1);
+    try {
+      await createProject.mutateAsync({
+        data: {
+          name: `${p.name} (Copy)`,
+          businessDescription: p.description,
+        }
+      });
+      queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+      toast.success("Project duplicated!");
+    } catch (err: any) {
+      toast.error("Failed to duplicate project");
+    }
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm("Are you sure you want to delete this project?")) {
-      projectsService.delete(id);
-      setRefreshCount(c => c + 1);
+      try {
+        await deleteProject.mutateAsync({ id });
+        queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+        toast.success("Project deleted successfully");
+      } catch (err: any) {
+        toast.error("Failed to delete project");
+      }
     }
   };
 

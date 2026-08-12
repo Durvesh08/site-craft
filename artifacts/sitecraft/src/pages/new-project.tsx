@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useCreateProject, useGenerateProject } from "@workspace/api-client-react";
+import { useCreateProject, useGenerateProject, getListProjectsQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,6 +102,7 @@ function StepIndicator({ step, total }: { step: number; total: number }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function NewProject() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const createProject = useCreateProject();
   const generateProject = useGenerateProject();
 
@@ -166,6 +168,8 @@ export default function NewProject() {
         },
       });
 
+      queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
+
       const jobRes: any = await generateProject.mutateAsync({
         id: project.id,
         data: {
@@ -198,6 +202,8 @@ export default function NewProject() {
           businessDescription: quickBrief,
         },
       });
+
+      queryClient.invalidateQueries({ queryKey: getListProjectsQueryKey() });
 
       const jobRes: any = await generateProject.mutateAsync({
         id: project.id,

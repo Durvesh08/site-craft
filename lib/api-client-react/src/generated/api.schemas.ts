@@ -61,6 +61,8 @@ export interface Project {
   activeJobId?: string | null;
   logoUrl?: string | null;
   pixelCode?: string | null;
+  isStarred?: boolean;
+  category?: string;
   createdAt: string;
   updatedAt: string;
 }

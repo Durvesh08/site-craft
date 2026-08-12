@@ -28,7 +28,8 @@ class ProjectsService {
   private folders: Folder[] = [...INITIAL_FOLDERS];
 
   constructor() {
-    this.fetchRemoteProjects();
+    // Disabled automatic unawaited fetch in constructor to prevent race conditions.
+    // List/dashboard components should fetch reactively using React Query.
   }
 
   async fetchRemoteProjects(): Promise<Project[]> {

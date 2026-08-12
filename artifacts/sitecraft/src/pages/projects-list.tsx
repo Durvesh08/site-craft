@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
-import { projectsService, Project } from "@/services/projects";
+import { useListProjects } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
   Search,
@@ -21,16 +21,50 @@ export default function ProjectsList() {
   const [activeTab, setActiveTab] = useState<'all' | 'recent' | 'starred' | 'folders' | 'archived'>('all');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [, setRefreshCount] = useState(0);
 
-  React.useEffect(() => {
-    projectsService.fetchRemoteProjects().then(() => setRefreshCount(c => c + 1));
-  }, []);
+  const { data, isLoading } = useListProjects();
+  const rawProjects = data?.projects || [];
 
-  const projects = projectsService.getAll();
-  const starred = projectsService.getStarred();
-  const archived = projectsService.getArchived();
-  const folders = projectsService.getFolders();
+  const projects = React.useMemo(() => {
+    return rawProjects
+      .filter((p) => (p.status as string) !== 'archived')
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description || p.businessDescription || `Bespoke ${p.category || 'SaaS'} web experience`,
+        category: (p.category || 'SaaS') as any,
+        status: p.status === 'deployed' ? 'published' : p.status,
+        domain: p.previewUrl || `${p.id}.zovaix.site`,
+        thumbnail: p.logoUrl || undefined,
+        isStarred: !!p.isStarred,
+        isArchived: (p.status as string) === 'archived',
+        folderId: (p as any).folderPath || undefined,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString() : 'Just now',
+      }));
+  }, [rawProjects]);
+
+  const starred = React.useMemo(() => projects.filter(p => p.isStarred), [projects]);
+  const archived = React.useMemo(() => {
+    return rawProjects
+      .filter((p) => (p.status as string) === 'archived')
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description || p.businessDescription || `Bespoke ${p.category || 'SaaS'} web experience`,
+        category: (p.category || 'SaaS') as any,
+        status: 'archived',
+        domain: p.previewUrl || `${p.id}.zovaix.site`,
+        thumbnail: p.logoUrl || undefined,
+        isStarred: !!p.isStarred,
+        isArchived: true,
+        folderId: (p as any).folderPath || undefined,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt ? new Date(p.updatedAt).toLocaleTimeString() : 'Just now',
+      }));
+  }, [rawProjects]);
+
+  const folders = React.useMemo(() => [] as { id: string; name: string; count: number }[], []);
 
   let filtered = activeTab === 'starred' ? starred : activeTab === 'archived' ? archived : projects;
 
@@ -119,7 +153,23 @@ export default function ProjectsList() {
       </div>
 
       {/* Grid or List View */}
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((n) => (
+            <div
+              key={n}
+              className="p-5 rounded-2xl border animate-pulse space-y-4 flex flex-col justify-between"
+              style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)', minHeight: '260px' }}
+            >
+              <div className="space-y-3">
+                <div className="h-36 rounded-xl bg-white/5 border border-white/10" />
+                <div className="h-4 w-2/3 bg-white/10 rounded" />
+                <div className="h-3 w-full bg-white/5 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="p-16 rounded-2xl border text-center space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
           <div className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground mx-auto">
             <Layers className="h-6 w-6" />

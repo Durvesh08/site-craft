@@ -301,6 +301,8 @@ function toProjectResponse(p: typeof projectsTable.$inferSelect) {
     activeJobId: p.activeJobId ?? null,
     logoUrl: p.logoUrl ?? null,
     pixelCode: p.pixelCode ?? null,
+    isStarred: p.isStarred,
+    category: p.category ?? "Website",
     createdAt: formatSafeDate(p.createdAt),
     updatedAt: formatSafeDate(p.updatedAt),
   };
