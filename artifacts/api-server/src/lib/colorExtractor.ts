@@ -33,21 +33,49 @@ export async function extractDominantColor(logoUrl: string): Promise<string | nu
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       
-      const { data } = await sharp(buffer)
-        .resize(1, 1)
+      const { data, info } = await sharp(buffer)
+        .resize(64, 64, { fit: 'inside' })
+        .flatten({ background: "#ffffff" })
         .raw()
         .toBuffer({ resolveWithObject: true });
         
       if (data && data.length >= 3) {
-        const r = data[0];
-        const g = data[1];
-        const b = data[2];
-        const hex = "#" + [r, g, b].map(x => {
-          const hexStr = x.toString(16);
-          return hexStr.length === 1 ? "0" + hexStr : hexStr;
-        }).join("");
-        logger.info({ logoUrl, contentType, hex }, "Extracted dominant brand color from raster logo using sharp");
-        return hex;
+        const channels = info.channels;
+        const colorBuckets: Record<string, number> = {};
+
+        for (let i = 0; i < data.length; i += channels) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+
+          // Skip near-white (backgrounds)
+          if (r > 235 && g > 235 && b > 235) continue;
+          // Skip near-black (text/borders)
+          if (r < 25 && g < 25 && b < 25) continue;
+
+          // Simple quantization: round channels to nearest multiple of 16
+          const qr = Math.round(r / 16) * 16;
+          const qg = Math.round(g / 16) * 16;
+          const qb = Math.round(b / 16) * 16;
+          
+          const key = `${qr},${qg},${qb}`;
+          colorBuckets[key] = (colorBuckets[key] || 0) + 1;
+        }
+
+        const sortedBuckets = Object.entries(colorBuckets)
+          .sort((a, b) => b[1] - a[1]);
+
+        if (sortedBuckets.length > 0) {
+          const [qr, qg, qb] = sortedBuckets[0][0].split(',').map(Number);
+          const hex = "#" + [qr, qg, qb].map(x => {
+            const clamped = Math.max(0, Math.min(255, x));
+            const hexStr = clamped.toString(16);
+            return hexStr.length === 1 ? "0" + hexStr : hexStr;
+          }).join("");
+
+          logger.info({ logoUrl, contentType, hex }, "Extracted dominant brand color from raster logo using sharp bucket quantization");
+          return hex;
+        }
       }
     }
   } catch (err) {
