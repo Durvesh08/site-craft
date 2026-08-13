@@ -29,7 +29,7 @@ export async function createNotification(opts: {
 }
 
 // GET /api/notifications — List notifications for user in workspace
-notificationsRouter.get("/api/notifications", async (req: Request, res: Response) => {
+notificationsRouter.get("/notifications", async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 
@@ -62,7 +62,7 @@ notificationsRouter.get("/api/notifications", async (req: Request, res: Response
 });
 
 // POST /api/notifications/:id/read — Mark single notification as read
-notificationsRouter.post("/api/notifications/:id/read", async (req: Request, res: Response) => {
+notificationsRouter.post("/notifications/:id/read", async (req: Request, res: Response) => {
   const user = (req as any).user;
   const id = String(req.params.id);
   if (!user) return res.status(401).json({ error: "Unauthorized" });
@@ -87,7 +87,7 @@ notificationsRouter.post("/api/notifications/:id/read", async (req: Request, res
 });
 
 // POST /api/notifications/read-all — Mark all notifications as read
-notificationsRouter.post("/api/notifications/read-all", async (req: Request, res: Response) => {
+notificationsRouter.post("/notifications/read-all", async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 

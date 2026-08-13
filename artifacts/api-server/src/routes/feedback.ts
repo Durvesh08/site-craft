@@ -6,7 +6,7 @@ import { decrypt } from "../lib/encryption.js";
 
 const router: IRouter = Router();
 
-router.post("/api/feedback/approve", async (req: Request, res: Response) => {
+router.post("/feedback/approve", async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Unauthorized", message: "Authentication required" });
     return;

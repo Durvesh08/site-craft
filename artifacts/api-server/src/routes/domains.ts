@@ -15,7 +15,7 @@ function requireAuth(req: Request, res: Response): boolean {
 }
 
 // GET /api/domains — List custom domains
-domainsRouter.get("/api/domains", async (req: Request, res: Response) => {
+domainsRouter.get("/domains", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
     const workspaceId = req.workspaceId!;
@@ -48,7 +48,7 @@ domainsRouter.get("/api/domains", async (req: Request, res: Response) => {
 });
 
 // POST /api/domains — Register new custom domain
-domainsRouter.post("/api/domains", async (req: Request, res: Response) => {
+domainsRouter.post("/domains", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   const { hostname, projectId, projectName } = req.body;
   const workspaceId = req.workspaceId!;
@@ -104,7 +104,7 @@ domainsRouter.post("/api/domains", async (req: Request, res: Response) => {
 });
 
 // POST /api/domains/:id/verify — Perform real DNS lookup verification
-domainsRouter.post("/api/domains/:id/verify", async (req: Request, res: Response) => {
+domainsRouter.post("/domains/:id/verify", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
   const workspaceId = req.workspaceId!;
@@ -202,7 +202,7 @@ domainsRouter.post("/api/domains/:id/verify", async (req: Request, res: Response
 });
 
 // DELETE /api/domains/:id — Remove custom domain
-domainsRouter.delete("/api/domains/:id", async (req: Request, res: Response) => {
+domainsRouter.delete("/domains/:id", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
   const workspaceId = req.workspaceId!;

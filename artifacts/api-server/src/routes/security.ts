@@ -31,7 +31,7 @@ export async function logAuditEvent(opts: {
 }
 
 // GET /api/security/sessions — List active user sessions
-securityRouter.get("/api/security/sessions", async (req: Request, res: Response) => {
+securityRouter.get("/security/sessions", async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 
@@ -76,7 +76,7 @@ securityRouter.get("/api/security/sessions", async (req: Request, res: Response)
 });
 
 // DELETE /api/security/sessions/:id — Revoke a session
-securityRouter.delete("/api/security/sessions/:id", async (req: Request, res: Response) => {
+securityRouter.delete("/security/sessions/:id", async (req: Request, res: Response) => {
   const user = (req as any).user;
   const id = String(req.params.id);
   if (!user) return res.status(401).json({ error: "Unauthorized" });
@@ -106,7 +106,7 @@ securityRouter.delete("/api/security/sessions/:id", async (req: Request, res: Re
 });
 
 // GET /api/security/audit-logs — List workspace audit logs
-securityRouter.get("/api/security/audit-logs", async (req: Request, res: Response) => {
+securityRouter.get("/security/audit-logs", async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 

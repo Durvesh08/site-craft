@@ -15,7 +15,7 @@ import crypto from "crypto";
 const workspaceRouter: IRouter = Router();
 
 // GET /api/workspace/usage — Usage meters computed from real DB records
-workspaceRouter.get("/api/workspace/usage", async (req: Request, res: Response) => {
+workspaceRouter.get("/workspace/usage", async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId || "default-ws";
 
@@ -48,7 +48,7 @@ workspaceRouter.get("/api/workspace/usage", async (req: Request, res: Response) 
 });
 
 // GET /api/workspace/settings — Get real workspace profile & settings
-workspaceRouter.get("/api/workspace/settings", async (req: Request, res: Response) => {
+workspaceRouter.get("/workspace/settings", async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId || "default-ws";
     const user = (req as any).user;
@@ -94,7 +94,7 @@ workspaceRouter.get("/api/workspace/settings", async (req: Request, res: Respons
 });
 
 // PATCH /api/workspace/settings — Update workspace settings in DB
-workspaceRouter.patch("/api/workspace/settings", async (req: Request, res: Response) => {
+workspaceRouter.patch("/workspace/settings", async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
     const { name, slug, defaultAiProvider, defaultAiModel, timezone } = req.body;
@@ -127,7 +127,7 @@ workspaceRouter.patch("/api/workspace/settings", async (req: Request, res: Respo
 });
 
 // GET /api/workspace/members — List team members in workspace
-workspaceRouter.get("/api/workspace/members", async (req: Request, res: Response) => {
+workspaceRouter.get("/workspace/members", async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId || "default-ws";
 
@@ -176,7 +176,7 @@ workspaceRouter.get("/api/workspace/members", async (req: Request, res: Response
 });
 
 // POST /api/workspace/invitations — Invite new team member
-workspaceRouter.post("/api/workspace/invitations", async (req: Request, res: Response) => {
+workspaceRouter.post("/workspace/invitations", async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId || "default-ws";
     const user = (req as any).user;
