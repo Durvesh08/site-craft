@@ -335,6 +335,113 @@ export async function autoMigrate(): Promise<void> {
       );
     `);
 
+    // 16. project_files (depends on projects, workspaces)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS project_files (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        file_path TEXT NOT NULL,
+        content TEXT,
+        mime_type TEXT DEFAULT 'text/plain',
+        size INTEGER NOT NULL DEFAULT 0,
+        is_dir BOOLEAN NOT NULL DEFAULT FALSE,
+        parent_path TEXT DEFAULT '/',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 17. token_usage (depends on workspaces, users, projects, ai_jobs)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS token_usage (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
+        job_id TEXT REFERENCES ai_jobs(id) ON DELETE SET NULL,
+        model TEXT NOT NULL,
+        input_tokens INTEGER NOT NULL DEFAULT 0,
+        output_tokens INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 18. usage_events (depends on workspaces, users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS usage_events (
+        id TEXT PRIMARY KEY,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        amount INTEGER NOT NULL DEFAULT 1,
+        metadata_json TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 19. conversations (depends on projects, workspaces, users)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS conversations (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT NOT NULL DEFAULT 'New Conversation',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 20. conversation_messages (depends on conversations, projects, workspaces)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS conversation_messages (
+        id TEXT PRIMARY KEY,
+        conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        provider TEXT,
+        model TEXT,
+        status TEXT DEFAULT 'completed',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 21. message_attachments (depends on conversation_messages, conversations, projects, workspaces)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS message_attachments (
+        id TEXT PRIMARY KEY,
+        message_id TEXT REFERENCES conversation_messages(id) ON DELETE CASCADE,
+        conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        filename TEXT NOT NULL,
+        mime_type TEXT NOT NULL,
+        size INTEGER NOT NULL DEFAULT 0,
+        storage_key TEXT NOT NULL,
+        url TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 22. message_references (depends on conversation_messages, conversations, projects, workspaces)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS message_references (
+        id TEXT PRIMARY KEY,
+        message_id TEXT REFERENCES conversation_messages(id) ON DELETE CASCADE,
+        conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+        type TEXT NOT NULL,
+        target_id TEXT,
+        title TEXT NOT NULL,
+        url TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
     // ── Column migrations: add missing columns safely ──
     const addColumnIfMissing = async (table: string, column: string, definition: string) => {
       await client.query(`
@@ -358,6 +465,21 @@ export async function autoMigrate(): Promise<void> {
     await addColumnIfMissing("deployments", "deployment_log", "TEXT");
     await addColumnIfMissing("projects", "logo_url", "TEXT");
     await addColumnIfMissing("ai_jobs", "payload_json", "TEXT");
+    
+    // Missing project columns
+    await addColumnIfMissing("projects", "category", "TEXT NOT NULL DEFAULT 'Website'");
+    await addColumnIfMissing("projects", "folder_path", "TEXT DEFAULT '/'");
+    await addColumnIfMissing("projects", "is_starred", "BOOLEAN NOT NULL DEFAULT FALSE");
+    await addColumnIfMissing("projects", "pixel_code", "TEXT");
+
+    // Missing domains columns
+    await addColumnIfMissing("domains", "workspace_id", "TEXT REFERENCES workspaces(id) ON DELETE CASCADE");
+    await addColumnIfMissing("domains", "status", "TEXT NOT NULL DEFAULT 'PENDING'");
+    await addColumnIfMissing("domains", "txt_verification_token", "TEXT");
+    await addColumnIfMissing("domains", "txt_record", "TEXT");
+    await addColumnIfMissing("domains", "cname_record", "TEXT");
+    await addColumnIfMissing("domains", "dns_records_json", "TEXT");
+    await addColumnIfMissing("domains", "verified_at", "TIMESTAMP");
 
     // 16. domains (depends on users, projects)
     await client.query(`
