@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import JSZip from "jszip";
 import { db } from "@workspace/db";
-import { projectsTable, aiJobsTable, aiJobStepsTable, versionsTable } from "@workspace/db";
+import { projectsTable, aiJobsTable, aiJobStepsTable, versionsTable, domainsTable } from "@workspace/db";
 import { eq, desc, and, count, asc } from "drizzle-orm";
 import {
   CreateProjectBody,
@@ -1247,6 +1247,24 @@ router.delete("/projects/:id", async (req: Request, res: Response) => {
     if (!existing) {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
       return;
+    }
+
+    // Remove any associated domains from Cloudflare KV
+    if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
+      try {
+        const associatedDomains = await db.select().from(domainsTable).where(eq(domainsTable.projectId, existing.id));
+        for (const domain of associatedDomains) {
+          await fetch(
+            `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${domain.domain}`,
+            {
+              method: "DELETE",
+              headers: { "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` }
+            }
+          );
+        }
+      } catch (err) {
+        req.log.error({ err }, "Failed to delete KV domains for project");
+      }
     }
 
     await db.delete(projectsTable).where(eq(projectsTable.id, existing.id));

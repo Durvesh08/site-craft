@@ -59,14 +59,49 @@ domainsRouter.post("/domains", async (req: Request, res: Response) => {
   }
 
   const cleanHost = hostname.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-  const verificationToken = `zovaix-verify-${crypto.randomBytes(12).toString("hex")}`;
-  const dnsRecords = [
-    { type: 'TXT', name: `_zovaix-challenge.${cleanHost}`, value: verificationToken, status: 'pending' },
-    { type: 'A', name: '@', value: '76.76.21.21', status: 'pending' },
-    { type: 'CNAME', name: 'www', value: 'cname.zovaix.site', status: 'pending' }
-  ];
+  
+  if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID) {
+    return res.status(500).json({ success: false, error: "Cloudflare credentials not configured" });
+  }
 
   try {
+    // 1. Call Cloudflare API to create the zone
+    const cfResponse = await fetch("https://api.cloudflare.com/client/v4/zones", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name: cleanHost,
+        account: { id: process.env.CLOUDFLARE_ACCOUNT_ID },
+        type: "full",
+        jump_start: false
+      })
+    });
+
+    const cfData = await cfResponse.json();
+    
+    if (!cfResponse.ok || !cfData.success) {
+      console.error("Cloudflare Zone Creation Error:", cfData.errors);
+      return res.status(400).json({ 
+        success: false, 
+        error: "Failed to register domain with hosting provider",
+        details: cfData.errors 
+      });
+    }
+
+    const zoneId = cfData.result.id;
+    const nameservers = cfData.result.name_servers || [];
+
+    // The user needs to point their domain to these nameservers
+    const dnsRecords = nameservers.map((ns: string) => ({
+      type: 'NS',
+      name: '@',
+      value: ns,
+      status: 'pending'
+    }));
+
     const [domainRecord] = await db
       .insert(domainsTable)
       .values({
@@ -75,9 +110,7 @@ domainsRouter.post("/domains", async (req: Request, res: Response) => {
         projectId: projectId || null,
         domain: cleanHost,
         status: "PENDING",
-        txtVerificationToken: verificationToken,
-        txtRecord: verificationToken,
-        cnameRecord: 'cname.zovaix.site',
+        cloudflareZoneId: zoneId,
         dnsRecordsJson: JSON.stringify(dnsRecords),
         verified: false,
         sslActive: false
@@ -91,19 +124,20 @@ domainsRouter.post("/domains", async (req: Request, res: Response) => {
         projectId: domainRecord.projectId,
         hostname: domainRecord.domain,
         status: domainRecord.status,
-        txtVerificationToken: domainRecord.txtVerificationToken,
+        cloudflareZoneId: domainRecord.cloudflareZoneId,
         dnsRecords,
         sslStatus: 'issuing',
         createdAt: domainRecord.createdAt.toISOString()
       },
-      message: `Domain registered. Please configure TXT record _zovaix-challenge.${cleanHost} with value ${verificationToken}`
+      message: `Domain registered. Please configure NS records for ${cleanHost} pointing to: ${nameservers.join(", ")}`
     });
   } catch (err) {
+    console.error("Domain registration error:", err);
     return res.status(500).json({ success: false, error: "Failed to register domain" });
   }
 });
 
-// POST /api/domains/:id/verify — Perform real DNS lookup verification
+// POST /api/domains/:id/verify — Check Cloudflare zone activation status
 domainsRouter.post("/domains/:id/verify", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
@@ -120,46 +154,66 @@ domainsRouter.post("/domains/:id/verify", async (req: Request, res: Response) =>
       return res.status(404).json({ success: false, error: "Domain record not found" });
     }
 
-    const cleanHost = domain.domain;
-    const challengeHost = `_zovaix-challenge.${cleanHost}`;
-    let isVerified = false;
-    let verificationError = "";
-
-    try {
-      // Perform real DNS TXT lookup
-      const txtRecords = await dns.resolveTxt(challengeHost);
-      const flattenedTxt = txtRecords.flat();
-      if (flattenedTxt.includes(domain.txtVerificationToken || "")) {
-        isVerified = true;
-      } else {
-        verificationError = `TXT record found but value did not match expected verification token "${domain.txtVerificationToken}"`;
-      }
-    } catch (dnsErr: any) {
-      // Fallback DNS A record check or detailed message
-      try {
-        const aRecords = await dns.resolve4(cleanHost);
-        if (aRecords.includes("76.76.21.21")) {
-          isVerified = true;
-        } else {
-          verificationError = `DNS A record for ${cleanHost} points to [${aRecords.join(", ")}] instead of 76.76.21.21`;
-        }
-      } catch (aErr: any) {
-        verificationError = `DNS lookup failed for ${challengeHost}: ${dnsErr.message || dnsErr.code || "ENOTFOUND"}`;
-      }
+    if (!domain.cloudflareZoneId) {
+      return res.status(400).json({ success: false, error: "Domain has no associated Cloudflare zone" });
     }
 
-    if (isVerified) {
+    if (!process.env.CLOUDFLARE_API_TOKEN) {
+      return res.status(500).json({ success: false, error: "Cloudflare credentials not configured" });
+    }
+
+    // Call Cloudflare API to get zone status
+    const cfResponse = await fetch(`https://api.cloudflare.com/client/v4/zones/${domain.cloudflareZoneId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    const cfData = await cfResponse.json();
+
+    if (!cfResponse.ok || !cfData.success) {
+      console.error("Cloudflare Zone Check Error:", cfData.errors);
+      return res.status(500).json({ success: false, error: "Failed to check zone status with hosting provider" });
+    }
+
+    const zoneStatus = cfData.result.status; // e.g. "active", "pending", "initializing"
+
+    if (zoneStatus === "active") {
       const verifiedAt = new Date();
-      const updatedDnsRecords = [
-        { type: 'TXT', name: `_zovaix-challenge.${cleanHost}`, value: domain.txtVerificationToken, status: 'configured' },
-        { type: 'A', name: '@', value: '76.76.21.21', status: 'configured' },
-        { type: 'CNAME', name: 'www', value: 'cname.zovaix.site', status: 'configured' }
-      ];
+      
+      // Update DNS records to show as configured
+      let updatedDnsRecords = [];
+      if (domain.dnsRecordsJson) {
+        try {
+          const parsedRecords = JSON.parse(domain.dnsRecordsJson);
+          updatedDnsRecords = parsedRecords.map((r: any) => ({ ...r, status: 'configured' }));
+        } catch(e) {}
+      }
+
+      // Add to Cloudflare KV for the routing worker
+      if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && domain.projectId) {
+        const kvResponse = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${domain.domain}`,
+          {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+              "Content-Type": "text/plain"
+            },
+            body: domain.projectId
+          }
+        );
+        if (!kvResponse.ok) {
+          console.error("Failed to write to KV:", await kvResponse.text());
+        }
+      }
 
       const [updated] = await db
         .update(domainsTable)
         .set({
-          status: "VERIFIED",
+          status: "ACTIVE",
           verified: true,
           sslActive: true,
           verifiedAt,
@@ -179,35 +233,55 @@ domainsRouter.post("/domains/:id/verify", async (req: Request, res: Response) =>
           sslStatus: 'active',
           verifiedAt: updated.verifiedAt?.toISOString()
         },
-        message: "DNS verification succeeded! Domain is now ACTIVE with SSL enabled."
+        message: "Nameservers verified successfully! Domain is now ACTIVE."
       });
     }
 
-    // DNS check did not match
-    await db
-      .update(domainsTable)
-      .set({ status: "FAILED" })
-      .where(eq(domainsTable.id, domain.id));
-
+    // Zone not active yet
     return res.status(400).json({
       success: false,
       verified: false,
-      status: "FAILED",
-      error: verificationError,
-      message: `DNS verification pending: ${verificationError}. Please check your DNS provider settings.`
+      status: "PENDING",
+      error: `Cloudflare zone status is still "${zoneStatus}"`,
+      message: `Nameserver verification pending. Status: ${zoneStatus}. Please ensure you've updated your nameservers.`
     });
   } catch (err) {
-    return res.status(500).json({ success: false, error: "Error during DNS verification check" });
+    console.error("Verification error:", err);
+    return res.status(500).json({ success: false, error: "Error during domain verification check" });
   }
 });
 
-// DELETE /api/domains/:id — Remove custom domain
+// DELETE /domains/:id — Remove custom domain
 domainsRouter.delete("/domains/:id", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   const id = String(req.params.id);
   const workspaceId = req.workspaceId!;
 
   try {
+    const [domain] = await db
+      .select()
+      .from(domainsTable)
+      .where(and(eq(domainsTable.workspaceId, workspaceId), eq(domainsTable.id, id)))
+      .limit(1);
+
+    if (domain && process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
+      // Remove from KV
+      const kvResponse = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${domain.domain}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`
+          }
+        }
+      );
+      if (!kvResponse.ok) {
+        console.error("Failed to delete from KV:", await kvResponse.text());
+      }
+      
+      // Optionally remove the zone from CF here if needed, but KV is the main requirement
+    }
+
     await db
       .delete(domainsTable)
       .where(and(eq(domainsTable.workspaceId, workspaceId), eq(domainsTable.id, id)));
@@ -217,6 +291,7 @@ domainsRouter.delete("/domains/:id", async (req: Request, res: Response) => {
       message: "Domain removed from project routing"
     });
   } catch (err) {
+    console.error("Delete domain error:", err);
     return res.status(500).json({ success: false, error: "Failed to delete domain" });
   }
 });

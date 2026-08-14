@@ -67,6 +67,7 @@ export const domainsTable = pgTable("domains", {
   projectId: text("project_id").references(() => projectsTable.id, { onDelete: "set null" }),
   domain: text("domain").notNull(),
   status: text("status").notNull().default("PENDING"), // PENDING | VERIFYING | VERIFIED | ACTIVE | FAILED
+  cloudflareZoneId: text("cloudflare_zone_id"),
   txtVerificationToken: text("txt_verification_token"),
   txtRecord: text("txt_record"),
   cnameRecord: text("cname_record"),

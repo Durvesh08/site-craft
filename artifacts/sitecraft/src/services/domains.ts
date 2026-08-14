@@ -69,22 +69,32 @@ class DomainsService {
       status: 'pending',
       isPrimary: false,
       sslStatus: 'issuing',
-      dnsRecords: [
-        { type: 'A', name: '@', value: '76.76.21.21', status: 'pending' },
-        { type: 'CNAME', name: 'www', value: 'cname.zovaix.site', status: 'pending' },
-      ],
+      dnsRecords: [],
       createdAt: 'Just now',
     };
+    
+    // Optimistic insert
     this.domains.unshift(newDomain);
 
     try {
-      await fetch('/api/domains', {
+      const res = await fetch('/api/domains', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hostname: domain, projectId, projectName })
       });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.domain) {
+          // Update the optimistic domain with real data
+          newDomain.id = data.domain.id;
+          newDomain.dnsRecords = data.domain.dnsRecords || [];
+        }
+      } else {
+        newDomain.status = 'error';
+      }
     } catch (_err) {
-      // Local fallback
+      newDomain.status = 'error';
     }
 
     return newDomain;

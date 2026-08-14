@@ -1266,6 +1266,25 @@ router.delete("/projects/:id", async (req: Request, res: Response) => {
 
     // Delete deployments first (FK constraint)
     await db.delete(deploymentsTable).where(eq(deploymentsTable.projectId, projectId));
+
+    // Remove any associated domains from Cloudflare KV
+    if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
+      try {
+        const associatedDomains = await db.select().from(domainsTable).where(eq(domainsTable.projectId, projectId));
+        for (const domain of associatedDomains) {
+          await fetch(
+            `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${domain.domain}`,
+            {
+              method: "DELETE",
+              headers: { "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` }
+            }
+          );
+        }
+      } catch (err) {
+        req.log.error({ err }, "Failed to delete KV domains for project");
+      }
+    }
+
     // Delete the project
     await db.delete(projectsTable).where(eq(projectsTable.id, projectId));
 

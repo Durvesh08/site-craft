@@ -475,6 +475,7 @@ export async function autoMigrate(): Promise<void> {
     // Missing domains columns
     await addColumnIfMissing("domains", "workspace_id", "TEXT REFERENCES workspaces(id) ON DELETE CASCADE");
     await addColumnIfMissing("domains", "status", "TEXT NOT NULL DEFAULT 'PENDING'");
+    await addColumnIfMissing("domains", "cloudflare_zone_id", "TEXT");
     await addColumnIfMissing("domains", "txt_verification_token", "TEXT");
     await addColumnIfMissing("domains", "txt_record", "TEXT");
     await addColumnIfMissing("domains", "cname_record", "TEXT");
@@ -489,6 +490,7 @@ export async function autoMigrate(): Promise<void> {
         workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
         project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
         domain TEXT NOT NULL,
+        cloudflare_zone_id TEXT,
         verified BOOLEAN NOT NULL DEFAULT FALSE,
         ssl_active BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
