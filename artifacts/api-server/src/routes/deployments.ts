@@ -947,76 +947,6 @@ router.post("/deployments/:id/rollback", async (req: Request, res: Response) => 
   }
 });
 
-// ── Domains ───────────────────────────────────────────────────────────────────
-
-router.get("/domains", async (req: Request, res: Response) => {
-  if (!requireAuth(req, res)) return;
-  try {
-    const domains = await db
-      .select()
-      .from(domainsTable)
-      .where(eq(domainsTable.userId, req.user!.id))
-      .orderBy(desc(domainsTable.createdAt));
-    res.json({ domains: domains.map(toDomainResponse) });
-  } catch (err) {
-    req.log.error({ err }, "Failed to list domains");
-    res.status(500).json({ error: "InternalError", message: "Failed to list domains" });
-  }
-});
-
-router.post("/domains", async (req: Request, res: Response) => {
-  if (!requireAuth(req, res)) return;
-  try {
-    const body = CreateDomainBody.safeParse(req.body);
-    if (!body.success) {
-      res.status(422).json({ error: "ValidationError", message: "Invalid request body" });
-      return;
-    }
-
-    const [domain] = await db
-      .insert(domainsTable)
-      .values({
-        userId: req.user!.id,
-        projectId: body.data.projectId ?? null,
-        domain: body.data.domain,
-        verified: false,
-        sslActive: false,
-      })
-      .returning();
-
-    res.status(201).json(toDomainResponse(domain));
-  } catch (err) {
-    req.log.error({ err }, "Failed to create domain");
-    res.status(500).json({ error: "InternalError", message: "Failed to create domain" });
-  }
-});
-
-router.delete("/domains/:id", async (req: Request, res: Response) => {
-  if (!requireAuth(req, res)) return;
-  try {
-    const params = DeleteDomainParams.safeParse(req.params);
-    if (!params.success) {
-      res.status(400).json({ error: "BadRequest", message: "Invalid domain ID" });
-      return;
-    }
-
-    const [existing] = await db
-      .select()
-      .from(domainsTable)
-      .where(and(eq(domainsTable.id, params.data.id), eq(domainsTable.userId, req.user!.id)));
-
-    if (!existing) {
-      res.status(404).json({ error: "NotFound", message: "Domain not found" });
-      return;
-    }
-
-    await db.delete(domainsTable).where(eq(domainsTable.id, params.data.id));
-    res.json({ message: "Domain removed" });
-  } catch (err) {
-    req.log.error({ err }, "Failed to delete domain");
-    res.status(500).json({ error: "InternalError", message: "Failed to delete domain" });
-  }
-});
 
 // ── POST /projects/:id/deploy/netlify ──────────────────────────────────────────
 // Deploy the generated HTML to Netlify via their REST API.
@@ -1246,54 +1176,7 @@ router.post("/projects/:id/deploy/github-pages", async (req: Request, res: Respo
   }
 });
 
-// ── DELETE /projects/:id ────────────────────────────────────────────────────────
-// Delete a project and all its deployments.
 
-router.delete("/projects/:id", async (req: Request, res: Response) => {
-  if (!requireAuth(req, res)) return;
-  try {
-    const projectId = String(req.params.id);
-
-    const [project] = await db
-      .select()
-      .from(projectsTable)
-      .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
-
-    if (!project) {
-      res.status(404).json({ error: "NotFound", message: "Project not found" });
-      return;
-    }
-
-    // Delete deployments first (FK constraint)
-    await db.delete(deploymentsTable).where(eq(deploymentsTable.projectId, projectId));
-
-    // Remove any associated domains from Cloudflare KV
-    if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
-      try {
-        const associatedDomains = await db.select().from(domainsTable).where(eq(domainsTable.projectId, projectId));
-        for (const domain of associatedDomains) {
-          await fetch(
-            `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${domain.domain}`,
-            {
-              method: "DELETE",
-              headers: { "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` }
-            }
-          );
-        }
-      } catch (err) {
-        req.log.error({ err }, "Failed to delete KV domains for project");
-      }
-    }
-
-    // Delete the project
-    await db.delete(projectsTable).where(eq(projectsTable.id, projectId));
-
-    res.json({ success: true, message: "Project deleted" });
-  } catch (err: any) {
-    req.log.error({ err }, "Failed to delete project");
-    res.status(500).json({ error: "InternalError", message: "Failed to delete project" });
-  }
-});
 
 // ── DELETE /deployments/:id ────────────────────────────────────────────────────
 // Delete a single deployment record.
@@ -1321,67 +1204,7 @@ router.delete("/deployments/:id", async (req: Request, res: Response) => {
   }
 });
 
-// ── SiteCraft V4 Goal 7: Real-Time Automated DNS Verification ─────────────────────
-// POST /domains/verify
-router.post("/domains/verify", async (req: Request, res: Response) => {
-  if (!requireAuth(req, res)) return;
-  try {
-    const { domainId, domain } = req.body as { domainId?: string; domain?: string };
-    const targetDomain = domain?.trim().toLowerCase();
 
-    if (!targetDomain) {
-      res.status(400).json({ error: "BadRequest", message: "Domain name is required" });
-      return;
-    }
-
-    let cnameRecords: string[] = [];
-    let aRecords: string[] = [];
-    let isVerified = false;
-
-    // Check CNAME record
-    try {
-      cnameRecords = await dns.promises.resolveCname(targetDomain);
-      if (cnameRecords.some(c => c.includes("sitecraft") || c.includes("vercel") || c.includes("netlify") || c.includes("pages.dev"))) {
-        isVerified = true;
-      }
-    } catch {}
-
-    // Check A record if CNAME not resolved
-    if (!isVerified) {
-      try {
-        aRecords = await dns.promises.resolve4(targetDomain);
-        if (aRecords.length > 0) {
-          // Any configured A record resolves successfully
-          isVerified = true;
-        }
-      } catch {}
-    }
-
-    // Update database record if domainId provided
-    if (domainId) {
-      await db.update(domainsTable)
-        .set({ verified: isVerified, sslActive: isVerified })
-        .where(and(eq(domainsTable.id, domainId), eq(domainsTable.userId, req.user!.id)));
-    }
-
-    res.json({
-      success: true,
-      domain: targetDomain,
-      verified: isVerified,
-      sslActive: isVerified,
-      cnameRecords,
-      aRecords,
-      dnsInstructions: {
-        cname: { type: "CNAME", host: "@", value: "cname.sitecraft.app" },
-        aRecord: { type: "A", host: "@", value: "76.76.21.21" },
-      },
-      note: isVerified ? "DNS verified! Your domain is active." : "DNS pending propagation. Ensure your CNAME or A record is configured.",
-    });
-  } catch (err: any) {
-    req.log.error({ err }, "DNS verification failed");
-    res.status(500).json({ error: "InternalError", message: "DNS verification failed" });
-  }
-});
 
 // POST /projects/:id/deploy/vercel
 router.post("/projects/:id/deploy/vercel", async (req: Request, res: Response) => {
