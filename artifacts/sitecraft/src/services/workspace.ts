@@ -44,8 +44,8 @@ class WorkspaceService {
           };
         }
       }
-    } catch (_err) {
-      // Local fallback
+    } catch (err) {
+      console.error('[workspace] syncFromBackend failed:', err);
     }
     return this.usage;
   }

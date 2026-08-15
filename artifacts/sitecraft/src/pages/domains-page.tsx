@@ -128,7 +128,11 @@ export default function DomainsPage() {
                     </div>
                   ))}
                   {(!activeDomain?.dnsRecords || activeDomain.dnsRecords.length === 0) && (
-                    <div className="text-muted-foreground py-2 text-center text-[10px]">No nameservers returned. Please try again.</div>
+                    <div className="text-muted-foreground py-2 text-center text-[10px]">
+                      {activeDomain?.status === 'error' && activeDomain.errorMessage 
+                        ? <span className="text-red-400 font-semibold">{activeDomain.errorMessage}</span> 
+                        : "No nameservers returned. Please try again."}
+                    </div>
                   )}
                 </div>
                 <div className="flex justify-end gap-2 pt-2">

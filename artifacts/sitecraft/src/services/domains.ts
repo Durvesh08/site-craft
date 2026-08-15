@@ -14,6 +14,7 @@ export interface DomainItem {
     status: 'valid' | 'pending';
   }[];
   createdAt: string;
+  errorMessage?: string;
 }
 
 const INITIAL_DOMAINS: DomainItem[] = [];
@@ -45,8 +46,8 @@ class DomainsService {
           }));
         }
       }
-    } catch (_err) {
-      // In-memory fallback
+    } catch (err) {
+      console.error('[domains] syncFromBackend failed:', err);
     }
     return this.domains;
   }
@@ -91,10 +92,14 @@ class DomainsService {
           newDomain.dnsRecords = data.domain.dnsRecords || [];
         }
       } else {
+        const errorData = await res.json().catch(() => ({}));
         newDomain.status = 'error';
+        newDomain.errorMessage = errorData.error || errorData.message || `Request failed with status ${res.status}`;
       }
-    } catch (_err) {
+    } catch (err) {
+      console.error('[domains] addDomain failed:', err);
       newDomain.status = 'error';
+      newDomain.errorMessage = err instanceof Error ? err.message : 'Unknown error';
     }
 
     return newDomain;
@@ -118,7 +123,8 @@ class DomainsService {
         } else {
           dom.status = 'error';
         }
-      } catch (_err) {
+      } catch (err) {
+        console.error('[domains] verify failed:', err);
         dom.status = 'error';
       }
     }
@@ -141,8 +147,8 @@ class DomainsService {
       this.domains.splice(idx, 1);
       try {
         await fetch(`/api/domains/${id}`, { method: 'DELETE' });
-      } catch (_err) {
-        // Local fallback
+      } catch (err) {
+        console.error('[domains] remove failed:', err);
       }
       return true;
     }
