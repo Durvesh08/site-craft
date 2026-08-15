@@ -28,15 +28,14 @@ import { extractDominantColor } from "../lib/colorExtractor";
 import { performVisualQa } from "../lib/visualQa.js";
 import { retrieveExemplar } from "./knowledge/retriever.js";
 
+import { GEMINI_FAST_MODEL, GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL } from "../config/models";
+
 // ── Models ────────────────────────────────────────────────────────────────────
-// gemini-2.0-flash-lite, gemini-2.0-flash, and gemini-2.5-pro are unavailable
-// on Tier 1 / new-user AI Studio accounts.
-// All constants now resolve to gemini-2.5-flash — the best universally
-// available workhorse model. Thinking budget is configured per call site.
-const FLASH_LITE = "gemini-2.0-flash";
-const FLASH_FAST = "gemini-2.0-flash";
-const FLASH      = "gemini-2.0-flash";
-const PRO        = "gemini-1.5-pro";
+// Thinking budget is configured per call site.
+const FLASH_LITE = GEMINI_FAST_MODEL;
+const FLASH_FAST = GEMINI_FAST_MODEL;
+const FLASH      = GEMINI_FLASH_MODEL;
+const PRO        = GEMINI_PRO_MODEL;
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.

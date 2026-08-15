@@ -11,6 +11,7 @@ import {
 } from "@workspace/db";
 import { eq, and, count, sum } from "drizzle-orm";
 import crypto from "crypto";
+import { GEMINI_FLASH_MODEL } from "../config/models.js";
 
 const workspaceRouter: IRouter = Router();
 
@@ -68,7 +69,7 @@ workspaceRouter.get("/workspace/settings", async (req: Request, res: Response) =
           slug: "personal",
           ownerId: user?.id || "user-1",
           defaultAiProvider: "google",
-          defaultAiModel: "gemini-2.5-flash",
+          defaultAiModel: GEMINI_FLASH_MODEL,
           timezone: "UTC",
         },
       });
@@ -83,7 +84,7 @@ workspaceRouter.get("/workspace/settings", async (req: Request, res: Response) =
         ownerId: workspace.ownerId,
         avatarUrl: workspace.avatarUrl,
         defaultAiProvider: workspace.defaultAiProvider || "google",
-        defaultAiModel: workspace.defaultAiModel || "gemini-2.5-flash",
+        defaultAiModel: workspace.defaultAiModel || GEMINI_FLASH_MODEL,
         timezone: workspace.timezone || "UTC",
         createdAt: workspace.createdAt.toISOString(),
       },

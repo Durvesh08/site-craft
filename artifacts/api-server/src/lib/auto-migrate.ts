@@ -508,7 +508,7 @@ export async function autoMigrate(): Promise<void> {
         system_prompt TEXT NOT NULL,
         user_prompt_template TEXT NOT NULL,
         provider TEXT NOT NULL DEFAULT 'gemini',
-        model TEXT NOT NULL DEFAULT 'gemini-2.0-flash',
+        model TEXT NOT NULL DEFAULT 'gemini-2.5-flash',
         temperature REAL NOT NULL DEFAULT 0.7,
         version TEXT NOT NULL DEFAULT '1.0.0',
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -633,16 +633,16 @@ export async function autoMigrate(): Promise<void> {
 
           -- Step 3: backfill from the (still-enum) old model column
           UPDATE prompt_templates SET new_model = CASE
-            WHEN model::text = 'gemini-flash' THEN 'gemini-2.0-flash'
-            WHEN model::text = 'gemini-pro' THEN 'gemini-1.5-pro'
-            WHEN model::text = 'gemini-flash-fast' THEN 'gemini-2.0-flash'
-            WHEN model::text = 'gemini-1.5-flash' THEN 'gemini-1.5-flash'
-            ELSE 'gemini-2.0-flash'
+            WHEN model::text = 'gemini-flash' THEN 'gemini-2.5-flash'
+            WHEN model::text = 'gemini-pro' THEN 'gemini-2.5-pro'
+            WHEN model::text = 'gemini-flash-fast' THEN 'gemini-2.5-flash'
+            WHEN model::text = 'gemini-1.5-flash' THEN 'gemini-2.5-flash'
+            ELSE 'gemini-2.5-flash'
           END WHERE new_model IS NULL;
 
           -- Step 4: enforce default/not-null
-          ALTER TABLE prompt_templates ALTER COLUMN new_model SET DEFAULT 'gemini-2.0-flash';
-          UPDATE prompt_templates SET new_model = 'gemini-2.0-flash' WHERE new_model IS NULL;
+          ALTER TABLE prompt_templates ALTER COLUMN new_model SET DEFAULT 'gemini-2.5-flash';
+          UPDATE prompt_templates SET new_model = 'gemini-2.5-flash' WHERE new_model IS NULL;
           ALTER TABLE prompt_templates ALTER COLUMN new_model SET NOT NULL;
 
           -- Step 5: drop the old enum column

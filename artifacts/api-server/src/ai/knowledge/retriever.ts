@@ -3,6 +3,7 @@ import { db, settingsTable, sectionExemplarsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { decrypt } from "../../lib/encryption.js";
 import { logger } from "../../lib/logger.js";
+import { GEMINI_EMBEDDING_MODEL } from "../../config/models.js";
 
 async function getEmbeddings(userId: string, text: string): Promise<number[]> {
   const rows = await db
@@ -33,7 +34,7 @@ async function getEmbeddings(userId: string, text: string): Promise<number[]> {
 
   const ai = new GoogleGenAI({ apiKey });
   const result = await ai.models.embedContent({
-    model: "gemini-embedding-2",
+    model: GEMINI_EMBEDDING_MODEL,
     contents: text,
     config: {
       outputDimensionality: 768

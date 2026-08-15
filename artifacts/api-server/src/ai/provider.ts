@@ -38,6 +38,8 @@ function resolveModelForProvider(providerId: string, model: string): string {
   return model;
 }
 
+import { GEMINI_FALLBACK_MODEL } from "../config/models";
+
 export class GeminiProvider implements AIProvider {
   providerId = "gemini" as const;
   private genai: GoogleGenAI;
@@ -49,7 +51,7 @@ export class GeminiProvider implements AIProvider {
   }
 
   getFallbackModel(model: string): string | null {
-    if (model !== "gemini-1.5-flash") return "gemini-1.5-flash";
+    if (model !== GEMINI_FALLBACK_MODEL) return GEMINI_FALLBACK_MODEL;
     return null;
   }
 

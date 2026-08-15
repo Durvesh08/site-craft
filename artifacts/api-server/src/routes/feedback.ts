@@ -3,6 +3,7 @@ import { db, sectionExemplarsTable, settingsTable } from "@workspace/db";
 import { GoogleGenAI } from "@google/genai";
 import { eq, and } from "drizzle-orm";
 import { decrypt } from "../lib/encryption.js";
+import { GEMINI_EMBEDDING_MODEL } from "../config/models.js";
 
 const router: IRouter = Router();
 
@@ -55,7 +56,7 @@ router.post("/feedback/approve", async (req: Request, res: Response) => {
     const embeddingInputText = `Section type: ${sectionType}. Archetype: ${archetypeKey}. Copy: ${exampleCopy}. Pattern: ${copyPattern}. Notes: ${layoutNotes}`;
     
     const embedResult = await ai.models.embedContent({
-      model: "gemini-embedding-2",
+      model: GEMINI_EMBEDDING_MODEL,
       contents: embeddingInputText,
       config: {
         outputDimensionality: 768
