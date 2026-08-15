@@ -59,24 +59,26 @@ async function createJob(
   stepNames: string[],
   payloadJson?: string,
 ) {
-  const [job] = await db.insert(aiJobsTable).values({
-    projectId,
-    userId,
-    type,
-    status: "pending",
-    progress: 0,
-    payloadJson,
-  }).returning();
+  return await db.transaction(async (tx) => {
+    const [job] = await tx.insert(aiJobsTable).values({
+      projectId,
+      userId,
+      type,
+      status: "pending",
+      progress: 0,
+      payloadJson,
+    }).returning();
 
-  const stepsData = stepNames.map((name, i) => ({
-    jobId: job.id,
-    name,
-    status: "pending" as const,
-    order: i,
-  }));
+    const stepsData = stepNames.map((name, i) => ({
+      jobId: job.id,
+      name,
+      status: "pending" as const,
+      order: i,
+    }));
 
-  const steps = await db.insert(aiJobStepsTable).values(stepsData).returning();
-  return { job, steps };
+    const steps = await tx.insert(aiJobStepsTable).values(stepsData).returning();
+    return { job, steps };
+  });
 }
 
 import { findProjectByIdOrSlug } from "./projects";
