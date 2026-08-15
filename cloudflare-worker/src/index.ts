@@ -78,6 +78,7 @@ export default {
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     headers.set("etag", object.httpEtag);
+    headers.set("Cache-Control", "no-cache, must-revalidate");
     
     // Guess basic content types if not set by R2
     if (!headers.has("Content-Type")) {
