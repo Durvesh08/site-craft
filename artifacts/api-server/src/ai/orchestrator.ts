@@ -946,6 +946,20 @@ ${generatedHtml}
         updatedAt: new Date(),
       });
       
+      if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
+        await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${defaultDomain}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+            },
+            body: projectId,
+          }
+        );
+        logger.info({ projectId, defaultDomain }, "Wrote default domain mapping to Cloudflare KV");
+      }
+
       logger.info({ projectId, deploymentUrl }, "Created default deployment record");
     } catch (publishErr) {
       logger.error({ err: publishErr, projectId }, "Failed to publish site to R2");
@@ -1041,6 +1055,20 @@ ${generatedHtml}
         updatedAt: new Date(),
       });
       
+      if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
+        await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${defaultDomain}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+            },
+            body: projectId,
+          }
+        );
+        logger.info({ projectId, defaultDomain }, "Wrote default domain mapping to Cloudflare KV for fallback");
+      }
+
     } catch (publishErr) {
       logger.error({ err: publishErr, projectId }, "Failed to publish fallback site to R2");
     }
