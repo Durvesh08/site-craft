@@ -1,13 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
+import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
 import {
   aiJobsTable,
   aiJobStepsTable,
   projectsTable,
   versionsTable,
-  settingsTable,
   promptTemplatesTable,
   layoutSkeletonsTable,
+  deploymentsTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -918,6 +919,34 @@ ${generatedHtml}
       const storageService = new ObjectStorageService();
       await storageService.putObject(`projects/${projectId}/index.html`, generatedHtml);
       logger.info({ projectId }, "Successfully published generated site to R2");
+
+      // Auto-assign default subdomain and create a deployment record
+      const projectSlug = project.slug || project.id;
+      const defaultDomain = `${projectSlug}.zovaix.site`;
+      const deploymentUrl = `https://${defaultDomain}`;
+      
+      if (!project.domain || project.domain === "" || project.domain === `${project.id}.zovaix.site`) {
+        await db.update(projectsTable)
+          .set({ domain: defaultDomain })
+          .where(eq(projectsTable.id, projectId));
+      }
+
+      await db.insert(deploymentsTable).values({
+        id: randomUUID(),
+        projectId,
+        workspaceId: project.workspaceId || "default-ws",
+        userId,
+        status: "active",
+        commitMsg: "Initial AI Generation",
+        commitHash: "ai-gen",
+        url: deploymentUrl,
+        number: 1,
+        logs: ["Published to R2 edge network successfully"],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      
+      logger.info({ projectId, deploymentUrl }, "Created default deployment record");
     } catch (publishErr) {
       logger.error({ err: publishErr, projectId }, "Failed to publish site to R2");
     }
@@ -986,6 +1015,32 @@ ${generatedHtml}
       const storageService = new ObjectStorageService();
       await storageService.putObject(`projects/${projectId}/index.html`, synthesizedHtml);
       logger.info({ projectId }, "Successfully published fallback site to R2");
+
+      const projectSlug = project?.slug || project?.id || projectId;
+      const defaultDomain = `${projectSlug}.zovaix.site`;
+      const deploymentUrl = `https://${defaultDomain}`;
+      
+      if (!project?.domain || project?.domain === "" || project?.domain === `${project?.id}.zovaix.site`) {
+        await db.update(projectsTable)
+          .set({ domain: defaultDomain })
+          .where(eq(projectsTable.id, projectId));
+      }
+
+      await db.insert(deploymentsTable).values({
+        id: randomUUID(),
+        projectId,
+        workspaceId: project?.workspaceId || "default-ws",
+        userId,
+        status: "active",
+        commitMsg: "Fallback AI Generation",
+        commitHash: "ai-fallback",
+        url: deploymentUrl,
+        number: 1,
+        logs: ["Published fallback site to R2 edge network successfully"],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      
     } catch (publishErr) {
       logger.error({ err: publishErr, projectId }, "Failed to publish fallback site to R2");
     }

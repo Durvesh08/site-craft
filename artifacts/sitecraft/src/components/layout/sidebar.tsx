@@ -73,10 +73,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           <NavItem href="/projects" icon={Layers} label="Projects" active={location === "/projects"} collapsed={collapsed} onNavigate={onNavigate} />
         </div>
 
-        {/* CONNECT SECTION */}
-        <NavGroup title="CONNECT" collapsed={collapsed}>
-          <NavItem href="/domains" icon={Globe} label="Domains" active={location === "/domains"} collapsed={collapsed} onNavigate={onNavigate} />
-        </NavGroup>
+
 
         {/* WORKSPACE SECTION */}
         <NavGroup title="WORKSPACE" collapsed={collapsed}>

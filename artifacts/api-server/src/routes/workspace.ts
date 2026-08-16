@@ -203,6 +203,29 @@ workspaceRouter.post("/workspace/invitations", async (req: Request, res: Respons
       })
       .returning();
 
+    // Send email via Resend
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    if (RESEND_API_KEY) {
+      const inviteLink = `${process.env.FRONTEND_URL || 'https://zovaix.site'}/invite/${token}`;
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: 'Zovaix <invites@zovaix.site>',
+            to: [invitation.email],
+            subject: 'You have been invited to join a Zovaix workspace',
+            html: `<p>You have been invited to collaborate on a workspace.</p><p><a href="${inviteLink}">Click here to accept your invitation</a></p>`
+          })
+        });
+      } catch (emailErr) {
+        console.error("Failed to send invitation email", emailErr);
+      }
+    }
+
     return res.status(201).json({
       success: true,
       invitation,

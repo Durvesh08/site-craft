@@ -315,6 +315,22 @@ export default function SettingsPage() {
     }
   };
 
+  // Revoke All Other Sessions
+  const handleRevokeAllOtherSessions = async () => {
+    try {
+      const res = await fetch(`/api/security/sessions`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        setSessions(prev => prev.filter(s => s.isCurrent));
+        toast.success("All other sessions revoked successfully");
+      }
+    } catch {
+      toast.error("Failed to revoke other sessions");
+    }
+  };
+
   // Send Team Invitation
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -669,7 +685,14 @@ export default function SettingsPage() {
                   <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
                     <Laptop className="h-4 w-4 text-primary" /> Active Sessions
                   </h3>
-                  <span className="text-xs font-mono text-muted-foreground">{sessions.length} active</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-muted-foreground">{sessions.length} active</span>
+                    {sessions.length > 1 && (
+                      <Button size="sm" variant="outline" onClick={handleRevokeAllOtherSessions} className="h-7 text-[10px] uppercase border-destructive/30 text-destructive hover:bg-destructive/10">
+                        Sign Out All Others
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {sessions.length === 0 ? (
