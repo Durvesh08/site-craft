@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation, useParams } from "wouter";
-import { projectsService } from "@/services/projects";
+import { useGetProject } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -33,13 +33,9 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
   const [consoleTab, setConsoleTab] = useState<'console' | 'problems' | 'logs'>('console');
 
   const projectId = id || 'lumina';
-  const [, setRefresh] = useState(0);
+  const { data, isLoading } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  const rawProject = data?.project;
 
-  React.useEffect(() => {
-    projectsService.fetchRemoteProjects().then(() => setRefresh(r => r + 1));
-  }, [projectId]);
-
-  const rawProject = projectsService.getById(projectId) || projectsService.getAll()[0];
   const project = rawProject || {
     id: projectId,
     name: projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),

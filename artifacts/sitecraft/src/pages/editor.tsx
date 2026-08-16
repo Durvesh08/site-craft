@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
-import { projectsService } from "@/services/projects";
+import { useGetProject } from "@workspace/api-client-react";
 import { generationService } from "@/services/generation";
 import { filesService } from "@/services/files";
 import { Button } from "@/components/ui/button";
@@ -35,19 +35,21 @@ interface ChatMessage {
 export default function ProjectEditor() {
   const { id } = useParams<{ id?: string }>();
   const projectId = id || 'lumina';
-  const [, setRefresh] = useState(0);
-
-  useEffect(() => {
-    projectsService.fetchRemoteProjects().then(() => setRefresh(r => r + 1));
-  }, [projectId]);
-
-  const rawProject = projectsService.getById(projectId) || projectsService.getAll()[0];
-  const project = rawProject || {
+  const { data } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  
+  const rawProject = data?.project || {
     id: projectId,
-    name: projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    name: projectId,
     domain: `${projectId}.zovaix.site`,
     status: 'draft',
+    description: '',
+    category: 'SaaS',
+    isStarred: false,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
+  const project = rawProject;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [viewport, setViewport] = useState<Viewport>("desktop");

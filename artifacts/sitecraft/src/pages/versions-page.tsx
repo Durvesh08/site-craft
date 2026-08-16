@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { versionsService, VersionSnapshot } from "@/services/versions";
-import { projectsService } from "@/services/projects";
+import { useGetProject } from "@workspace/api-client-react";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -20,11 +20,21 @@ export default function VersionsPage() {
   const [, setLocation] = useLocation();
   const isProjectContext = Boolean(id);
   const projectId = id || 'lumina';
-  const rawProject = projectsService.getById(projectId) || projectsService.getAll()[0];
-  const project = rawProject || {
+  const { data } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  
+  const rawProject = data?.project || {
     id: projectId,
-    name: projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    name: projectId,
+    domain: `${projectId}.zovaix.site`,
+    status: 'draft',
+    description: '',
+    category: 'SaaS',
+    isStarred: false,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
+  const project = rawProject;
 
   const [versions, setVersions] = useState<VersionSnapshot[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<VersionSnapshot | null>(null);

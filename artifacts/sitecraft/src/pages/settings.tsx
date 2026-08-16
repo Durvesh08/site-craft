@@ -84,6 +84,14 @@ export default function SettingsPage() {
   const [userAvatar, setUserAvatar] = useState((user as any)?.avatarUrl || "");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      setUserName((user as any)?.name || (user as any)?.username || "Admin User");
+      setUserEmail(user?.email || "admin@zovaix.com");
+      setUserAvatar((user as any)?.avatarUrl || "");
+    }
+  }, [user]);
+
   // Security State
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);

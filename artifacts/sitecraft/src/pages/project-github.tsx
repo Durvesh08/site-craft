@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams } from "wouter";
 import { githubService } from "@/services/github";
-import { projectsService } from "@/services/projects";
+import { useGetProject } from "@workspace/api-client-react";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,21 @@ import {
 export default function ProjectGitHub() {
   const { id } = useParams<{ id?: string }>();
   const projectId = id || 'lumina';
-  const project = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const { data } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  
+  const rawProject = data?.project || {
+    id: projectId,
+    name: projectId,
+    domain: `${projectId}.zovaix.site`,
+    status: 'draft',
+    description: '',
+    category: 'SaaS',
+    isStarred: false,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  const project = rawProject;
 
   const sync = githubService.getSync(projectId);
 

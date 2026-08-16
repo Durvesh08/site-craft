@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
-import { projectsService } from "@/services/projects";
 import { Button } from "@/components/ui/button";
 import { Sparkles, LayoutTemplate, ArrowRight, Plus } from "lucide-react";
 
@@ -17,12 +16,35 @@ const TEMPLATES: Template[] = [];
 export default function TemplatesPage() {
   const [, setLocation] = useLocation();
   const [prompt, setPrompt] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
-  const handleCreateFromPrompt = (e: React.FormEvent) => {
+  const handleCreateFromPrompt = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim()) return;
-    const proj = projectsService.create(prompt.slice(0, 30), 'SaaS', prompt);
-    setLocation(`/projects/${proj.id}/build`);
+    if (!prompt.trim() || isCreating) return;
+    
+    setIsCreating(true);
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          name: prompt.slice(0, 30), 
+          businessDescription: prompt, 
+          prompt: prompt 
+        })
+      });
+      
+      if (res.ok) {
+        const { project } = await res.json();
+        setLocation(`/projects/${project.id}/build`);
+      } else {
+        console.error("Failed to create project");
+        setIsCreating(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setIsCreating(false);
+    }
   };
 
   return (

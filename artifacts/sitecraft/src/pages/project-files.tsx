@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { projectsService } from "@/services/projects";
+import { useGetProject } from "@workspace/api-client-react";
 import { filesService, VFSFile } from "@/services/files";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,21 @@ export default function ProjectFiles() {
   const { id } = useParams<{ id?: string }>();
   const [, setLocation] = useLocation();
   const projectId = id || 'lumina';
-  const project = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const { data } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  
+  const rawProject = data?.project || {
+    id: projectId,
+    name: projectId,
+    domain: `${projectId}.zovaix.site`,
+    status: 'draft',
+    description: '',
+    category: 'SaaS',
+    isStarred: false,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  const project = rawProject;
   const filesTree = filesService.getFilesForProject(projectId);
 
   const [activeFilter, setActiveFilter] = useState<'All' | 'Source' | 'Assets' | 'Config' | 'Public'>('All');

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams } from "wouter";
-import { projectsService } from "@/services/projects";
+import { useGetProject } from "@workspace/api-client-react";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,20 @@ import {
 export default function ProjectPreview() {
   const { id } = useParams<{ id?: string }>();
   const projectId = id || 'lumina';
-  const project = projectsService.getById(projectId) || projectsService.getAll()[0];
+  const { data } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  
+  const project = data?.project || {
+    id: projectId,
+    name: projectId,
+    domain: `${projectId}.zovaix.site`,
+    status: 'draft',
+    description: '',
+    category: 'SaaS',
+    isStarred: false,
+    isArchived: false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
 
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [copied, setCopied] = useState(false);

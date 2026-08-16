@@ -31,6 +31,7 @@ import { retrieveExemplar } from "./knowledge/retriever.js";
 import { GEMINI_FAST_MODEL, GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL } from "../config/models";
 
 import { getBestAvailableModel } from "./providers/modelRegistry";
+import { ObjectStorageService } from "../lib/objectStorage";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
@@ -913,6 +914,14 @@ ${generatedHtml}
       })
       .where(eq(aiJobsTable.id, jobId));
 
+    try {
+      const storageService = new ObjectStorageService();
+      await storageService.putObject(`projects/${projectId}/index.html`, generatedHtml);
+      logger.info({ projectId }, "Successfully published generated site to R2");
+    } catch (publishErr) {
+      logger.error({ err: publishErr, projectId }, "Failed to publish site to R2");
+    }
+
     logger.info({ userId, projectId }, "Generation complete");
 
     await createNotification({
@@ -972,6 +981,14 @@ ${generatedHtml}
         updatedAt: new Date(),
       })
       .where(eq(aiJobsTable.id, jobId));
+
+    try {
+      const storageService = new ObjectStorageService();
+      await storageService.putObject(`projects/${projectId}/index.html`, synthesizedHtml);
+      logger.info({ projectId }, "Successfully published fallback site to R2");
+    } catch (publishErr) {
+      logger.error({ err: publishErr, projectId }, "Failed to publish fallback site to R2");
+    }
   }
 }
 
@@ -1127,6 +1144,14 @@ export async function runSectionRegeneration(
     await db.update(aiJobsTable)
       .set({ status: "completed", progress: 100, currentStep: "Complete", resultJson: JSON.stringify({ htmlLen: updatedHtml.length }), completedAt: new Date(), updatedAt: new Date() })
       .where(eq(aiJobsTable.id, jobId));
+
+    try {
+      const storageService = new ObjectStorageService();
+      await storageService.putObject(`projects/${projectId}/index.html`, updatedHtml);
+      logger.info({ projectId, sectionId: input.sectionId }, "Successfully published regenerated section to R2");
+    } catch (publishErr) {
+      logger.error({ err: publishErr, projectId, sectionId: input.sectionId }, "Failed to publish regenerated section to R2");
+    }
 
     logger.info({ jobId, sectionId: input.sectionId }, "Section regeneration complete");
 
@@ -1426,6 +1451,14 @@ export async function runChatEdit(
     await db.update(aiJobsTable)
       .set({ status: "completed", progress: 100, currentStep: "Complete", resultJson: JSON.stringify({ html: refinedHtml }), completedAt: new Date(), updatedAt: new Date() })
       .where(eq(aiJobsTable.id, jobId));
+
+    try {
+      const storageService = new ObjectStorageService();
+      await storageService.putObject(`projects/${projectId}/index.html`, refinedHtml);
+      logger.info({ projectId }, "Successfully published chat edit to R2");
+    } catch (publishErr) {
+      logger.error({ err: publishErr, projectId }, "Failed to publish chat edit to R2");
+    }
 
     logger.info({ userId, projectId }, "Chat edit complete");
 
