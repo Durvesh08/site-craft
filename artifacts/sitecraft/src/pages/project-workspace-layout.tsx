@@ -33,10 +33,10 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
   const [consoleTab, setConsoleTab] = useState<'console' | 'problems' | 'logs'>('console');
 
   const projectId = id || 'lumina';
-  const { data, isLoading } = useGetProject(projectId, { query: { enabled: !!projectId } });
-  const rawProject = data?.project;
+  const { data, isLoading } = useGetProject(projectId);
+  const rawProject = data;
 
-  const project = rawProject || {
+  const project = (rawProject || {
     id: projectId,
     name: projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     domain: `${projectId}.zovaix.site`,
@@ -47,7 +47,7 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: 'Just now',
-  };
+  }) as any;
 
   const tabs = [
     { id: 'build', label: 'Build', href: `/projects/${projectId}/build`, icon: Sparkles },

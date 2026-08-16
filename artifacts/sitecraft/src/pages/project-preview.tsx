@@ -17,9 +17,9 @@ import {
 export default function ProjectPreview() {
   const { id } = useParams<{ id?: string }>();
   const projectId = id || 'lumina';
-  const { data } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  const { data } = useGetProject(projectId);
   
-  const project = data?.project || {
+  const project = (data || {
     id: projectId,
     name: projectId,
     domain: `${projectId}.zovaix.site`,
@@ -30,7 +30,7 @@ export default function ProjectPreview() {
     isArchived: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
-  };
+  }) as any;
 
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [copied, setCopied] = useState(false);

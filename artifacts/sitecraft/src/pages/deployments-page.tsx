@@ -23,9 +23,9 @@ export default function DeploymentsPage() {
   const { id } = useParams<{ id?: string }>();
   const isProjectContext = Boolean(id);
   const projectId = id || 'lumina';
-  const { data } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  const { data } = useGetProject(projectId);
   
-  const rawProject = data?.project || {
+  const rawProject = data || {
     id: projectId,
     name: projectId,
     domain: `${projectId}.zovaix.site`,
@@ -37,7 +37,7 @@ export default function DeploymentsPage() {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
-  const project = rawProject;
+  const project = rawProject as any;
 
   const [refresh, setRefresh] = useState(0);
   const [selectedDep, setSelectedDep] = useState<Deployment | null>(null);

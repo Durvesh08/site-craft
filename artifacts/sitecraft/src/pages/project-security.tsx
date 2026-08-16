@@ -23,9 +23,9 @@ import {
 export default function ProjectSecurity() {
   const { id } = useParams<{ id?: string }>();
   const projectId = id || 'lumina';
-  const { data } = useGetProject(projectId, { query: { enabled: !!projectId } });
+  const { data } = useGetProject(projectId);
   
-  const rawProject = data?.project || {
+  const rawProject = data || {
     id: projectId,
     name: projectId,
     domain: `${projectId}.zovaix.site`,
