@@ -1,6 +1,6 @@
 import { Router, Request, Response, IRouter } from "express";
 import { db, auditLogsTable, userSessionsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, or, ne } from "drizzle-orm";
 
 const securityRouter: IRouter = Router();
 
@@ -72,6 +72,47 @@ securityRouter.get("/security/sessions", async (req: Request, res: Response) => 
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: "Failed to fetch user sessions" });
+  }
+});
+
+// DELETE /api/security/sessions — Revoke all sessions EXCEPT the current one
+securityRouter.delete("/security/sessions", async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    const userAgentHeader = req.headers["user-agent"];
+    const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader || "";
+    const ipAddress = req.ip || "";
+
+    // Delete all sessions for this user that don't match the current IP and User Agent
+    // Alternatively, if we had a precise session ID in req.session, we'd use that.
+    await db
+      .delete(userSessionsTable)
+      .where(
+        and(
+          eq(userSessionsTable.userId, user.id),
+          or(
+            ne(userSessionsTable.ipAddress, ipAddress),
+            ne(userSessionsTable.userAgent, userAgent)
+          )
+        )
+      );
+
+    await logAuditEvent({
+      workspaceId: req.workspaceId,
+      userId: user.id,
+      action: "session.revoke_all",
+      resource: "security",
+      resourceId: user.id,
+      ipAddress,
+      userAgent,
+    });
+
+    return res.json({ success: true, message: "All other sessions revoked" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to revoke sessions");
+    return res.status(500).json({ error: "InternalError" });
   }
 });
 
