@@ -51,8 +51,11 @@ export class GeminiProvider implements AIProvider {
   }
 
   getFallbackModel(model: string): string | null {
-    if (model !== GEMINI_FALLBACK_MODEL) return GEMINI_FALLBACK_MODEL;
-    return null;
+    const fallbackChain: Record<string, string> = {
+      "gemini-2.5-pro": "gemini-2.5-flash",
+      "gemini-2.5-flash": "gemini-2.5-flash-lite"
+    };
+    return fallbackChain[model] ?? (model !== "gemini-2.5-flash" ? "gemini-2.5-flash" : null);
   }
 
   async generateContent(model: string, prompt: string, options?: GenerateOptions): Promise<string> {

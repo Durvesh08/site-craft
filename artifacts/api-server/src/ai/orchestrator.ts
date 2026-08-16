@@ -30,12 +30,14 @@ import { retrieveExemplar } from "./knowledge/retriever.js";
 
 import { GEMINI_FAST_MODEL, GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL } from "../config/models";
 
+import { getBestAvailableModel } from "./providers/modelRegistry";
+
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
-const FLASH_LITE = GEMINI_FAST_MODEL;
-const FLASH_FAST = GEMINI_FAST_MODEL;
-const FLASH      = GEMINI_FLASH_MODEL;
-const PRO        = GEMINI_PRO_MODEL;
+const FLASH_LITE = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash", "gemini-1.5-flash"]);
+const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash", "gemini-1.5-flash"]);
+const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-2.5-pro"]);
+const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.

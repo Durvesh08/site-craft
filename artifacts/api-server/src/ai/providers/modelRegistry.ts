@@ -5,9 +5,6 @@ export const ALLOWED_MODELS = [
   "gemini-2.5-flash-lite",
   "gemini-2.5-pro",
   "gemini-embedding-2",
-  "gemini-2.0-flash",
-  "gemini-1.5-pro",
-  "gemini-1.5-flash",
   "claude-3-5-sonnet-20241022",
   "claude-3-5-haiku-20241022",
   "deepseek-coder"
@@ -15,3 +12,12 @@ export const ALLOWED_MODELS = [
 
 export type ProviderType = typeof ALLOWED_PROVIDERS[number];
 export type ModelType = typeof ALLOWED_MODELS[number];
+
+export function getBestAvailableModel(preferred: string, fallbacks: string[]): string {
+  const allModels = ALLOWED_MODELS as readonly string[];
+  if (allModels.includes(preferred)) return preferred;
+  for (const fallback of fallbacks) {
+    if (allModels.includes(fallback)) return fallback;
+  }
+  return "gemini-2.5-flash"; // Ultimate fallback guaranteed to exist
+}
