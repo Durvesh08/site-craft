@@ -6,6 +6,7 @@ import {
   aiJobStepsTable,
   projectsTable,
   versionsTable,
+  settingsTable,
   promptTemplatesTable,
   layoutSkeletonsTable,
   deploymentsTable,
@@ -921,29 +922,17 @@ ${generatedHtml}
       logger.info({ projectId }, "Successfully published generated site to R2");
 
       // Auto-assign default subdomain and create a deployment record
-      const projectSlug = project.slug || project.id;
+      const projectSlug = project.name ? project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : project.id;
       const defaultDomain = `${projectSlug}.zovaix.site`;
       const deploymentUrl = `https://${defaultDomain}`;
       
-      if (!project.domain || project.domain === "" || project.domain === `${project.id}.zovaix.site`) {
-        await db.update(projectsTable)
-          .set({ domain: defaultDomain })
-          .where(eq(projectsTable.id, projectId));
-      }
-
       await db.insert(deploymentsTable).values({
-        id: randomUUID(),
         projectId,
         workspaceId: project.workspaceId || "default-ws",
         userId,
-        status: "active",
-        commitMsg: "Initial AI Generation",
-        commitHash: "ai-gen",
-        url: deploymentUrl,
-        number: 1,
-        logs: ["Published to R2 edge network successfully"],
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        status: "live",
+        deploymentLog: "Published to R2 edge network successfully",
+        liveUrl: deploymentUrl,
       });
       
       if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
@@ -1030,29 +1019,17 @@ ${generatedHtml}
       await storageService.putObject(`projects/${projectId}/index.html`, synthesizedHtml);
       logger.info({ projectId }, "Successfully published fallback site to R2");
 
-      const projectSlug = project?.slug || project?.id || projectId;
+      const projectSlug = project?.name ? project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : project?.id || projectId;
       const defaultDomain = `${projectSlug}.zovaix.site`;
       const deploymentUrl = `https://${defaultDomain}`;
       
-      if (!project?.domain || project?.domain === "" || project?.domain === `${project?.id}.zovaix.site`) {
-        await db.update(projectsTable)
-          .set({ domain: defaultDomain })
-          .where(eq(projectsTable.id, projectId));
-      }
-
       await db.insert(deploymentsTable).values({
-        id: randomUUID(),
         projectId,
         workspaceId: project?.workspaceId || "default-ws",
         userId,
-        status: "active",
-        commitMsg: "Fallback AI Generation",
-        commitHash: "ai-fallback",
-        url: deploymentUrl,
-        number: 1,
-        logs: ["Published fallback site to R2 edge network successfully"],
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        status: "live",
+        deploymentLog: "Published fallback site to R2 edge network successfully",
+        liveUrl: deploymentUrl,
       });
       
       if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
