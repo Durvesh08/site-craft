@@ -46,12 +46,16 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : 'button';
 
     const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (variant === 'default' || variant === 'destructive') {
-        soundEngine.playPrimaryClick();
-      } else {
-        soundEngine.playSecondaryClick();
-      }
       if (onClick) onClick(e);
+      try {
+        if (variant === 'default' || variant === 'destructive') {
+          soundEngine.playPrimaryClick();
+        } else {
+          soundEngine.playSecondaryClick();
+        }
+      } catch (err) {
+        // Ignore sound errors that could block click handlers
+      }
     };
 
     return (

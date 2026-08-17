@@ -38,10 +38,21 @@ export default function ProjectCode() {
   };
   const project = rawProject;
   
-  const filesTree = filesService.getFilesForProject(projectId);
+  const [filesTree, setFilesTree] = useState<VFSFile[]>(filesService.getFilesForProject(projectId));
   const [selectedPath, setSelectedPath] = useState("src/components/Hero.tsx");
   const [openTabs, setOpenTabs] = useState<string[]>(["src/components/Hero.tsx", "src/App.tsx"]);
   const [copied, setCopied] = useState(false);
+  const [aiEditing, setAiEditing] = useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    filesService.fetchRemoteFiles(projectId).then(files => {
+      if (mounted) {
+        setFilesTree(files);
+      }
+    });
+    return () => { mounted = false; };
+  }, [projectId]);
   const [aiEditing, setAiEditing] = useState(false);
 
   const activeFile = filesService.getFileByPath(projectId, selectedPath) || {
