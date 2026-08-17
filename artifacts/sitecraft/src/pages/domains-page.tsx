@@ -26,7 +26,7 @@ export default function DomainsPage() {
   const rawProject = data || {
     id: projectId,
     name: projectId,
-    domain: `${projectId}.zovaix.site`,
+    domain: `${projectId}.site.zovaix.com`,
     status: 'draft',
     description: '',
     category: 'SaaS',

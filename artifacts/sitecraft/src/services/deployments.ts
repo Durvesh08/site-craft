@@ -22,14 +22,14 @@ const INITIAL_DEPLOYMENTS: Deployment[] = [
     commitHash: '85e269e',
     environment: 'Production',
     status: 'live',
-    url: 'https://lumina.zovaix.site',
+    url: 'https://lumina.site.zovaix.com',
     createdAt: '12 mins ago',
     logs: [
       '[08:14:02] Initializing deployment pipeline...',
       '[08:14:03] Pulling commit 85e269e (main)...',
       '[08:14:05] Running Vite production build...',
       '[08:14:08] Optimized 14 assets (1.8MB total)',
-      '[08:14:10] Verifying SSL certificate for lumina.zovaix.site...',
+      '[08:14:10] Verifying SSL certificate for lumina.site.zovaix.com...',
       '[08:14:12] Deployment #42 is LIVE on edge global CDN.',
     ],
   },
@@ -42,7 +42,7 @@ const INITIAL_DEPLOYMENTS: Deployment[] = [
     commitHash: 'd0ea1f0',
     environment: 'Production',
     status: 'live',
-    url: 'https://lumina-dep-41.zovaix.site',
+    url: 'https://lumina-dep-41.site.zovaix.com',
     createdAt: '2 hours ago',
     logs: [
       '[06:30:00] Initializing deployment pipeline...',
@@ -59,7 +59,7 @@ const INITIAL_DEPLOYMENTS: Deployment[] = [
     commitHash: '65d5e90',
     environment: 'Production',
     status: 'live',
-    url: 'https://pulsar.zovaix.site',
+    url: 'https://pulsar.site.zovaix.com',
     createdAt: 'Yesterday',
     logs: [
       '[14:22:00] Deployment #40 LIVE.',
@@ -93,7 +93,7 @@ class DeploymentsService {
       commitHash: Math.random().toString(16).substring(2, 9),
       environment: 'Production',
       status: 'live',
-      url: `https://${projectId}.zovaix.site`,
+      url: `https://${projectId}.site.zovaix.com`,
       createdAt: 'Just now',
       logs: [
         `[${new Date().toLocaleTimeString()}] Initializing deployment pipeline...`,

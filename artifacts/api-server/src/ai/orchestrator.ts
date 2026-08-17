@@ -923,7 +923,7 @@ ${generatedHtml}
 
       // Auto-assign default subdomain and create a deployment record
       const projectSlug = project.name ? project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : project.id;
-      const defaultDomain = `${projectSlug}.zovaix.site`;
+      const defaultDomain = `${projectSlug}.site.zovaix.com`;
       const deploymentUrl = `https://${defaultDomain}`;
       
       await db.insert(deploymentsTable).values({
@@ -1020,7 +1020,7 @@ ${generatedHtml}
       logger.info({ projectId }, "Successfully published fallback site to R2");
 
       const projectSlug = project?.name ? project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : project?.id || projectId;
-      const defaultDomain = `${projectSlug}.zovaix.site`;
+      const defaultDomain = `${projectSlug}.site.zovaix.com`;
       const deploymentUrl = `https://${defaultDomain}`;
       
       await db.insert(deploymentsTable).values({

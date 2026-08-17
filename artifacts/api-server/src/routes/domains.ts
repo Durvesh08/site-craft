@@ -34,7 +34,7 @@ domainsRouter.get("/domains", async (req: Request, res: Response) => {
         txtVerificationToken: d.txtVerificationToken,
         dnsRecords: d.dnsRecordsJson ? JSON.parse(d.dnsRecordsJson) : [
           { type: 'A', name: '@', value: '76.76.21.21', status: d.verified ? 'configured' : 'pending' },
-          { type: 'CNAME', name: 'www', value: 'cname.zovaix.site', status: d.verified ? 'configured' : 'pending' }
+          { type: 'CNAME', name: 'www', value: 'site.zovaix.com', status: d.verified ? 'configured' : 'pending' }
         ],
         sslStatus: d.sslActive ? 'active' : 'issuing',
         verifiedAt: d.verifiedAt?.toISOString(),

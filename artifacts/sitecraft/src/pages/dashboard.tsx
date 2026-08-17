@@ -87,7 +87,7 @@ export default function Dashboard() {
         description: p.description || p.businessDescription || `Bespoke ${p.category || 'SaaS'} web experience`,
         category: (p.category || 'SaaS') as any,
         status: p.status === 'deployed' ? 'published' : p.status,
-        domain: p.previewUrl || `${p.id}.zovaix.site`,
+        domain: p.previewUrl || `${p.id}.site.zovaix.com`,
         thumbnail: p.logoUrl || undefined,
         isStarred: !!p.isStarred,
         isArchived: (p.status as string) === 'archived',

@@ -25,7 +25,7 @@ export default function VersionsPage() {
   const rawProject = data || {
     id: projectId,
     name: projectId,
-    domain: `${projectId}.zovaix.site`,
+    domain: `${projectId}.site.zovaix.com`,
     status: 'draft',
     description: '',
     category: 'SaaS',

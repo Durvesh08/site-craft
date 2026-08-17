@@ -27,7 +27,7 @@ export default function ProjectCode() {
   const rawProject = data || {
     id: projectId,
     name: projectId,
-    domain: `${projectId}.zovaix.site`,
+    domain: `${projectId}.site.zovaix.com`,
     status: 'draft',
     description: '',
     category: 'SaaS',
@@ -53,7 +53,6 @@ export default function ProjectCode() {
     });
     return () => { mounted = false; };
   }, [projectId]);
-  const [aiEditing, setAiEditing] = useState(false);
 
   const activeFile = filesService.getFileByPath(projectId, selectedPath) || {
     path: selectedPath,

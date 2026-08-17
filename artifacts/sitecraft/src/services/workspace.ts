@@ -52,8 +52,8 @@ class WorkspaceService {
 
   getMembers(): WorkspaceMember[] {
     return [
-      { id: 'mem-1', name: 'Durvesh Narkhede', email: 'durvesh@zovaix.site', role: 'Owner', status: 'active' },
-      { id: 'mem-2', name: 'Alex Chen', email: 'alex@zovaix.site', role: 'Developer', status: 'active' },
+      { id: 'mem-1', name: 'Durvesh Narkhede', email: 'durvesh@zovaix.com', role: 'Owner', status: 'active' },
+      { id: 'mem-2', name: 'Alex Chen', email: 'alex@zovaix.com', role: 'Developer', status: 'active' },
       { id: 'mem-3', name: 'Sarah Jenkins', email: 'sarah@agency.com', role: 'Admin', status: 'invited' },
     ];
   }

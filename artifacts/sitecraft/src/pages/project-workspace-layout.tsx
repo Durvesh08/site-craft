@@ -39,7 +39,7 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
   const project = (rawProject || {
     id: projectId,
     name: projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    domain: `${projectId}.zovaix.site`,
+    domain: `${projectId}.site.zovaix.com`,
     status: 'draft',
     description: 'Custom AI web application',
     category: 'SaaS',

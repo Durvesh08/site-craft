@@ -28,7 +28,7 @@ export default function DeploymentsPage() {
   const rawProject = data || {
     id: projectId,
     name: projectId,
-    domain: `${projectId}.zovaix.site`,
+    domain: `${projectId}.site.zovaix.com`,
     status: 'draft',
     description: '',
     category: 'SaaS',
@@ -159,7 +159,7 @@ export default function DeploymentsPage() {
             <span className="text-xs font-mono text-muted-foreground">Auto-PR</span>
           </div>
           <div>
-            <h3 className="text-lg font-bold text-foreground">https://preview-{project.id}.zovaix.site</h3>
+            <h3 className="text-lg font-bold text-foreground">https://preview-{project.id}.site.zovaix.com</h3>
             <p className="text-xs text-muted-foreground mt-1">Staging sandbox for testing AI edits</p>
           </div>
           <div className="pt-2 flex items-center gap-3">
