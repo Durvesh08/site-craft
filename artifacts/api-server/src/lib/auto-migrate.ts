@@ -634,7 +634,7 @@ export async function autoMigrate(): Promise<void> {
           -- Step 3: backfill from the (still-enum) old model column
           UPDATE prompt_templates SET new_model = CASE
             WHEN model::text = 'gemini-flash' THEN 'gemini-2.5-flash'
-            WHEN model::text = 'gemini-pro' THEN 'gemini-2.5-pro'
+            WHEN model::text = 'gemini-pro' THEN 'gemini-2.5-flash'
             WHEN model::text = 'gemini-flash-fast' THEN 'gemini-2.5-flash'
             WHEN model::text = 'gemini-1.5-flash' THEN 'gemini-2.5-flash'
             ELSE 'gemini-2.5-flash'
