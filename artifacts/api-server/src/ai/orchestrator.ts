@@ -37,10 +37,10 @@ import { ObjectStorageService } from "../lib/objectStorage";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
-const FLASH_LITE = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash", "gemini-1.5-flash"]);
-const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash", "gemini-1.5-flash"]);
-const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-2.5-pro"]);
-const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+const FLASH_LITE = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash"]);
+const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash"]);
+const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-2.5-flash"]);
+const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-2.5-flash"]);
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.
@@ -722,38 +722,45 @@ ${html.slice(0, 60000)}`;
           } catch (err) {
             logger.warn("Failed to parse merged motion-designer output, falling back to sequential steps");
           }
-        } else if (step.agent === "image-director") {
+const FALLBACK_IMAGE_URL = "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80";
+
+async function searchUnsplashImage(query: string, orientation: "landscape" | "squarish" = "landscape"): Promise<string> {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+  if (!accessKey) {
+    logger.error("UNSPLASH_ACCESS_KEY not configured");
+    return FALLBACK_IMAGE_URL;
+  }
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=5`,
+      { headers: { Authorization: `Client-ID ${accessKey}` } }
+    );
+    const data = await res.json();
+    const results = data.results || [];
+    if (results.length === 0) return FALLBACK_IMAGE_URL;
+    const pick = results[Math.floor(Math.random() * Math.min(results.length, 5))];
+    return pick.urls.regular;
+  } catch (err) {
+    logger.error({ err }, "Unsplash search failed");
+    return FALLBACK_IMAGE_URL;
+  }
+}
+
+        if (step.agent === "image-director") {
           try {
             const parsed = JSON.parse(cleanedOutput);
-            const imageProvider = await AIProviderFactory.getImageProviderForUser(userId);
             
-            // Resolve hero image
-            let heroImageUrl = "";
-            if (parsed.heroImageType === "photography") {
-              heroImageUrl = `https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80`;
-            } else {
-              try {
-                heroImageUrl = await imageProvider.generateImage(`Premium professional ${parsed.heroImageDescription || "business visuals"}, high-resolution, design style ${archetype?.imageryStyle || "abstract"}`, { aspectRatio: "16:9" });
-              } catch (err) {
-                logger.error({ err }, "Failed to generate hero image via Imagen, falling back to stock");
-                heroImageUrl = "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80";
-              }
-            }
-            parsed.heroImageUrl = heroImageUrl;
+            // Hero image — search using the actual business context
+            parsed.heroImageUrl = await searchUnsplashImage(
+              parsed.heroImageDescription || `${archetype?.imageryStyle || "business"} ${businessAnalysis?.industry || ""}`,
+              "landscape"
+            );
 
-            // Resolve section imagery
+            // Section images — search using each image's own real description
             if (parsed.sectionImagery && Array.isArray(parsed.sectionImagery)) {
               await Promise.all(
                 parsed.sectionImagery.map(async (img: any) => {
-                  if (img.imageType === "photography") {
-                    img.url = `https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80`;
-                  } else {
-                    try {
-                      img.url = await imageProvider.generateImage(`Minimal flat icon illustration of ${img.description || "feature icon"}, design style ${archetype?.imageryStyle || "abstract-illustration"}`, { aspectRatio: "1:1" });
-                    } catch (err) {
-                      img.url = "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80";
-                    }
-                  }
+                  img.url = await searchUnsplashImage(img.description || "abstract business", "squarish");
                 })
               );
             }
@@ -761,7 +768,7 @@ ${html.slice(0, 60000)}`;
             output = JSON.stringify(parsed);
             agentOutputs["image-director"] = output;
             parsingSucceeded = true;
-            logger.info("Successfully resolved image-director manifest with real URLs");
+            logger.info("Successfully resolved image-director manifest with real Unsplash search");
           } catch (err) {
             logger.error({ err }, "Failed to parse/resolve image-director manifest");
           }
