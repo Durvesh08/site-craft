@@ -42,6 +42,30 @@ const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash"]
 const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-2.5-flash"]);
 const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-2.5-flash"]);
 
+const FALLBACK_IMAGE_URL = "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80";
+
+async function searchUnsplashImage(query: string, orientation: "landscape" | "squarish" = "landscape"): Promise<string> {
+  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
+  if (!accessKey) {
+    logger.error("UNSPLASH_ACCESS_KEY not configured");
+    return FALLBACK_IMAGE_URL;
+  }
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=5`,
+      { headers: { Authorization: `Client-ID ${accessKey}` } }
+    );
+    const data = await res.json();
+    const results = data.results || [];
+    if (results.length === 0) return FALLBACK_IMAGE_URL;
+    const pick = results[Math.floor(Math.random() * Math.min(results.length, 5))];
+    return pick.urls.regular;
+  } catch (err) {
+    logger.error({ err }, "Unsplash search failed");
+    return FALLBACK_IMAGE_URL;
+  }
+}
+
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.
 const GENERATION_STEPS = [
@@ -722,31 +746,7 @@ ${html.slice(0, 60000)}`;
           } catch (err) {
             logger.warn("Failed to parse merged motion-designer output, falling back to sequential steps");
           }
-const FALLBACK_IMAGE_URL = "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80";
-
-async function searchUnsplashImage(query: string, orientation: "landscape" | "squarish" = "landscape"): Promise<string> {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-  if (!accessKey) {
-    logger.error("UNSPLASH_ACCESS_KEY not configured");
-    return FALLBACK_IMAGE_URL;
-  }
-  try {
-    const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=5`,
-      { headers: { Authorization: `Client-ID ${accessKey}` } }
-    );
-    const data = await res.json();
-    const results = data.results || [];
-    if (results.length === 0) return FALLBACK_IMAGE_URL;
-    const pick = results[Math.floor(Math.random() * Math.min(results.length, 5))];
-    return pick.urls.regular;
-  } catch (err) {
-    logger.error({ err }, "Unsplash search failed");
-    return FALLBACK_IMAGE_URL;
-  }
-}
-
-        if (step.agent === "image-director") {
+        } else if (step.agent === "image-director") {
           try {
             const parsed = JSON.parse(cleanedOutput);
             

@@ -11,8 +11,7 @@ export const PROVIDER_REGISTRY: Record<string, AIProvider> = {
     name: 'Google Gemini',
     brandColor: '#1A73E8',
     models: [
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Advanced multimodal reasoning & code synthesis', contextWindow: '2M tokens' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'High-speed low-latency assistant model', contextWindow: '1M tokens' },
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Advanced multimodal reasoning & code synthesis', contextWindow: '1M tokens' },
     ],
   },
   openai: {
@@ -44,7 +43,7 @@ export interface WorkspaceAISettings {
 class ApiModelsService {
   private settings: WorkspaceAISettings = {
     defaultProviderId: 'google',
-    defaultModelId: 'gemini-2.5-pro',
+    defaultModelId: 'gemini-2.5-flash',
     connections: {
       google: { apiKeyMasked: '••••••••••••••••', status: 'Connected' },
       openai: { apiKeyMasked: '••••••••••••••••', status: 'Connected' },

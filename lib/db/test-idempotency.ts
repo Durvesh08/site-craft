@@ -73,8 +73,8 @@ async function run() {
     if (!row1) {
       throw new Error("Legacy row was deleted!");
     }
-    if (row1.provider !== 'gemini' || row1.model !== 'gemini-1.5-pro') {
-      throw new Error(`Migration mismatch! Expected provider 'gemini' and model 'gemini-1.5-pro', but got provider '${row1.provider}' and model '${row1.model}'`);
+    if (row1.provider !== 'gemini' || row1.model !== 'gemini-3.1-pro-preview') {
+      throw new Error(`Migration mismatch! Expected provider 'gemini' and model 'gemini-3.1-pro-preview', but got provider '${row1.provider}' and model '${row1.model}'`);
     }
 
     console.log("Running autoMigrate() SECOND time (testing idempotency)...");
@@ -88,8 +88,8 @@ async function run() {
     if (!row2) {
       throw new Error("Legacy row was deleted after second run!");
     }
-    if (row2.provider !== 'gemini' || row2.model !== 'gemini-1.5-pro') {
-      throw new Error(`Idempotency broken! Expected provider 'gemini' and model 'gemini-1.5-pro' to remain, but got provider '${row2.provider}' and model '${row2.model}'`);
+    if (row2.provider !== 'gemini' || row2.model !== 'gemini-3.1-pro-preview') {
+      throw new Error(`Idempotency broken! Expected provider 'gemini' and model 'gemini-3.1-pro-preview' to remain, but got provider '${row2.provider}' and model '${row2.model}'`);
     }
 
     console.log("SUCCESS: Idempotency regression test passed!");
