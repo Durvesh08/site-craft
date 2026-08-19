@@ -16,7 +16,6 @@ export interface AIProvider {
   getFallbackModel(model: string): string | null;
 }
 
-}
 
 function resolveModelForProvider(providerId: string, model: string): string {
   const modelLower = model.toLowerCase();
@@ -387,3 +386,4 @@ export class AIProviderFactory {
   }
 
 
+}
