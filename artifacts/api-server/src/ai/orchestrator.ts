@@ -414,41 +414,104 @@ export async function runGeneration(
               });
 
               try {
-                // Primary attempt — Gemini PRO call
-                let rawCode = await provider.generateContent(PRO, prompt, { maxTokens: 32768, temperature: 0.8 });
+                // Primary attempt — Gemini FLASH call (as decided, we use Flash first for speed/cost)
+                let rawCode = await provider.generateContent(FLASH, prompt, { maxTokens: 32768, temperature: 0.8 });
+                let newCode = cleanComponentCode(rawCode, componentName);
 
-                // Validate archetype constraints
+                // Validate archetype constraints AND transpile
                 let attempts = 1;
-                let validation = validateSectionConstraints(rawCode, archetype);
-                while (!validation.valid && attempts < 3) {
+                let validation = validateSectionConstraints(newCode, archetype);
+                let transpileError = "";
+                if (validation.valid) {
+                  try {
+                    await transpileAndWrapSection(newCode, componentName);
+                  } catch (e: any) {
+                    transpileError = e?.message || "Unknown transpile error";
+                  }
+                }
+
+                while ((!validation.valid || transpileError) && attempts < 3) {
                   attempts++;
-                  logger.warn({ sectionId: section.id, errors: validation.errors, attempt: attempts }, "Archetype constraints violated! Retrying section generation...");
-                  const feedbackPrompt = `${prompt}\n\n[RETRY FEEDBACK]: The previous generation failed compliance validation against the Design Archetype. Please fix these errors:\n${validation.errors.map(e => `- ${e}`).join("\n")}`;
-                  rawCode = await provider.generateContent(PRO, feedbackPrompt, { maxTokens: 32768, temperature: 0.8 });
-                  validation = validateSectionConstraints(rawCode, archetype);
+                  
+                  let feedbackPrompt = "";
+                  if (!validation.valid) {
+                    logger.warn({ sectionId: section.id, errors: validation.errors, attempt: attempts }, "Archetype constraints violated! Retrying section generation...");
+                    feedbackPrompt = `${prompt}\n\n[RETRY FEEDBACK]: The previous generation failed compliance validation against the Design Archetype. Please fix these errors:\n${validation.errors.map(e => `- ${e}`).join("\n")}`;
+                  } else {
+                    logger.warn({ sectionType: section.type, esbuildError: transpileError, attempt: attempts }, "Section JSX transpile failed — retrying with error feedback");
+                    feedbackPrompt = `${prompt}\n\n[RETRY FEEDBACK]: Your previous code had a syntax error and failed to compile: "${transpileError}". Fix this specific error and return corrected, valid JSX.`;
+                  }
+                  
+                  rawCode = await provider.generateContent(FLASH, feedbackPrompt, { maxTokens: 32768, temperature: 0.8 });
+                  newCode = cleanComponentCode(rawCode, componentName);
+                  validation = validateSectionConstraints(newCode, archetype);
+                  
+                  transpileError = "";
+                  if (validation.valid) {
+                    try {
+                      await transpileAndWrapSection(newCode, componentName);
+                    } catch (e: any) {
+                      transpileError = e?.message || "Unknown transpile error";
+                    }
+                  }
+                }
+                
+                if (!validation.valid || transpileError) {
+                  throw new Error("Validation or transpile failed after retries");
                 }
 
                 logger.info({ sectionId: section.id }, "Section generated successfully");
-                return { plan: section, componentName, code: cleanComponentCode(rawCode, componentName) } as SectionCode;
+                return { plan: section, componentName, code: newCode } as SectionCode;
               } catch (err) {
-                logger.warn({ err, sectionId: section.id }, "Section generation failed — retrying with FLASH");
-                // Retry once with FLASH (handles transient API overload errors)
+                logger.warn({ err, sectionId: section.id }, "Section generation failed — retrying with PRO as fallback");
+                // Retry once with PRO (verified against registry) specifically for code generation if Flash failed transpilation after retries
                 try {
                   await new Promise(r => setTimeout(r, 2000)); // brief back-off
-                  let retryCode = await provider.generateContent(FLASH, prompt, { maxTokens: 32768, temperature: 0.8 });
+                  const PRO_FALLBACK = getBestAvailableModel("gemini-2.5-pro", ["gemini-2.5-flash"]);
+                  let retryCode = await provider.generateContent(PRO_FALLBACK, prompt, { maxTokens: 32768, temperature: 0.8 });
 
                   let flashAttempts = 1;
-                  let flashValidation = validateSectionConstraints(retryCode, archetype);
-                  while (!flashValidation.valid && flashAttempts < 2) {
+                  let flashNewCode = cleanComponentCode(retryCode, componentName);
+                  let flashValidation = validateSectionConstraints(flashNewCode, archetype);
+                  let flashTranspileError = "";
+                  if (flashValidation.valid) {
+                    try {
+                      await transpileAndWrapSection(flashNewCode, componentName);
+                    } catch (e: any) {
+                      flashTranspileError = e?.message || "Unknown transpile error";
+                    }
+                  }
+
+                  while ((!flashValidation.valid || flashTranspileError) && flashAttempts < 2) {
                     flashAttempts++;
-                    logger.warn({ sectionId: section.id, errors: flashValidation.errors, attempt: flashAttempts }, "Archetype constraints violated on FLASH! Retrying section generation...");
-                    const feedbackPrompt = `${prompt}\n\n[RETRY FEEDBACK]: Please fix these errors:\n${flashValidation.errors.map(e => `- ${e}`).join("\n")}`;
-                    retryCode = await provider.generateContent(FLASH, feedbackPrompt, { maxTokens: 32768, temperature: 0.8 });
-                    flashValidation = validateSectionConstraints(retryCode, archetype);
+                    let feedbackPrompt = "";
+                    if (!flashValidation.valid) {
+                      logger.warn({ sectionId: section.id, errors: flashValidation.errors, attempt: flashAttempts }, "Archetype constraints violated on PRO fallback! Retrying section generation...");
+                      feedbackPrompt = `${prompt}\n\n[RETRY FEEDBACK]: Please fix these errors:\n${flashValidation.errors.map(e => `- ${e}`).join("\n")}`;
+                    } else {
+                      logger.warn({ sectionType: section.type, esbuildError: flashTranspileError, attempt: flashAttempts }, "Section JSX transpile failed on PRO fallback — retrying with error feedback");
+                      feedbackPrompt = `${prompt}\n\n[RETRY FEEDBACK]: Your previous code had a syntax error and failed to compile: "${flashTranspileError}". Fix this specific error and return corrected, valid JSX.`;
+                    }
+                    retryCode = await provider.generateContent(PRO_FALLBACK, feedbackPrompt, { maxTokens: 32768, temperature: 0.8 });
+                    flashNewCode = cleanComponentCode(retryCode, componentName);
+                    flashValidation = validateSectionConstraints(flashNewCode, archetype);
+                    
+                    flashTranspileError = "";
+                    if (flashValidation.valid) {
+                      try {
+                        await transpileAndWrapSection(flashNewCode, componentName);
+                      } catch (e: any) {
+                        flashTranspileError = e?.message || "Unknown transpile error";
+                      }
+                    }
+                  }
+
+                  if (!flashValidation.valid || flashTranspileError) {
+                    throw new Error("Validation or transpile failed on PRO fallback after retries");
                   }
 
                   logger.info({ sectionId: section.id }, "Section generated on retry");
-                  return { plan: section, componentName, code: cleanComponentCode(retryCode, componentName) } as SectionCode;
+                  return { plan: section, componentName, code: flashNewCode } as SectionCode;
                 } catch (retryErr) {
                   logger.error({ retryErr, sectionId: section.id }, "Section generation failed on retry — using invisible placeholder");
                   return {
