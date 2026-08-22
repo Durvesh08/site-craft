@@ -813,9 +813,20 @@ ${html.slice(0, 60000)}`;
           try {
             const parsed = JSON.parse(cleanedOutput);
             
+            // Extract industry key from business-analyzer output if available
+            let industryKey = "";
+            if (agentOutputs["business-analyzer"]) {
+              try {
+                const biz = JSON.parse(agentOutputs["business-analyzer"]);
+                industryKey = biz.industryKey || biz.category || biz.businessType || "";
+              } catch {
+                industryKey = "";
+              }
+            }
+
             // Hero image — search using the actual business context
             parsed.heroImageUrl = await searchUnsplashImage(
-              parsed.heroImageDescription || `${archetype?.imageryStyle || "business"} ${businessAnalysis?.industry || ""}`,
+              parsed.heroImageDescription || `${archetype?.imageryStyle || "business"} ${industryKey}`,
               "landscape"
             );
 
