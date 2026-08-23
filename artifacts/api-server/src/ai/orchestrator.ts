@@ -36,6 +36,11 @@ import { getBestAvailableModel } from "./providers/modelRegistry";
 import { ObjectStorageService } from "../lib/objectStorage";
 import type { GenerationInput, BusinessAnalysis, ResolvedCta } from "./types";
 import { executeImageDirectionStep, searchUnsplashImage } from "./steps/imageDirection";
+import {
+  buildBusinessAnalysisPrompt,
+  executeBusinessAnalysisStep,
+  formatBusinessAnalysisContext,
+} from "./steps/businessAnalysis";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
@@ -290,6 +295,7 @@ export async function runGeneration(
 
     const agentOutputs: Record<string, string> = {};
     let archetype: DesignArchetype | undefined = undefined;
+    let businessAnalysis: BusinessAnalysis | undefined = undefined;
 
     let currentPhase = "";
     
@@ -343,14 +349,17 @@ export async function runGeneration(
             "seo-agent":              1000,
           };
           const planningContext = [
-            "design-director", "ux-strategist", "copywriter", "content-personalizer",
-            "seo-agent", "image-director", "component-planner", "motion-designer", "animation-choreographer", "visual-effects-designer",
+            formatBusinessAnalysisContext(businessAnalysis),
+            ...[
+              "design-director", "ux-strategist", "copywriter", "content-personalizer",
+              "seo-agent", "image-director", "component-planner", "motion-designer", "animation-choreographer", "visual-effects-designer",
+            ]
+              .map(agent => {
+                if (!agentOutputs[agent]) return "";
+                const limit = AGENT_CONTEXT_BUDGET[agent] ?? 2000;
+                return `[${agent}]\n${agentOutputs[agent].slice(0, limit)}`;
+              }),
           ]
-            .map(agent => {
-              if (!agentOutputs[agent]) return "";
-              const limit = AGENT_CONTEXT_BUDGET[agent] ?? 2000;
-              return `[${agent}]\n${agentOutputs[agent].slice(0, limit)}`;
-            })
             .filter(Boolean)
             .join("\n\n");
 
@@ -683,6 +692,7 @@ ${html.slice(0, 60000)}`;
         if (!archetype && agentOutputs["business-analyzer"]) {
           try {
             const bizAnalysis = JSON.parse(agentOutputs["business-analyzer"]);
+            businessAnalysis = bizAnalysis;
             const indKey = bizAnalysis.industryKey || "saas";
             const playful = !!bizAnalysis.personalityAxes?.isPlayful;
             const bold = !!bizAnalysis.personalityAxes?.isBold;
@@ -701,14 +711,14 @@ ${html.slice(0, 60000)}`;
           })
           .join("\n\n");
 
-        const defaultPrompt = buildAgentPrompt(step.agent, { ...input, previousOutputs: contextSummary }, branding, archetype);
+        const defaultPrompt = buildAgentPrompt(step.agent, { ...input, previousOutputs: contextSummary, businessAnalysis }, branding, archetype);
 
         const promptParams = {
           businessDescription: input.businessDescription,
           targetAudience:      input.targetAudience ?? "General consumers",
           primaryCta:          input.primaryCta ?? "Get Started",
           additionalInstructions: input.additionalInstructions ?? "",
-          previousOutputs:     contextSummary,
+          previousOutputs:     contextSummary + (businessAnalysis ? "\n\n" + formatBusinessAnalysisContext(businessAnalysis) : ""),
           companyName:         branding["company_name"] ?? "",
           logoUrl:             branding["logo_url"] ?? "",
           primaryColor:        branding["primary_color"] ?? "#6366f1",
@@ -734,25 +744,17 @@ ${html.slice(0, 60000)}`;
 
         if (step.agent === "business-analyzer") {
           try {
-            const parsed = JSON.parse(cleanedOutput);
-            if (parsed.businessAnalysis && parsed.audienceProfiling && parsed.brandStrategy) {
-              agentOutputs["business-analyzer"] = JSON.stringify(parsed.businessAnalysis);
-              agentOutputs["audience-strategist"] = JSON.stringify(parsed.audienceProfiling);
-              agentOutputs["brand-strategist"] = JSON.stringify(parsed.brandStrategy);
-              
-              // Resolve Design Archetype
-              const indKey = parsed.businessAnalysis.industryKey || "saas";
-              const playful = !!parsed.businessAnalysis.personalityAxes?.isPlayful;
-              const bold = !!parsed.businessAnalysis.personalityAxes?.isBold;
-              archetype = getArchetypeForIndustry(indKey, { isPlayful: playful, isBold: bold });
-              logger.info({ archetypeKey: archetype.key }, "Resolved Design Archetype for project");
-
-              output = agentOutputs["business-analyzer"];
-              parsingSucceeded = true;
-              logger.info("Successfully parsed and populated Business, Audience, and Brand strategy outputs");
-            }
+            const stepResult = executeBusinessAnalysisStep(cleanedOutput);
+            businessAnalysis = stepResult.businessAnalysis;
+            archetype = stepResult.archetype;
+            agentOutputs["business-analyzer"] = stepResult.serializedBusinessAnalysis;
+            agentOutputs["audience-strategist"] = stepResult.serializedAudience;
+            agentOutputs["brand-strategist"] = stepResult.serializedBrand;
+            output = agentOutputs["business-analyzer"];
+            parsingSucceeded = true;
+            logger.info("Successfully parsed and populated deep Business, Audience, and Brand strategy outputs");
           } catch (err) {
-            logger.warn("Failed to parse merged business-analyzer output, falling back to sequential steps");
+            logger.warn({ err }, "Failed to parse merged business-analyzer output, falling back to sequential steps");
           }
         } else if (step.agent === "copywriter") {
           try {
@@ -1584,10 +1586,21 @@ function buildAgentPrompt(
     primaryCta?: string;
     additionalInstructions?: string;
     previousOutputs?: string;
+    businessAnalysis?: BusinessAnalysis;
   },
   branding?: Record<string, string>,
   archetype?: DesignArchetype,
 ): string {
+  if (agent === "business-analyzer") {
+    return buildBusinessAnalysisPrompt({
+      businessDescription: input.businessDescription,
+      targetAudience: input.targetAudience,
+      primaryCta: input.primaryCta,
+      additionalInstructions: input.additionalInstructions,
+      companyName: branding?.["company_name"] || "",
+    });
+  }
+
   let brandingCtx = "";
   if (branding && Object.keys(branding).length > 0) {
     brandingCtx = `
@@ -1613,59 +1626,19 @@ Design Archetype Configuration (MANDATORY CONSTRAINT):
 `;
   }
 
+  const deepBizCtx = input.businessAnalysis
+    ? `\n\n${formatBusinessAnalysisContext(input.businessAnalysis)}`
+    : "";
+
   const ctx = `Business: ${input.businessDescription}
 Target Audience: ${input.targetAudience ?? "General consumers"}
 Primary CTA: ${input.primaryCta ?? "Get Started"}
-${input.additionalInstructions ? `Additional: ${input.additionalInstructions}` : ""}${brandingCtx}${archetypeCtx}
+${input.additionalInstructions ? `Additional: ${input.additionalInstructions}` : ""}${brandingCtx}${archetypeCtx}${deepBizCtx}
 ${input.previousOutputs ? `\nContext from previous agents:\n${input.previousOutputs}` : ""}`;
 
   const prompts: Record<string, string> = {
 
-    "business-analyzer": `You are a Business Analyzer, conversion psychologist, and Brand Strategist. Analyze the business, build the customer persona, and outline the brand strategy.
-${ctx}
-
-CRITICAL — Company Name: The admin has already defined the company name as "${branding?.["company_name"] || ""}". You MUST use this exact name in the brandName parameter — do NOT invent, modify, or replace it.
-
-Return ONLY valid JSON (no markdown fences) containing three keys:
-{
-  "businessAnalysis": {
-    "businessType": string,
-    "category": string,
-    "industryKey": string (one of: "saas", "tech", "design-agency", "marketing-agency", "creative", "food", "cafe", "restaurant", "real-estate", "property", "luxury", "ecommerce", "fashion", "portfolio", "personal", "community", "web3", "healthcare", "medical", "finance", "banking", "nonprofit", "event", "launch"),
-    "personalityAxes": { "isPlayful": boolean, "isBold": boolean },
-    "products": string[],
-    "audience": string,
-    "currentAlternatives": string[],
-    "corePromise": string,
-    "differentiators": string[],
-    "messagesToAvoid": string[],
-    "tone": string,
-    "goals": string[],
-    "trustSignals": string[],
-    "confidence": number
-  },
-  "audienceProfiling": {
-    "primaryPersona": { "name": string, "age": string, "context": string, "painPoints": string[], "motivations": string[], "objections": string[] },
-    "buyingTriggers": string[],
-    "trustNeeds": string[],
-    "copyToneRules": string[],
-    "visualComfortZone": string,
-    "confidence": number
-  },
-  "brandStrategy": {
-    "brandName": string,
-    "tagline": string,
-    "personality": string[],
-    "voiceTone": string,
-    "coreOffer": string,
-    "primaryOutcome": string,
-    "ctaHierarchy": { "primary": string, "secondary": string },
-    "riskReducers": string[],
-    "colorDirection": string,
-    "typographyStyle": string,
-    "confidence": number
-  }
-}`,
+    "business-analyzer": "", // Handled above via buildBusinessAnalysisPrompt
 
     "audience-strategist": `Return the audience profiling JSON pre-computed in the business-analyzer step. If none exists, generate standard audience profiling.
 ${ctx}
@@ -1684,7 +1657,7 @@ CRITICAL:
 - Refer to "Design Archetype Configuration" in the Context.
 - You MUST select the "fontFamily" and "monoFont" strictly from the listed "Vetted Fonts" for this archetype. Do not invent any other fonts.
 - If a "Primary Color" is provided in the "Branding (MANDATORY)" section, you MUST use that exact color as your primaryColor, and design matching secondary and accent colors around it.
-- Choose backgrounds with rich gradients, SVG grid structures, and glowing aurora mesh overlays matching the archetype'sallowed 3D scenes and palette mood.
+- Choose backgrounds with rich gradients, SVG grid structures, and glowing aurora mesh overlays matching the archetype's allowed 3D scenes and palette mood.
 - Define a beautiful 60/30/10 color rule with high-contrast accent buttons.
 - Design cards with frosted glassmorphism borders and custom radius choices.
 
@@ -1759,6 +1732,11 @@ Return ONLY valid JSON (no markdown fences):
 
     "copywriter": `You are a world-class Copywriter, Audience Personalizer, and SEO specialist. Write bold, outcome-focused, conversion-optimized copy, metadata, and audience-targeted adjustments.
 ${ctx}
+
+CRITICAL COPYWRITING RULES:
+- You MUST directly weave the real pain points and specific differentiators from the Deep Business Context into the headlines, benefit blocks, and hero copy.
+- NEVER use generic filler or buzzwords (e.g. "Welcome to our website", "Transform your business"). Be intensely concrete and tailored to this business model and positioning.
+- Include authentic, realistic statistics, testimonials, and FAQs reflecting the required trust signals and actual problem domain.
 
 Return ONLY valid JSON (no markdown fences) containing three keys:
 {
