@@ -34,6 +34,8 @@ import { GEMINI_FAST_MODEL, GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL } from "../conf
 
 import { getBestAvailableModel } from "./providers/modelRegistry";
 import { ObjectStorageService } from "../lib/objectStorage";
+import type { GenerationInput, BusinessAnalysis, ResolvedCta } from "./types";
+import { executeImageDirectionStep, searchUnsplashImage } from "./steps/imageDirection";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
@@ -41,30 +43,6 @@ const FLASH_LITE = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash"]
 const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash"]);
 const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-2.5-flash"]);
 const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-2.5-flash"]);
-
-const FALLBACK_IMAGE_URL = "https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80";
-
-async function searchUnsplashImage(query: string, orientation: "landscape" | "squarish" = "landscape"): Promise<string> {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-  if (!accessKey) {
-    logger.error("UNSPLASH_ACCESS_KEY not configured");
-    return FALLBACK_IMAGE_URL;
-  }
-  try {
-    const res = await fetch(
-      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=${orientation}&per_page=5`,
-      { headers: { Authorization: `Client-ID ${accessKey}` } }
-    );
-    const data = await res.json();
-    const results = data.results || [];
-    if (results.length === 0) return FALLBACK_IMAGE_URL;
-    const pick = results[Math.floor(Math.random() * Math.min(results.length, 5))];
-    return pick.urls.regular;
-  } catch (err) {
-    logger.error({ err }, "Unsplash search failed");
-    return FALLBACK_IMAGE_URL;
-  }
-}
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.
@@ -147,11 +125,6 @@ async function getAgentPromptAndModel(
 // Detects platform from the user's primaryCta (which may be a raw URL) and from
 // the business description, returning a human-readable button label and the
 // actual link href so every section uses the correct button name and URL.
-
-interface ResolvedCta {
-  label: string;
-  href: string;
-}
 
 function detectPlatformCta(text: string, fallbackLabel = "Get Started"): ResolvedCta | null {
   const lower = text.toLowerCase();
@@ -811,35 +784,22 @@ ${html.slice(0, 60000)}`;
           }
         } else if (step.agent === "image-director") {
           try {
-            const parsed = JSON.parse(cleanedOutput);
-            
-            // Extract industry key from business-analyzer output if available
-            let industryKey = "";
+            let parsedBiz: Partial<BusinessAnalysis> | undefined;
             if (agentOutputs["business-analyzer"]) {
               try {
-                const biz = JSON.parse(agentOutputs["business-analyzer"]);
-                industryKey = biz.industryKey || biz.category || biz.businessType || "";
+                parsedBiz = JSON.parse(agentOutputs["business-analyzer"]);
               } catch {
-                industryKey = "";
+                parsedBiz = undefined;
               }
             }
 
-            // Hero image — search using the actual business context
-            parsed.heroImageUrl = await searchUnsplashImage(
-              parsed.heroImageDescription || `${archetype?.imageryStyle || "business"} ${industryKey}`,
-              "landscape"
-            );
+            const stepResult = await executeImageDirectionStep({
+              cleanedOutput,
+              businessAnalysis: parsedBiz,
+              archetype,
+            });
 
-            // Section images — search using each image's own real description
-            if (parsed.sectionImagery && Array.isArray(parsed.sectionImagery)) {
-              await Promise.all(
-                parsed.sectionImagery.map(async (img: any) => {
-                  img.url = await searchUnsplashImage(img.description || "abstract business", "squarish");
-                })
-              );
-            }
-
-            output = JSON.stringify(parsed);
+            output = stepResult.serialized;
             agentOutputs["image-director"] = output;
             parsingSucceeded = true;
             logger.info("Successfully resolved image-director manifest with real Unsplash search");
