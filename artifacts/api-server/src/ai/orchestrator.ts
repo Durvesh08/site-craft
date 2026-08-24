@@ -34,13 +34,14 @@ import { GEMINI_FAST_MODEL, GEMINI_FLASH_MODEL, GEMINI_PRO_MODEL } from "../conf
 
 import { getBestAvailableModel } from "./providers/modelRegistry";
 import { ObjectStorageService } from "../lib/objectStorage";
-import type { GenerationInput, BusinessAnalysis, ResolvedCta } from "./types";
+import type { GenerationInput, BusinessAnalysis, ResolvedCta, ImageDirectionManifest } from "./types";
 import { executeImageDirectionStep, searchUnsplashImage } from "./steps/imageDirection";
 import {
   buildBusinessAnalysisPrompt,
   executeBusinessAnalysisStep,
   formatBusinessAnalysisContext,
 } from "./steps/businessAnalysis";
+import { writeProjectFileTree } from "./assembler/fileTreeWriter";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
@@ -551,11 +552,32 @@ export async function runGeneration(
 
           agentOutputs["assembler"] = html;
 
+          // Parse image manifest if available
+          let imageManifest: ImageDirectionManifest | undefined;
+          if (agentOutputs["image-director"]) {
+            try {
+              imageManifest = JSON.parse(agentOutputs["image-director"]);
+            } catch {}
+          }
+
+          // Persist complete, structured multi-file tree to project_files table
+          await writeProjectFileTree({
+            projectId,
+            workspaceId: project?.workspaceId,
+            projectName: branding["company_name"] || project?.name || "Website",
+            projectDescription: description,
+            archetypeKey: archetype?.key || "saas-technical",
+            sections,
+            globalCSS,
+            imageManifest,
+            assembledHtml: html,
+          });
+
           await db.update(aiJobStepsTable)
             .set({ status: "completed", completedAt: new Date(), outputJson: JSON.stringify({ htmlLen: html.length }) })
             .where(eq(aiJobStepsTable.id, dbStep.id));
 
-          logger.info({ htmlLen: html.length }, "Assembly complete");
+          logger.info({ htmlLen: html.length }, "Assembly complete and project file tree persisted");
           continue;
         }
 // ── Accessibility Audit — analyze assembled HTML for WCAG compliance ──────
