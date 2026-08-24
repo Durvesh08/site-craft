@@ -560,6 +560,18 @@ export async function runGeneration(
             } catch {}
           }
 
+          // Handle multi-page vs single-page JSON
+          let multiPageHtmlMap: Record<string, string> | undefined;
+          let entryHtml = html;
+          if (html.trimStart().startsWith("{")) {
+            try {
+              multiPageHtmlMap = JSON.parse(html);
+              entryHtml = multiPageHtmlMap?.["index.html"] || Object.values(multiPageHtmlMap || {})[0] || html;
+            } catch {
+              multiPageHtmlMap = undefined;
+            }
+          }
+
           // Persist complete, structured multi-file tree to project_files table
           await writeProjectFileTree({
             projectId,
@@ -570,7 +582,8 @@ export async function runGeneration(
             sections,
             globalCSS,
             imageManifest,
-            assembledHtml: html,
+            assembledHtml: entryHtml,
+            multiPageHtmlMap,
           });
 
           await db.update(aiJobStepsTable)

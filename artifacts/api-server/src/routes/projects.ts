@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import JSZip from "jszip";
 import { db } from "@workspace/db";
-import { projectsTable, aiJobsTable, aiJobStepsTable, versionsTable, domainsTable } from "@workspace/db";
+import { projectsTable, projectFilesTable, aiJobsTable, aiJobStepsTable, versionsTable, domainsTable } from "@workspace/db";
 import { eq, desc, and, count, asc } from "drizzle-orm";
 import {
   CreateProjectBody,
@@ -686,6 +686,20 @@ router.get("/projects/:id/export/zip", async (req: Request, res: Response) => {
     zip.file("sitemap.xml", sitemapContent);
     zip.file("README.txt",  buildReadme(siteTitle, slug));
 
+    // Add stored project files if available (components, styles, assets, package.json)
+    const storedFiles = await db
+      .select()
+      .from(projectFilesTable)
+      .where(eq(projectFilesTable.projectId, project.id));
+
+    if (storedFiles.length > 0) {
+      for (const f of storedFiles) {
+        if (!f.filePath.endsWith(".html") && f.content) {
+          zip.file(f.filePath, f.content);
+        }
+      }
+    }
+
     const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 9 } });
 
     res.setHeader("Content-Type", "application/zip");
@@ -817,8 +831,50 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   --radius: 12px;
 }`);
 
-    // 6. app/page.tsx
-    zip.file("app/page.tsx", `'use client';
+    // 6. app/page.tsx & components
+    const storedFiles = await db
+      .select()
+      .from(projectFilesTable)
+      .where(eq(projectFilesTable.projectId, project.id));
+
+    const componentFiles = storedFiles.filter(f => f.filePath.startsWith("components/") && !f.filePath.endsWith("index.ts"));
+    const styleFiles = storedFiles.filter(f => f.filePath.startsWith("styles/"));
+
+    if (componentFiles.length > 0) {
+      for (const cf of storedFiles.filter(f => f.filePath.startsWith("components/"))) {
+        zip.file(cf.filePath, cf.content || "");
+      }
+      for (const sf of styleFiles) {
+        zip.file(sf.filePath, sf.content || "");
+      }
+
+      const imports = componentFiles
+        .map(cf => {
+          const compName = cf.filePath.replace("components/", "").replace(/\.tsx?$/, "");
+          return `import ${compName} from '@/components/${compName}';`;
+        })
+        .join("\n");
+
+      const compElements = componentFiles
+        .map(cf => {
+          const compName = cf.filePath.replace("components/", "").replace(/\.tsx?$/, "");
+          return `      <${compName} />`;
+        })
+        .join("\n");
+
+      zip.file("app/page.tsx", `'use client';
+import React from 'react';
+${imports}
+
+export default function Home() {
+  return (
+    <main className="min-h-screen">
+${compElements}
+    </main>
+  );
+}`);
+    } else {
+      zip.file("app/page.tsx", `'use client';
 export default function Home() {
   return (
     <main className="min-h-screen">
@@ -826,6 +882,7 @@ export default function Home() {
     </main>
   );
 }`);
+    }
 
     // 7. README.md
     zip.file("README.md", `# ${project.name || "SiteCraft"} — Next.js 14 App Router Bundle
@@ -1019,12 +1076,55 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );`);
 
-    // 5. src/App.jsx
-    zip.file("src/App.jsx", `export default function App() {
+    // 5. src/App.jsx & components
+    const storedFiles = await db
+      .select()
+      .from(projectFilesTable)
+      .where(eq(projectFilesTable.projectId, project.id));
+
+    const componentFiles = storedFiles.filter(f => f.filePath.startsWith("components/") && !f.filePath.endsWith("index.ts"));
+    const styleFiles = storedFiles.filter(f => f.filePath.startsWith("styles/"));
+
+    if (componentFiles.length > 0) {
+      for (const cf of storedFiles.filter(f => f.filePath.startsWith("components/"))) {
+        zip.file(`src/${cf.filePath}`, cf.content || "");
+      }
+      for (const sf of styleFiles) {
+        zip.file(`src/${sf.filePath}`, sf.content || "");
+      }
+
+      const imports = componentFiles
+        .map(cf => {
+          const compName = cf.filePath.replace("components/", "").replace(/\.tsx?$/, "");
+          return `import ${compName} from './components/${compName}';`;
+        })
+        .join("\n");
+
+      const compElements = componentFiles
+        .map(cf => {
+          const compName = cf.filePath.replace("components/", "").replace(/\.tsx?$/, "");
+          return `      <${compName} />`;
+        })
+        .join("\n");
+
+      zip.file("src/App.jsx", `import React from 'react';
+${styleFiles.length > 0 ? "import './styles/tokens.css';" : ""}
+${imports}
+
+export default function App() {
+  return (
+    <main className="min-h-screen">
+${compElements}
+    </main>
+  );
+}`);
+    } else {
+      zip.file("src/App.jsx", `export default function App() {
   return (
     <div dangerouslySetInnerHTML={{ __html: ${JSON.stringify(htmlContent)} }} />
   );
 }`);
+    }
 
     // 6. README.md
     zip.file("README.md", `# ${project.name || "SiteCraft"} — React + Vite Bundle
