@@ -193,21 +193,29 @@ domainsRouter.post("/domains/:id/verify", async (req: Request, res: Response) =>
       }
 
       // Add to Cloudflare KV for the routing worker
-      if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && domain.projectId) {
-        const kvResponse = await fetch(
-          `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${domain.domain}`,
-          {
-            method: "PUT",
-            headers: {
-              "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-              "Content-Type": "text/plain"
-            },
-            body: domain.projectId
-          }
-        );
-        if (!kvResponse.ok) {
-          console.error("Failed to write to KV:", await kvResponse.text());
+      if (!process.env.CLOUDFLARE_KV_NAMESPACE_ID) {
+        return res.status(500).json({ success: false, error: "CLOUDFLARE_KV_NAMESPACE_ID is missing" });
+      }
+
+      if (!domain.projectId) {
+        return res.status(400).json({ success: false, error: "Domain is not linked to a project" });
+      }
+
+      const kvResponse = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${domain.domain}`,
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+            "Content-Type": "text/plain"
+          },
+          body: domain.projectId
         }
+      );
+      if (!kvResponse.ok) {
+        const errText = await kvResponse.text();
+        console.error("Failed to write to KV:", errText);
+        return res.status(500).json({ success: false, error: "Failed to update routing table (KV write failed)" });
       }
 
       const [updated] = await db
