@@ -41,16 +41,28 @@ export default function DeploymentsPage() {
 
   const [refresh, setRefresh] = useState(0);
   const [selectedDep, setSelectedDep] = useState<Deployment | null>(null);
+  const [deployments, setDeployments] = useState<Deployment[]>([]);
 
   // Preflight Check Modal State
   const [preflightOpen, setPreflightOpen] = useState(false);
 
-  const deployments = isProjectContext ? deploymentsService.getByProject(projectId) : deploymentsService.getAll();
+  React.useEffect(() => {
+    if (isProjectContext) {
+      deploymentsService.getByProject(projectId, project.name).then(setDeployments).catch(console.error);
+    } else {
+      deploymentsService.getAll().then(setDeployments).catch(console.error);
+    }
+  }, [projectId, project.name, isProjectContext, refresh]);
 
-  const handleConfirmDeploy = () => {
+  const handleConfirmDeploy = async () => {
     setPreflightOpen(false);
-    deploymentsService.triggerBuild(project.id, project.name, "Manual production deploy");
-    setRefresh(r => r + 1);
+    try {
+      await deploymentsService.triggerBuild(project.id, project.name, "Manual production deploy");
+      setRefresh(r => r + 1);
+    } catch (err) {
+      console.error(err);
+      alert("Deployment failed: " + (err as Error).message);
+    }
   };
 
   const content = (
