@@ -18,6 +18,7 @@ import {
   DeleteDomainParams,
 } from "@workspace/api-zod";
 import { DeploymentProviderFactory } from "../deployments/provider";
+import { republishToDefaultSubdomain } from "../lib/publishDefault";
 
 const router: IRouter = Router();
 
@@ -588,8 +589,11 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
     const params = DeployProjectParams.safeParse(req.params);
+    const rawProtocol = req.body?.protocol;
+    const isDefault = !rawProtocol || rawProtocol === "default";
+
     const body = DeployProjectBody.safeParse(req.body);
-    if (!params.success || !body.success) {
+    if (!params.success || (!isDefault && !body.success)) {
       res.status(400).json({ error: "BadRequest", message: "Invalid request" });
       return;
     }
@@ -606,6 +610,32 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
 
     if (!project.generatedHtml) {
       res.status(400).json({ error: "BadRequest", message: "Project has no generated HTML. Generate the site first." });
+      return;
+    }
+
+    if (isDefault) {
+      const publishResult = await republishToDefaultSubdomain({
+        id: project.id,
+        name: project.name,
+        generatedHtml: project.generatedHtml,
+      });
+
+      const [deployment] = await db.insert(deploymentsTable).values({
+        projectId: params.data.id,
+        userId: req.user!.id,
+        status: "live",
+        environment: req.body?.environment || "production",
+        liveUrl: publishResult.url,
+        uploadProgress: 100,
+        deploymentLog: "Published to default edge network successfully",
+      }).returning();
+
+      res.status(202).json(toDeploymentResponse(deployment));
+      return;
+    }
+
+    if (!body.success) {
+      res.status(400).json({ error: "BadRequest", message: "Invalid request body" });
       return;
     }
 

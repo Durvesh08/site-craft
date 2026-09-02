@@ -13,6 +13,7 @@ import {
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { republishToDefaultSubdomain } from "../lib/publishDefault";
 import { decrypt } from "../lib/encryption";
 import { createNotification } from "../routes/notifications";
 import {
@@ -995,41 +996,24 @@ ${generatedHtml}
       .where(eq(aiJobsTable.id, jobId));
 
     try {
-      const storageService = new ObjectStorageService();
-      await storageService.putObject(`projects/${projectId}/index.html`, generatedHtml);
-      logger.info({ projectId }, "Successfully published generated site to R2");
+      const publishResult = await republishToDefaultSubdomain({
+        id: projectId,
+        name: project.name,
+        generatedHtml: generatedHtml,
+      });
 
-      // Auto-assign default subdomain and create a deployment record
-      const projectSlug = project.name ? project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : project.id;
-      const defaultDomain = `${projectSlug}.site.zovaix.com`;
-      const deploymentUrl = `https://${defaultDomain}`;
-      
       await db.insert(deploymentsTable).values({
         projectId,
         workspaceId: project.workspaceId || "default-ws",
         userId,
         status: "live",
-        deploymentLog: "Published to R2 edge network successfully",
-        liveUrl: deploymentUrl,
+        deploymentLog: "Published to default edge network successfully",
+        liveUrl: publishResult.url,
       });
       
-      if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
-        await fetch(
-          `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${defaultDomain}`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-            },
-            body: projectId,
-          }
-        );
-        logger.info({ projectId, defaultDomain }, "Wrote default domain mapping to Cloudflare KV");
-      }
-
-      logger.info({ projectId, deploymentUrl }, "Created default deployment record");
+      logger.info({ projectId, deploymentUrl: publishResult.url }, "Created default deployment record");
     } catch (publishErr) {
-      logger.error({ err: publishErr, projectId }, "Failed to publish site to R2");
+      logger.error({ err: publishErr, projectId }, "Failed to publish site to default edge network");
     }
 
     logger.info({ userId, projectId }, "Generation complete");
@@ -1093,39 +1077,24 @@ ${generatedHtml}
       .where(eq(aiJobsTable.id, jobId));
 
     try {
-      const storageService = new ObjectStorageService();
-      await storageService.putObject(`projects/${projectId}/index.html`, synthesizedHtml);
-      logger.info({ projectId }, "Successfully published fallback site to R2");
+      const publishResult = await republishToDefaultSubdomain({
+        id: projectId,
+        name: project?.name || projectId,
+        generatedHtml: synthesizedHtml,
+      });
 
-      const projectSlug = project?.name ? project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") : project?.id || projectId;
-      const defaultDomain = `${projectSlug}.site.zovaix.com`;
-      const deploymentUrl = `https://${defaultDomain}`;
-      
       await db.insert(deploymentsTable).values({
         projectId,
         workspaceId: project?.workspaceId || "default-ws",
         userId,
         status: "live",
-        deploymentLog: "Published fallback site to R2 edge network successfully",
-        liveUrl: deploymentUrl,
+        deploymentLog: "Published fallback site to default edge network successfully",
+        liveUrl: publishResult.url,
       });
       
-      if (process.env.CLOUDFLARE_KV_NAMESPACE_ID && process.env.CLOUDFLARE_API_TOKEN) {
-        await fetch(
-          `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces/${process.env.CLOUDFLARE_KV_NAMESPACE_ID}/values/${defaultDomain}`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-            },
-            body: projectId,
-          }
-        );
-        logger.info({ projectId, defaultDomain }, "Wrote default domain mapping to Cloudflare KV for fallback");
-      }
-
+      logger.info({ projectId, deploymentUrl: publishResult.url }, "Created default deployment record for fallback");
     } catch (publishErr) {
-      logger.error({ err: publishErr, projectId }, "Failed to publish fallback site to R2");
+      logger.error({ err: publishErr, projectId }, "Failed to publish fallback site to default edge network");
     }
   }
 }
