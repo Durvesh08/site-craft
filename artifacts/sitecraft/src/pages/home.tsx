@@ -35,6 +35,14 @@ export default function Home() {
   const s3Opacity = useTransform(globalScroll, [0.42, 0.48, 0.62, 0.68], [0, 1, 1, 0]);
   const s3Y = useTransform(globalScroll, [0.42, 0.48, 0.62, 0.68], [80, 0, 0, -80]);
 
+  // Floating visual transforms for Slide 2
+  const s2LeftCardX = useTransform(globalScroll, [0.12, 0.25], [-200, 0]);
+  const s2RightCardX = useTransform(globalScroll, [0.12, 0.25], [200, 0]);
+
+  // Floating visual transforms for Slide 3
+  const s3CodeY = useTransform(globalScroll, [0.42, 0.55], [200, 0]);
+  const s3Rotate = useTransform(globalScroll, [0.42, 0.55], [10, -5]);
+
   const goToLogin = () => {
     soundEngine.playPrimaryClick();
     setLocation("/login");
@@ -228,6 +236,31 @@ export default function Home() {
               <p className="text-white/60 text-xs sm:text-sm max-w-md mt-6 leading-relaxed font-mono tracking-wider">
                 Uncompromising typographical precision and layout balance.
               </p>
+
+              {/* Floating UI Card Left */}
+              <motion.div 
+                style={{ x: s2LeftCardX }}
+                className="absolute left-10 md:left-24 top-1/3 w-48 md:w-64 h-32 md:h-40 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-4 hidden sm:flex flex-col gap-3 shadow-2xl"
+              >
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-400/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-amber-400/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-emerald-400/80"></div>
+                </div>
+                <div className="w-full h-4 bg-white/10 rounded-full mt-2"></div>
+                <div className="w-3/4 h-4 bg-white/10 rounded-full"></div>
+                <div className="w-1/2 h-4 bg-white/10 rounded-full"></div>
+              </motion.div>
+
+              {/* Floating UI Card Right */}
+              <motion.div 
+                style={{ x: s2RightCardX }}
+                className="absolute right-10 md:right-24 bottom-1/4 w-48 md:w-64 h-32 md:h-40 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-4 hidden sm:flex flex-col justify-end gap-3 shadow-2xl"
+              >
+                <div className="w-1/2 h-4 bg-white/10 rounded-full self-end"></div>
+                <div className="w-3/4 h-4 bg-white/10 rounded-full self-end"></div>
+                <div className="w-full h-8 bg-white/10 rounded-lg mt-2"></div>
+              </motion.div>
             </motion.div>
 
             {/* Slide 3: Aesthetic Typography Overlay */}
@@ -244,6 +277,26 @@ export default function Home() {
               <p className="text-white/60 text-xs sm:text-sm max-w-md mt-6 leading-relaxed font-mono tracking-wider">
                 Every transition behaves like physical matter. Fluid and beautifully weighted.
               </p>
+
+              {/* Floating Code Snippet / Visual Element */}
+              <motion.div
+                style={{ y: s3CodeY, rotate: s3Rotate }}
+                className="absolute right-8 md:right-32 top-1/4 w-56 md:w-72 h-48 md:h-56 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/20 p-5 hidden sm:flex flex-col gap-4 shadow-2xl shadow-white/5"
+              >
+                <div className="flex gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-white/20"></div>
+                  <div className="w-2 h-2 rounded-full bg-white/20"></div>
+                  <div className="w-2 h-2 rounded-full bg-white/20"></div>
+                </div>
+                <div className="font-mono text-[10px] text-left text-white/50 space-y-2">
+                  <p><span className="text-pink-400">const</span> motion = <span className="text-emerald-400">fluid</span>();</p>
+                  <p><span className="text-blue-400">await</span> engine.render(&#123;</p>
+                  <p className="pl-4">physics: <span className="text-purple-400">true</span>,</p>
+                  <p className="pl-4">tension: <span className="text-orange-400">120</span>,</p>
+                  <p className="pl-4">friction: <span className="text-orange-400">14</span></p>
+                  <p>&#125;);</p>
+                </div>
+              </motion.div>
             </motion.div>
 
           </div>
@@ -251,7 +304,13 @@ export default function Home() {
 
         {/* ── PRICING & CTA ── */}
         <section id="pricing" className="w-full py-24 px-6 relative z-20 bg-transparent border-t border-white/10">
-          <div className="max-w-4xl mx-auto space-y-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="max-w-4xl mx-auto space-y-12"
+          >
             <div className="text-center space-y-3">
               <span className="text-xs font-mono text-white/50 tracking-widest uppercase">TRANSPARENT VALUE</span>
               <h2 className="text-3xl font-extrabold tracking-tight">Simple Pricing</h2>
@@ -308,17 +367,23 @@ export default function Home() {
                 </Button>
               </div>
             </div>
-          </div>
+          </motion.div>
         </section>
 
         {/* ── CTA & FOOTER ── */}
         <section className="w-full py-24 px-6 text-center relative z-20 bg-transparent">
-          <div className="max-w-2xl mx-auto space-y-8">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="max-w-2xl mx-auto space-y-8"
+          >
             <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white drop-shadow-2xl">Your next website starts with an idea.</h2>
             <Button size="lg" className="h-14 px-10 rounded-xl text-sm font-semibold gap-2 bg-white text-black hover:bg-white/90 shadow-2xl shadow-white/10" onClick={goToLogin}>
               Start Creating <ArrowRight className="h-4 w-4" />
             </Button>
-          </div>
+          </motion.div>
         </section>
       </main>
 
