@@ -3,9 +3,26 @@ import { Loader2, Sparkles, AlertTriangle } from "lucide-react";
 
 interface ProjectRuntimePreviewProps {
   projectId: string;
+  page?: string;
 }
 
-export function ProjectRuntimePreview({ projectId }: ProjectRuntimePreviewProps) {
+function extractPageHtml(content: string | null, targetPage: string = "index.html"): string | null {
+  if (!content) return content;
+  const trimmed = content.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const pages: Record<string, string> = JSON.parse(trimmed);
+      return pages[targetPage] || pages["index.html"] || Object.values(pages)[0] || content;
+    } catch {
+      return content;
+    }
+  }
+  return content;
+}
+
+export function ProjectRuntimePreview({ projectId, page }: ProjectRuntimePreviewProps) {
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const targetPage = page || searchParams?.get("page") || "index.html";
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
@@ -109,9 +126,13 @@ export function ProjectRuntimePreview({ projectId }: ProjectRuntimePreviewProps)
     );
   }
 
+  const finalHtml =
+    extractPageHtml(htmlContent, targetPage) ||
+    generateDynamicWebsiteHtml(projectId.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()));
+
   return (
     <iframe
-      srcDoc={htmlContent || generateDynamicWebsiteHtml(projectId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))}
+      srcDoc={finalHtml}
       title="Project Preview"
       className="w-full h-full min-h-screen border-none bg-white"
       sandbox="allow-scripts allow-same-origin allow-forms"

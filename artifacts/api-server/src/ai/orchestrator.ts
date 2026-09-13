@@ -1431,6 +1431,27 @@ export async function runChatEdit(
     const provider = await AIProviderFactory.getProviderForUser(userId, "gemini", { projectId, jobId });
     const agentOutputs: Record<string, string> = {};
 
+    const rawHtml = input.currentHtml ?? "";
+    const isMulti = rawHtml.trimStart().startsWith("{");
+    let multiPages: Record<string, string> = {};
+    let activePage = "index.html";
+
+    const pageMatch = input.message.match(/\[Active Page:\s*([^\]]+)\]/i);
+    if (pageMatch) {
+      activePage = pageMatch[1].trim();
+    }
+
+    let activePageHtml = rawHtml;
+    if (isMulti) {
+      try {
+        multiPages = JSON.parse(rawHtml);
+        activePageHtml = multiPages[activePage] || multiPages["index.html"] || Object.values(multiPages)[0] || "";
+      } catch {
+        multiPages = { "index.html": rawHtml };
+        activePageHtml = rawHtml;
+      }
+    }
+
     for (let i = 0; i < CHAT_EDIT_STEPS.length; i++) {
       const step   = CHAT_EDIT_STEPS[i];
       const dbStep = dbSteps[i];
@@ -1446,7 +1467,7 @@ export async function runChatEdit(
         .where(eq(aiJobsTable.id, jobId));
 
       try {
-        const prompt = buildChatEditPrompt(step.agent, input.message, input.currentHtml ?? "", agentOutputs);
+        const prompt = buildChatEditPrompt(step.agent, input.message, activePageHtml, agentOutputs);
         const output = await provider.generateContent(step.model, prompt, { maxTokens: 32768 });
         agentOutputs[step.agent] = output;
 
@@ -1462,10 +1483,9 @@ export async function runChatEdit(
     }
 
     // Apply CSS changes from the structured refinement-agent response.
-    // The refinement-agent now returns JSON with cssChanges (CSS var overrides)
-    // and textChanges (section-level descriptions), rather than re-generating
-    // the entire transpiled HTML blob. We apply CSS changes surgically.
-    let refinedHtml = input.currentHtml ?? "";
+    // The refinement-agent returns JSON with cssChanges (CSS var overrides)
+    // and textChanges (section-level descriptions).
+    let refinedHtml = activePageHtml;
 
     const refinementRaw = agentOutputs["refinement-agent"] ?? "";
     const parsed = parseJsonObject<{
@@ -1478,6 +1498,11 @@ export async function runChatEdit(
       // Apply CSS variable changes directly into the HTML :root block
       if (parsed.cssChanges && typeof parsed.cssChanges === "object") {
         refinedHtml = applyCssVarChanges(refinedHtml, parsed.cssChanges);
+        if (isMulti) {
+          for (const [pName, pHtml] of Object.entries(multiPages)) {
+            multiPages[pName] = applyCssVarChanges(pHtml, parsed.cssChanges);
+          }
+        }
         logger.info({ cssChangeCount: Object.keys(parsed.cssChanges).length }, "CSS changes applied");
       }
 
@@ -1492,7 +1517,7 @@ export async function runChatEdit(
               logger.warn({ requestedSection: change.section }, "Text change target section not found — skipping");
               continue;
             }
-            const escapedId = componentName.replace(/[.*+?^${}()|[\\]]/g, "\\$&");
+            const escapedId = componentName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
             const typeMatch = new RegExp(`\\/\\/ ── ([^\\s(]+) \\(${escapedId}\\)`).exec(refinedHtml);
             const sectionType = typeMatch?.[1] ?? "content-section";
 
@@ -1543,28 +1568,27 @@ export async function runChatEdit(
         }
       }
 
-      // If neither cssChanges nor textChanges produced useful output, keep the
-      // current HTML. Structural edits should be handled by section regeneration,
-      // not by injecting a fresh full HTML blob from Gemini.
       if (!parsed.cssChanges && (!parsed.textChanges || parsed.textChanges.length === 0)) {
         logger.info({ summary: parsed.summary }, "No safe chat-edit changes returned; preserving current HTML");
       }
     } else {
-      // JSON parse failed — do NOT overwrite valid current HTML with raw Gemini
-      // output, which may contain un-transpiled JSX and cause browser SyntaxErrors.
-      // Only use extractHtml if we have no valid HTML at all.
       if (!refinedHtml || refinedHtml.length < 500) {
         const fallback = extractHtml(refinementRaw, "Edited Page");
         if (fallback.length > 200) refinedHtml = fallback;
       }
-      // If refinedHtml already equals input.currentHtml (valid page), keep it.
     }
 
     if (!refinedHtml || refinedHtml.length < 200) {
       const [proj] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
-      refinedHtml = (input.currentHtml && input.currentHtml.length > 200)
-        ? input.currentHtml
+      refinedHtml = (activePageHtml && activePageHtml.length > 200)
+        ? activePageHtml
         : buildSynthesizedWebsiteHtml(proj?.name || "AI Application", input.message);
+    }
+
+    let finalStoredHtml = refinedHtml;
+    if (isMulti) {
+      multiPages[activePage] = refinedHtml;
+      finalStoredHtml = JSON.stringify(multiPages);
     }
 
     const existingVersions = await db.select().from(versionsTable).where(eq(versionsTable.projectId, projectId));
@@ -1572,22 +1596,27 @@ export async function runChatEdit(
     await db.insert(versionsTable).values({
       projectId,
       versionNumber: existingVersions.length + 1,
-      label:         `v${existingVersions.length + 1} — Chat edit`,
-      generatedHtml: refinedHtml,
+      label:         `v${existingVersions.length + 1} — Chat edit (${activePage})`,
+      generatedHtml: finalStoredHtml,
     });
 
     await db.update(projectsTable)
-      .set({ generatedHtml: refinedHtml, activeJobId: null, updatedAt: new Date() })
+      .set({ generatedHtml: finalStoredHtml, activeJobId: null, updatedAt: new Date() })
       .where(eq(projectsTable.id, projectId));
 
     await db.update(aiJobsTable)
-      .set({ status: "completed", progress: 100, currentStep: "Complete", resultJson: JSON.stringify({ html: refinedHtml }), completedAt: new Date(), updatedAt: new Date() })
+      .set({ status: "completed", progress: 100, currentStep: "Complete", resultJson: JSON.stringify({ html: finalStoredHtml }), completedAt: new Date(), updatedAt: new Date() })
       .where(eq(aiJobsTable.id, jobId));
 
     try {
-      const storageService = new ObjectStorageService();
-      await storageService.putObject(`projects/${projectId}/index.html`, refinedHtml);
-      logger.info({ projectId }, "Successfully published chat edit to R2");
+      const [projForDomain] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
+      await republishToDefaultSubdomain({
+        id: projectId,
+        name: projForDomain?.name || "AI Website",
+        generatedHtml: finalStoredHtml,
+        domain: projForDomain?.domain ?? null,
+      });
+      logger.info({ projectId }, "Successfully published chat edit to R2 via republishToDefaultSubdomain");
     } catch (publishErr) {
       logger.error({ err: publishErr, projectId }, "Failed to publish chat edit to R2");
     }

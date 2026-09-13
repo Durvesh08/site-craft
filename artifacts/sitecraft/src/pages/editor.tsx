@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Monitor, Tablet, Smartphone, Sparkles, Send,
   Layers, Paperclip, CheckCircle2, Undo2, Loader2,
-  AlertCircle
+  AlertCircle, Plus, FileText, Trash2, Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -33,6 +33,41 @@ interface ParsedSection {
   id: string;
   name: string;
   type: string;
+}
+
+// Multi-page helper functions
+function extractPagesFromProject(html: string | null | undefined): string[] {
+  if (!html) return ["index.html"];
+  const trimmed = html.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const keys = Object.keys(JSON.parse(trimmed));
+      if (keys.length > 0) return keys;
+    } catch {}
+  }
+  return ["index.html"];
+}
+
+function getPageHtml(html: string | null | undefined, targetPage: string = "index.html"): string {
+  if (!html) return "";
+  const trimmed = html.trim();
+  if (trimmed.startsWith("{")) {
+    try {
+      const pages = JSON.parse(trimmed);
+      return pages[targetPage] || pages["index.html"] || Object.values(pages)[0] || "";
+    } catch {
+      return html;
+    }
+  }
+  return html;
+}
+
+function formatPageLabel(fileName: string): string {
+  if (fileName === "index.html") return "Home";
+  return fileName
+    .replace(/\.html$/i, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, l => l.toUpperCase());
 }
 
 // Contextual thinking messages that cycle during AI processing
@@ -73,6 +108,14 @@ export default function ProjectEditor() {
   const [isSectionsOpen, setIsSectionsOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
 
+  // Multi-page State
+  const [activePage, setActivePage] = useState<string>("index.html");
+  const [isAddPageOpen, setIsAddPageOpen] = useState(false);
+  const [newPageName, setNewPageName] = useState("");
+  const [isPageSubmitting, setIsPageSubmitting] = useState(false);
+
+  const pages = extractPagesFromProject(data?.generatedHtml);
+
   // Agent States
   const [agentMode, setAgentMode] = useState<AgentMode>("Build");
   const [editInstruction, setEditInstruction] = useState("");
@@ -81,7 +124,7 @@ export default function ProjectEditor() {
   const [iframeKey, setIframeKey] = useState(0);
   const [thinkingIdx, setThinkingIdx] = useState(0);
 
-  // Dynamic sections parsed from the real generated HTML
+  // Dynamic sections parsed from the real generated HTML of the active page
   const [sections, setSections] = useState<ParsedSection[]>([]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -122,16 +165,88 @@ export default function ProjectEditor() {
     return parsed;
   }, []);
 
-  // Update sections whenever project data changes
+  // Update sections whenever project data or active page changes
   useEffect(() => {
     if (data?.generatedHtml) {
-      const parsed = parseSectionsFromHtml(data.generatedHtml);
+      const currentHtml = getPageHtml(data.generatedHtml, activePage);
+      const parsed = parseSectionsFromHtml(currentHtml);
+      setSections(parsed);
       if (parsed.length > 0) {
-        setSections(parsed);
-        if (!selectedSection) setSelectedSection(parsed[0].id);
+        if (!selectedSection || !parsed.some(s => s.id === selectedSection)) {
+          setSelectedSection(parsed[0].id);
+        }
       }
     }
-  }, [data?.generatedHtml, parseSectionsFromHtml, selectedSection]);
+  }, [data?.generatedHtml, activePage, parseSectionsFromHtml]);
+
+  // Handle creating a new page
+  const handleCreatePage = async (pageNameInput?: string) => {
+    const rawName = pageNameInput || newPageName;
+    if (!rawName.trim()) return;
+
+    let clean = rawName.trim().toLowerCase().replace(/[^a-z0-9-_.]/g, "-");
+    if (!clean.endsWith(".html")) clean += ".html";
+
+    setIsPageSubmitting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/pages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ pageName: clean }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to create page");
+      }
+
+      await refetchProject();
+      setActivePage(clean);
+      setIframeKey(k => k + 1);
+      setIsAddPageOpen(false);
+      setNewPageName("");
+      toast.success(`Created page: ${formatPageLabel(clean)}`);
+    } catch (err: any) {
+      toast.error(err.message || "Could not add page");
+    } finally {
+      setIsPageSubmitting(false);
+    }
+  };
+
+  // Handle deleting a page
+  const handleDeletePage = async (pageToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (pageToDelete === "index.html") {
+      toast.error("Cannot delete the home page");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${formatPageLabel(pageToDelete)}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/pages/${encodeURIComponent(pageToDelete)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to delete page");
+      }
+
+      if (activePage === pageToDelete) {
+        setActivePage("index.html");
+      }
+      await refetchProject();
+      setIframeKey(k => k + 1);
+      toast.success(`Deleted page: ${formatPageLabel(pageToDelete)}`);
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete page");
+    }
+  };
 
   // Cycle thinking messages while building
   useEffect(() => {
@@ -175,11 +290,11 @@ export default function ProjectEditor() {
     if (!editInstruction.trim() || isBuilding) return;
 
     const attachedText = attachments.length > 0 ? ` [Attached: ${attachments.join(', ')}]` : '';
-    const promptText = editInstruction + attachedText;
+    const promptText = `[Active Page: ${activePage}] ${editInstruction}${attachedText}`;
     const userMsg: ChatMessage = {
       id: `usr-${Date.now()}`,
       sender: 'user',
-      text: promptText,
+      text: editInstruction + attachedText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
@@ -193,7 +308,7 @@ export default function ProjectEditor() {
     let lastStepName = "";
 
     try {
-      // 1. Send chat-edit to the real backend
+      // 1. Send chat-edit to the real backend with active page context
       const res = await fetch(`/api/projects/${projectId}/chat-edit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -224,7 +339,8 @@ export default function ProjectEditor() {
       // 3. Refetch project to get updated generatedHtml
       const { data: freshProject } = await refetchProject();
       if (freshProject?.generatedHtml) {
-        const newSections = parseSectionsFromHtml(freshProject.generatedHtml);
+        const currentHtml = getPageHtml(freshProject.generatedHtml, activePage);
+        const newSections = parseSectionsFromHtml(currentHtml);
         if (newSections.length > 0) setSections(newSections);
       }
 
@@ -307,27 +423,70 @@ export default function ProjectEditor() {
         {/* ── CENTER: LIVE WEBSITE PREVIEW ── */}
         <div className="flex-1 flex flex-col min-w-0 bg-[#090A0C] relative">
           
-          {/* Top Preview Control Bar */}
-          <div className="h-10 px-4 flex items-center justify-between border-b select-none shrink-0" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-            <div className="flex items-center gap-2">
+          {/* Top Preview Control Bar with Multi-Page Tabs */}
+          <div className="h-11 px-3 flex items-center justify-between border-b select-none shrink-0 gap-2 overflow-hidden" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+            {/* Left: Sections button */}
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setIsSectionsOpen(!isSectionsOpen)}
-                className={`p-1.5 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
+                className={`p-1.5 px-2.5 rounded-lg text-xs flex items-center gap-1.5 border transition-colors ${
                   isSectionsOpen ? 'bg-primary/20 text-primary border-primary/30' : 'text-muted-foreground border-white/10 hover:text-foreground'
                 }`}
               >
-                <Layers className="h-3.5 w-3.5" /> Sections
+                <Layers className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Sections</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10 text-xs">
-              <button onClick={() => setViewport('desktop')} className={`px-2 py-0.5 rounded ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>
+            {/* Center: Multi-page Tab Switcher */}
+            <div className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-none max-w-full">
+              {pages.map((p) => {
+                const isActive = activePage === p;
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setActivePage(p)}
+                    className={cn(
+                      "group relative px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 shrink-0 border",
+                      isActive
+                        ? "bg-primary/15 border-primary/40 text-primary shadow-sm"
+                        : "bg-white/[0.03] border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    )}
+                  >
+                    <FileText className="h-3 w-3 opacity-70" />
+                    <span>{formatPageLabel(p)}</span>
+                    {p !== "index.html" && (
+                      <span
+                        onClick={(e) => handleDeletePage(p, e)}
+                        className="opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-white/10 rounded p-0.5 ml-0.5 transition-opacity text-[11px]"
+                        title="Delete page"
+                      >
+                        ✕
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Add Page Button */}
+              <button
+                onClick={() => setIsAddPageOpen(true)}
+                className="px-2 py-1 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground border border-dashed border-white/20 hover:border-primary/50 hover:bg-primary/10 transition-all flex items-center gap-1 shrink-0"
+                title="Add new page"
+              >
+                <Plus className="h-3 w-3" />
+                <span className="hidden md:inline">Page</span>
+              </button>
+            </div>
+
+            {/* Right: Viewport selector */}
+            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10 text-xs shrink-0">
+              <button onClick={() => setViewport('desktop')} className={`px-2 py-0.5 rounded ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Desktop View">
                 <Monitor className="h-3.5 w-3.5" />
               </button>
-              <button onClick={() => setViewport('tablet')} className={`px-2 py-0.5 rounded ${viewport === 'tablet' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>
+              <button onClick={() => setViewport('tablet')} className={`px-2 py-0.5 rounded ${viewport === 'tablet' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Tablet View">
                 <Tablet className="h-3.5 w-3.5" />
               </button>
-              <button onClick={() => setViewport('mobile')} className={`px-2 py-0.5 rounded ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>
+              <button onClick={() => setViewport('mobile')} className={`px-2 py-0.5 rounded ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Mobile View">
                 <Smartphone className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -344,9 +503,9 @@ export default function ProjectEditor() {
             }`}>
               <iframe
                 ref={iframeRef}
-                key={iframeKey}
-                src={`/preview-frame/${projectId}`}
-                title={project.name}
+                key={`${iframeKey}-${activePage}`}
+                src={`/preview-frame/${projectId}?page=${encodeURIComponent(activePage)}&t=${iframeKey}`}
+                title={`${project.name} - ${activePage}`}
                 className="w-full h-full border-none"
               />
             </div>
@@ -465,6 +624,20 @@ export default function ProjectEditor() {
           {/* Prompt Composer Box with Attachment Support */}
           <div className="p-3 border-t space-y-2 shrink-0" style={{ borderColor: 'var(--surface-border)' }}>
             
+            {/* Active Page Context Target Chip */}
+            <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1.5 font-mono text-white/70">
+                <FileText className="h-3.5 w-3.5 text-primary" />
+                Targeting: <strong className="text-primary font-semibold">{formatPageLabel(activePage)}</strong>
+                <span className="text-muted-foreground/60 text-[10px]">({activePage})</span>
+              </span>
+              {pages.length > 1 && (
+                <span className="text-[10px] text-muted-foreground/60 font-mono">
+                  {pages.length} pages total
+                </span>
+              )}
+            </div>
+
             {/* Attachment Chips Display */}
             {attachments.length > 0 && (
               <div className="flex flex-wrap gap-1.5 px-1 font-mono text-[10px]">
@@ -482,7 +655,7 @@ export default function ProjectEditor() {
                 value={editInstruction}
                 onChange={(e) => setEditInstruction(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendPrompt(); } }}
-                placeholder={`Ask Zovaix AI in [${agentMode} Mode]...`}
+                placeholder={`Ask Zovaix AI to edit ${formatPageLabel(activePage)} in [${agentMode} Mode]...`}
                 className="w-full h-20 p-3 bg-transparent text-xs text-foreground outline-none resize-none placeholder:text-muted-foreground/50"
                 disabled={isBuilding}
               />
@@ -530,6 +703,74 @@ export default function ProjectEditor() {
         </div>
 
       </div>
+
+      {/* ── ADD NEW PAGE DIALOG MODAL ── */}
+      {isAddPageOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-primary">
+                  <Plus className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-foreground">Add New Page</h3>
+                  <p className="text-[11px] text-muted-foreground">Expand your website with multi-page structure</p>
+                </div>
+              </div>
+              <button onClick={() => setIsAddPageOpen(false)} className="text-muted-foreground hover:text-foreground p-1">✕</button>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground font-medium">Page Filename or Path</label>
+              <div className="flex items-center rounded-xl border px-3 py-2 bg-black/40 text-xs" style={{ borderColor: 'var(--surface-border)' }}>
+                <span className="text-muted-foreground font-mono mr-1">/</span>
+                <input
+                  type="text"
+                  value={newPageName}
+                  onChange={(e) => setNewPageName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreatePage(); }}
+                  placeholder="about, pricing, contact, team, faq..."
+                  className="flex-1 bg-transparent text-foreground outline-none font-mono"
+                  autoFocus
+                />
+                <span className="text-muted-foreground font-mono text-[11px]">.html</span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider block">Quick Presets</span>
+              <div className="flex flex-wrap gap-1.5">
+                {["About", "Pricing", "Features", "Contact", "FAQ", "Blog", "Terms"].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleCreatePage(preset.toLowerCase())}
+                    className="px-2.5 py-1 rounded-lg text-xs bg-white/5 hover:bg-primary/20 hover:text-primary hover:border-primary/40 border border-white/10 transition-colors font-medium"
+                  >
+                    + {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+              <Button size="sm" variant="outline" onClick={() => setIsAddPageOpen(false)} className="h-8 text-xs border-white/10">
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleCreatePage()}
+                disabled={!newPageName.trim() || isPageSubmitting}
+                className="h-8 text-xs font-semibold gap-1.5 bg-primary text-primary-foreground"
+              >
+                {isPageSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                Add Page
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </ProjectWorkspaceLayout>
   );
 }

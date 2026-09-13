@@ -22,6 +22,7 @@ import {
   initializeProjectDefaultFiles,
 } from "../lib/projectFilesystem";
 import { resolveAutoCategory } from "../lib/categorization";
+import { republishToDefaultSubdomain } from "../lib/publishDefault";
 
 // ── Multi-page helpers ─────────────────────────────────────────────────────
 // generatedHtml can be either:
@@ -549,6 +550,170 @@ router.get("/projects/:id/pages", async (req: Request, res: Response) => {
   } catch (err) {
     req.log.error({ err }, "Failed to list project pages");
     res.status(500).json({ error: "InternalError", message: "Failed to list pages" });
+  }
+});
+
+function scaffoldNewPage(baseHtml: string, pageName: string, projectName: string): string {
+  const cleanTitle = pageName
+    .replace(/\.html$/i, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+
+  if (!baseHtml || baseHtml.length < 100) {
+    return buildSynthesizedWebsiteHtml(`${projectName} — ${cleanTitle}`, `${cleanTitle} page for ${projectName}`);
+  }
+
+  return baseHtml.replace(/<title>[^<]*<\/title>/i, `<title>${cleanTitle} — ${projectName}</title>`);
+}
+
+// POST /projects/:id/pages — create a new subpage in a project
+router.post("/projects/:id/pages", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const rawId = String(req.params.id);
+    const rawPageName = String(req.body?.pageName || "").trim();
+
+    if (!rawPageName) {
+      res.status(400).json({ error: "BadRequest", message: "Page name is required" });
+      return;
+    }
+
+    let cleanName = rawPageName.toLowerCase().replace(/[^a-z0-9-_.]/g, "-").replace(/-+/g, "-");
+    if (!cleanName.endsWith(".html")) cleanName += ".html";
+    if (cleanName.startsWith(".")) cleanName = cleanName.slice(1);
+    if (cleanName.length < 6) {
+      res.status(400).json({ error: "BadRequest", message: "Invalid page name" });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, rawId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    let pages: Record<string, string> = {};
+    const currentHtml = project.generatedHtml || "";
+
+    if (isMultiPageJson(currentHtml)) {
+      try {
+        pages = JSON.parse(currentHtml);
+      } catch {
+        pages = { "index.html": currentHtml };
+      }
+    } else {
+      pages = { "index.html": currentHtml };
+    }
+
+    if (pages[cleanName]) {
+      res.status(409).json({ error: "Conflict", message: `Page "${cleanName}" already exists` });
+      return;
+    }
+
+    const baseHtml = pages["index.html"] || Object.values(pages)[0] || "";
+    const newPageHtml = req.body?.content || scaffoldNewPage(baseHtml, cleanName, project.name);
+    pages[cleanName] = newPageHtml;
+
+    const updatedHtml = JSON.stringify(pages);
+
+    const existingVersions = await db.select().from(versionsTable).where(eq(versionsTable.projectId, project.id));
+    await db.insert(versionsTable).values({
+      projectId: project.id,
+      versionNumber: existingVersions.length + 1,
+      label: `v${existingVersions.length + 1} — Added ${cleanName}`,
+      generatedHtml: updatedHtml,
+    });
+
+    await db
+      .update(projectsTable)
+      .set({ generatedHtml: updatedHtml, updatedAt: new Date() })
+      .where(eq(projectsTable.id, project.id));
+
+    try {
+      await republishToDefaultSubdomain({
+        id: project.id,
+        name: project.name,
+        generatedHtml: updatedHtml,
+        domain: project.domain ?? null,
+      });
+    } catch (pubErr) {
+      req.log.warn({ err: pubErr, projectId: project.id }, "R2 publish on page add encountered warning");
+    }
+
+    res.status(201).json({ success: true, page: cleanName, pages: Object.keys(pages) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to create project page");
+    res.status(500).json({ error: "InternalError", message: "Failed to create page" });
+  }
+});
+
+// DELETE /projects/:id/pages/:pageName — remove a subpage from a project
+router.delete("/projects/:id/pages/:pageName", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const rawId = String(req.params.id);
+    const targetPage = String(req.params.pageName).toLowerCase().trim();
+
+    if (targetPage === "index.html") {
+      res.status(400).json({ error: "BadRequest", message: "Cannot delete primary index.html page" });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(and(eq(projectsTable.id, rawId), eq(projectsTable.userId, req.user!.id)));
+
+    if (!project || !project.generatedHtml) {
+      res.status(404).json({ error: "NotFound", message: "Project not found" });
+      return;
+    }
+
+    if (!isMultiPageJson(project.generatedHtml)) {
+      res.status(400).json({ error: "BadRequest", message: "Single-page project cannot delete pages" });
+      return;
+    }
+
+    let pages: Record<string, string> = {};
+    try {
+      pages = JSON.parse(project.generatedHtml);
+    } catch {
+      res.status(500).json({ error: "InternalError", message: "Invalid project page data" });
+      return;
+    }
+
+    if (!pages[targetPage]) {
+      res.status(404).json({ error: "NotFound", message: `Page "${targetPage}" does not exist` });
+      return;
+    }
+
+    delete pages[targetPage];
+    const updatedHtml = JSON.stringify(pages);
+
+    await db
+      .update(projectsTable)
+      .set({ generatedHtml: updatedHtml, updatedAt: new Date() })
+      .where(eq(projectsTable.id, project.id));
+
+    try {
+      await republishToDefaultSubdomain({
+        id: project.id,
+        name: project.name,
+        generatedHtml: updatedHtml,
+        domain: project.domain ?? null,
+      });
+    } catch (pubErr) {
+      req.log.warn({ err: pubErr, projectId: project.id }, "R2 publish on page delete encountered warning");
+    }
+
+    res.json({ success: true, pages: Object.keys(pages) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete project page");
+    res.status(500).json({ error: "InternalError", message: "Failed to delete page" });
   }
 });
 

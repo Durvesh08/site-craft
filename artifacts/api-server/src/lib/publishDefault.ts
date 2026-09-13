@@ -5,11 +5,31 @@ export async function republishToDefaultSubdomain(project: { id: string; name: s
   const projectId = project.id;
   const generatedHtml = project.generatedHtml || "";
 
-  // 1. Publish to R2
+  // 1. Publish to R2 (all pages for multi-page, or index.html for single page)
   try {
     const storageService = new ObjectStorageService();
-    await storageService.putObject(`projects/${projectId}/index.html`, generatedHtml);
-    logger.info({ projectId }, "Successfully published site to R2");
+    const trimmed = generatedHtml.trimStart();
+
+    if (trimmed.startsWith("{")) {
+      try {
+        const pages: Record<string, string> = JSON.parse(trimmed);
+        const entries = Object.entries(pages);
+        for (const [pagePath, pageHtml] of entries) {
+          const cleanPath = pagePath.startsWith("/") ? pagePath.slice(1) : pagePath;
+          await storageService.putObject(`projects/${projectId}/${cleanPath}`, pageHtml);
+        }
+        if (!pages["index.html"] && entries.length > 0) {
+          await storageService.putObject(`projects/${projectId}/index.html`, entries[0][1]);
+        }
+        logger.info({ projectId, pageCount: entries.length }, "Successfully published multi-page site to R2");
+      } catch (jsonErr) {
+        await storageService.putObject(`projects/${projectId}/index.html`, generatedHtml);
+        logger.info({ projectId }, "Successfully published site to R2 (raw fallback)");
+      }
+    } else {
+      await storageService.putObject(`projects/${projectId}/index.html`, generatedHtml);
+      logger.info({ projectId }, "Successfully published single-page site to R2");
+    }
   } catch (publishErr) {
     logger.error({ err: publishErr, projectId }, "Failed to publish site to R2");
     throw new Error("Failed to publish to R2");
