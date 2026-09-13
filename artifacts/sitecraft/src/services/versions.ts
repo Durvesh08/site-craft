@@ -40,11 +40,10 @@ class VersionsService {
 
   async restoreVersion(projectId: string, versionId: string): Promise<boolean> {
     try {
-      const res = await fetch(`/api/projects/${projectId}/versions/restore`, {
+      const res = await fetch(`/api/projects/${projectId}/versions/${versionId}/restore`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ versionId }),
       });
       return res.ok;
     } catch {

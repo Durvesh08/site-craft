@@ -11,7 +11,8 @@ import {
   Wand2, ArrowRight, ArrowLeft, Check,
   Sparkles, Cpu, Palette, Shield, Flame, Globe, Terminal, Zap, Gauge,
   ListChecks, AlignLeft, Building2, ChevronRight,
-  Briefcase, GraduationCap, ShoppingBag, Utensils, Laptop, Heart, Camera, Calendar
+  Briefcase, GraduationCap, ShoppingBag, Utensils, Laptop, Heart, Camera, Calendar,
+  Activity, Landmark
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,19 +37,23 @@ export function extractCleanBusinessName(prompt: string, defaultFallback: string
 }
 
 // ── Type definitions ────────────────────────────────────────────────────────────
-type PageTypeId = "landing" | "portfolio" | "ecommerce" | "restaurant" | "saas" | "nonprofit" | "agency" | "event";
+type PageTypeId = "landing" | "portfolio" | "ecommerce" | "restaurant" | "saas" | "nonprofit" | "agency" | "event" | "healthcare" | "finance" | "real-estate" | "d2c" | "b2b";
 type ToneOption = "Minimal" | "Bold" | "Luxury" | "Playful" | "Corporate" | "Warm" | "Dark" | "Editorial";
 
 // ── Constants ───────────────────────────────────────────────────────────────────
 const PAGE_TYPES: { id: PageTypeId; label: string; description: string; icon: React.FC<{ className?: string }>; color: string; bg: string; activeStyle: string }[] = [
-  { id: "landing", label: "Landing Page", description: "SaaS, startup, or product launch", icon: Sparkles, color: "text-blue-500", bg: "bg-blue-500/5 border-blue-500/20", activeStyle: "bg-blue-500/10 border-blue-500" },
-  { id: "portfolio", label: "Portfolio", description: "Creative, freelancer, or personal", icon: Camera, color: "text-purple-500", bg: "bg-purple-500/5 border-purple-500/20", activeStyle: "bg-purple-500/10 border-purple-500" },
-  { id: "ecommerce", label: "E-Commerce", description: "Shop, product catalog, DTC brand", icon: ShoppingBag, color: "text-emerald-500", bg: "bg-emerald-500/5 border-emerald-500/20", activeStyle: "bg-emerald-500/10 border-emerald-500" },
-  { id: "restaurant", label: "Restaurant", description: "Café, bar, or food business", icon: Utensils, color: "text-orange-500", bg: "bg-orange-500/5 border-orange-500/20", activeStyle: "bg-orange-500/10 border-orange-500" },
-  { id: "saas", label: "SaaS / App", description: "Software, dashboard, API product", icon: Laptop, color: "text-cyan-500", bg: "bg-cyan-500/5 border-cyan-500/20", activeStyle: "bg-cyan-500/10 border-cyan-500" },
-  { id: "nonprofit", label: "Non-Profit", description: "Charity, cause, NGO", icon: Heart, color: "text-rose-500", bg: "bg-rose-500/5 border-rose-500/20", activeStyle: "bg-rose-500/10 border-rose-500" },
-  { id: "agency", label: "Agency", description: "Marketing, design, or consulting", icon: Briefcase, color: "text-amber-500", bg: "bg-amber-500/5 border-amber-500/20", activeStyle: "bg-amber-500/10 border-amber-500" },
-  { id: "event", label: "Event", description: "Conference, webinar, meetup", icon: Calendar, color: "text-indigo-500", bg: "bg-indigo-500/5 border-indigo-500/20", activeStyle: "bg-indigo-500/10 border-indigo-500" },
+  { id: "healthcare", label: "Healthcare", description: "Clinic, dental, therapy, or wellness practice", icon: Activity, color: "text-emerald-400", bg: "bg-emerald-500/5 border-emerald-500/20", activeStyle: "bg-emerald-500/10 border-emerald-500" },
+  { id: "finance", label: "Finance & Fintech", description: "Banking, investment, accounting, or crypto", icon: Landmark, color: "text-blue-400", bg: "bg-blue-500/5 border-blue-500/20", activeStyle: "bg-blue-500/10 border-blue-500" },
+  { id: "real-estate", label: "Real Estate", description: "Properties, luxury listings, brokerage", icon: Building2, color: "text-amber-400", bg: "bg-amber-500/5 border-amber-500/20", activeStyle: "bg-amber-500/10 border-amber-500" },
+  { id: "restaurant", label: "Restaurant & Food", description: "Café, bistro, bakery, bar, or dining", icon: Utensils, color: "text-rose-400", bg: "bg-rose-500/5 border-rose-500/20", activeStyle: "bg-rose-500/10 border-rose-500" },
+  { id: "d2c", label: "D2C Brand", description: "Direct-to-consumer apparel, beauty, goods", icon: ShoppingBag, color: "text-pink-400", bg: "bg-pink-500/5 border-pink-500/20", activeStyle: "bg-pink-500/10 border-pink-500" },
+  { id: "b2b", label: "B2B Enterprise", description: "Enterprise solutions, logistics, consulting", icon: Briefcase, color: "text-indigo-400", bg: "bg-indigo-500/5 border-indigo-500/20", activeStyle: "bg-indigo-500/10 border-indigo-500" },
+  { id: "saas", label: "SaaS & Tech", description: "Software, developer tools, AI product", icon: Laptop, color: "text-cyan-400", bg: "bg-cyan-500/5 border-cyan-500/20", activeStyle: "bg-cyan-500/10 border-cyan-500" },
+  { id: "agency", label: "Creative Agency", description: "Marketing, branding, design studio", icon: Sparkles, color: "text-fuchsia-400", bg: "bg-fuchsia-500/5 border-fuchsia-500/20", activeStyle: "bg-fuchsia-500/10 border-fuchsia-500" },
+  { id: "portfolio", label: "Portfolio", description: "Creative, freelancer, or personal CV", icon: Camera, color: "text-purple-400", bg: "bg-purple-500/5 border-purple-500/20", activeStyle: "bg-purple-500/10 border-purple-500" },
+  { id: "ecommerce", label: "E-Commerce", description: "Online store, multi-product catalog", icon: ShoppingBag, color: "text-teal-400", bg: "bg-teal-500/5 border-teal-500/20", activeStyle: "bg-teal-500/10 border-teal-500" },
+  { id: "nonprofit", label: "Non-Profit", description: "Charity, social cause, foundation", icon: Heart, color: "text-rose-500", bg: "bg-rose-500/5 border-rose-500/20", activeStyle: "bg-rose-500/10 border-rose-500" },
+  { id: "event", label: "Event & Launch", description: "Conference, summit, launch party", icon: Calendar, color: "text-yellow-400", bg: "bg-yellow-500/5 border-yellow-500/20", activeStyle: "bg-yellow-500/10 border-yellow-500" },
 ];
 
 const AUDIENCE_OPTIONS = ["B2B SaaS", "B2C Consumer", "Enterprise", "Developers", "Creators", "Local Customers", "Students", "Healthcare", "Investors"];
