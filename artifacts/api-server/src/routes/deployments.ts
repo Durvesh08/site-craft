@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { deploymentsTable, domainsTable, projectsTable, settingsTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { deploymentsTable, domainsTable, projectsTable, settingsTable, versionsTable } from "@workspace/db";
+import { eq, and, desc, lte } from "drizzle-orm";
 import * as ftp from "basic-ftp";
 import SftpClient from "ssh2-sftp-client";
 import dns from "dns";
@@ -628,7 +628,16 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
         liveUrl: publishResult.url,
         uploadProgress: 100,
         deploymentLog: "Published to default edge network successfully",
+        protocol: "cloudflare_pages",
+        completedAt: new Date(),
+        filesUploaded: 1,
       }).returning();
+
+      await db.update(projectsTable).set({
+        status: "deployed",
+        liveUrl: publishResult.url,
+        updatedAt: new Date(),
+      }).where(eq(projectsTable.id, project.id));
 
       res.status(202).json(toDeploymentResponse(deployment));
       return;
@@ -944,6 +953,24 @@ router.post("/deployments/:id/rollback", async (req: Request, res: Response) => 
       return;
     }
 
+    // Fetch the version that was generated at or before this deployment
+    const [versionSnapshot] = await db
+      .select()
+      .from(versionsTable)
+      .where(and(
+        eq(versionsTable.projectId, deployment.projectId),
+        lte(versionsTable.createdAt, deployment.createdAt)
+      ))
+      .orderBy(desc(versionsTable.createdAt))
+      .limit(1);
+
+    const htmlToDeploy = versionSnapshot?.generatedHtml || project.generatedHtml;
+
+    if (!htmlToDeploy) {
+      res.status(400).json({ error: "BadRequest", message: "No HTML found to rollback to." });
+      return;
+    }
+
     const [rollback] = await db
       .insert(deploymentsTable)
       .values({
@@ -956,7 +983,7 @@ router.post("/deployments/:id/rollback", async (req: Request, res: Response) => 
         ftpHost: deployment.ftpHost,
         ftpPort: deployment.ftpPort,
         uploadProgress: 0,
-        deploymentLog: "[Rollback deployment]\n",
+        deploymentLog: `[Rollback deployment to ${versionSnapshot ? `v${versionSnapshot.versionNumber}` : 'previous state'}]\n`,
       })
       .returning();
 
@@ -965,7 +992,7 @@ router.post("/deployments/:id/rollback", async (req: Request, res: Response) => 
       deployment.projectId,
       req.user!.id,
       creds,
-      project.generatedHtml,
+      htmlToDeploy,
       deployment.liveUrl || undefined,
       true,
     ).catch(err => logger.error({ err, deploymentId: rollback.id }, "rollback runUpload threw"));
@@ -1293,6 +1320,11 @@ router.post("/projects/:id/deploy/vercel", async (req: Request, res: Response) =
     const projectId = String(req.params.id);
     const { webhookUrl } = req.body as { webhookUrl?: string };
 
+    if (!webhookUrl) {
+      res.status(400).json({ error: "ValidationError", message: "Vercel Deploy Hook URL is required. Configure it in your project settings." });
+      return;
+    }
+
     const [project] = await db.select().from(projectsTable)
       .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
 
@@ -1301,11 +1333,9 @@ router.post("/projects/:id/deploy/vercel", async (req: Request, res: Response) =
       return;
     }
 
-    if (webhookUrl) {
-      const hookRes = await fetch(webhookUrl, { method: "POST" });
-      if (!hookRes.ok) {
-        throw new Error(`Vercel deploy hook returned status ${hookRes.status}`);
-      }
+    const hookRes = await fetch(webhookUrl, { method: "POST" });
+    if (!hookRes.ok) {
+      throw new Error(`Vercel deploy hook returned status ${hookRes.status}`);
     }
 
     const liveUrl = project.liveUrl || `https://${project.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}.vercel.app`;
@@ -1325,6 +1355,11 @@ router.post("/projects/:id/deploy/cloudflare", async (req: Request, res: Respons
     const projectId = String(req.params.id);
     const { webhookUrl } = req.body as { webhookUrl?: string };
 
+    if (!webhookUrl) {
+      res.status(400).json({ error: "ValidationError", message: "Cloudflare Pages Deploy Hook URL is required. Configure it in your project settings." });
+      return;
+    }
+
     const [project] = await db.select().from(projectsTable)
       .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
 
@@ -1333,11 +1368,9 @@ router.post("/projects/:id/deploy/cloudflare", async (req: Request, res: Respons
       return;
     }
 
-    if (webhookUrl) {
-      const hookRes = await fetch(webhookUrl, { method: "POST" });
-      if (!hookRes.ok) {
-        throw new Error(`Cloudflare Pages webhook returned status ${hookRes.status}`);
-      }
+    const hookRes = await fetch(webhookUrl, { method: "POST" });
+    if (!hookRes.ok) {
+      throw new Error(`Cloudflare Pages webhook returned status ${hookRes.status}`);
     }
 
     const liveUrl = project.liveUrl || `https://${project.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}.pages.dev`;

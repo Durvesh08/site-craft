@@ -461,7 +461,7 @@ router.post("/projects/:id/files/save", async (req: Request, res: Response) => {
 
     // If the saved file is an HTML page, sync back to projectsTable.generatedHtml and republish
     if (filePath.endsWith(".html")) {
-      const [proj] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
+      const [proj] = await db.select().from(projectsTable).where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
       if (proj) {
         let pages: Record<string, string> = {};
         const curr = proj.generatedHtml || "";
@@ -474,7 +474,7 @@ router.post("/projects/:id/files/save", async (req: Request, res: Response) => {
         const updated = JSON.stringify(pages);
         await db.update(projectsTable).set({ generatedHtml: updated, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
         try {
-          await republishToDefaultSubdomain({ id: proj.id, name: proj.name, generatedHtml: updated, domain: proj.domain });
+          await republishToDefaultSubdomain({ id: proj.id, name: proj.name, generatedHtml: updated });
         } catch {}
       }
     }
@@ -496,6 +496,11 @@ router.delete("/projects/:id/files/delete", async (req: Request, res: Response) 
 
     if (!filePath) {
       return res.status(400).json({ error: "BadRequest", message: "filePath is required" });
+    }
+
+    const [proj] = await db.select().from(projectsTable).where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+    if (!proj) {
+      return res.status(404).json({ error: "NotFound", message: "Project not found" });
     }
 
     await deleteProjectFile(workspaceId, projectId, filePath);
@@ -638,10 +643,7 @@ router.post("/projects/:id/pages", async (req: Request, res: Response) => {
       return;
     }
 
-    const [project] = await db
-      .select()
-      .from(projectsTable)
-      .where(and(eq(projectsTable.id, rawId), eq(projectsTable.userId, req.user!.id)));
+    const project = await findProjectByIdOrSlug(req.user!.id, rawId);
 
     if (!project) {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
@@ -690,7 +692,6 @@ router.post("/projects/:id/pages", async (req: Request, res: Response) => {
         id: project.id,
         name: project.name,
         generatedHtml: updatedHtml,
-        domain: project.domain ?? null,
       });
     } catch (pubErr) {
       req.log.warn({ err: pubErr, projectId: project.id }, "R2 publish on page add encountered warning");
@@ -715,10 +716,7 @@ router.delete("/projects/:id/pages/:pageName", async (req: Request, res: Respons
       return;
     }
 
-    const [project] = await db
-      .select()
-      .from(projectsTable)
-      .where(and(eq(projectsTable.id, rawId), eq(projectsTable.userId, req.user!.id)));
+    const project = await findProjectByIdOrSlug(req.user!.id, rawId);
 
     if (!project || !project.generatedHtml) {
       res.status(404).json({ error: "NotFound", message: "Project not found" });
@@ -756,7 +754,6 @@ router.delete("/projects/:id/pages/:pageName", async (req: Request, res: Respons
         id: project.id,
         name: project.name,
         generatedHtml: updatedHtml,
-        domain: project.domain ?? null,
       });
     } catch (pubErr) {
       req.log.warn({ err: pubErr, projectId: project.id }, "R2 publish on page delete encountered warning");

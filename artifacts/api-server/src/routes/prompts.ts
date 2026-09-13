@@ -40,6 +40,7 @@ router.get("/prompts", async (req: Request, res: Response) => {
     const prompts = await db
       .select()
       .from(promptTemplatesTable)
+      .where(eq(promptTemplatesTable.userId, req.user!.id))
       .orderBy(promptTemplatesTable.agentRole);
 
     res.json({ prompts: prompts.map(toPromptResponse) });
@@ -108,7 +109,7 @@ router.patch("/prompts/:id", async (req: Request, res: Response) => {
       .from(promptTemplatesTable)
       .where(eq(promptTemplatesTable.id, params.data.id));
 
-    if (!existing) {
+    if (!existing || existing.userId !== req.user!.id) {
       res.status(404).json({ error: "NotFound", message: "Prompt not found" });
       return;
     }

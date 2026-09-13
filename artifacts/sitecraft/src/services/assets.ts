@@ -13,18 +13,13 @@ class AssetsService {
 
   async fetchAssets(projectId?: string): Promise<Asset[]> {
     try {
-      const url = projectId ? `/api/projects/${projectId}/files` : `/api/storage/objects`;
+      const url = projectId ? `/api/assets?projectId=${projectId}` : `/api/assets`;
       const res = await fetch(url, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
-        const files = Array.isArray(data) ? data : data.files || [];
-        const mapped: Asset[] = files
-          .filter((f: any) => {
-            const name = (f.name || f.path || "").toLowerCase();
-            return /\.(png|jpe?g|webp|gif|svg|mp4|webm|woff2?|ttf|pdf|doc|docx)$/i.test(name);
-          })
-          .map((f: any, idx: number) => {
-            const name = f.name || f.path || `file-${idx}`;
+        const files = Array.isArray(data) ? data : data.assets || data.files || [];
+        const mapped: Asset[] = files.map((f: any) => {
+            const name = f.name || `file-${f.id}`;
             let cat: Asset['category'] = 'documents';
             if (/\.(png|jpe?g|webp|gif)$/i.test(name)) cat = 'images';
             else if (/\.(mp4|webm)$/i.test(name)) cat = 'videos';
@@ -32,10 +27,10 @@ class AssetsService {
             else if (/\.(woff2?|ttf)$/i.test(name)) cat = 'fonts';
 
             return {
-              id: f.id || `ast-${idx}`,
+              id: f.id,
               name,
               category: cat,
-              url: f.url || (f.content ? `data:image/svg+xml;utf8,${encodeURIComponent(f.content)}` : `/api/storage/objects/${name}`),
+              url: f.url,
               size: f.size ? `${(f.size / 1024).toFixed(1)} KB` : '12 KB',
               createdAt: f.createdAt ? new Date(f.createdAt).toLocaleDateString() : 'Just now',
             };
@@ -53,24 +48,61 @@ class AssetsService {
     return this.assets.filter(a => a.category === category);
   }
 
-  addUploadedAsset(url: string, name: string, category: Asset['category'] = 'images'): Asset {
-    const newAsset: Asset = {
-      id: `ast-${Date.now()}`,
-      name,
-      category,
-      url,
-      size: '120 KB',
-      createdAt: 'Just now',
-    };
-    this.assets.unshift(newAsset);
-    return newAsset;
+  async addUploadedAsset(file: any, projectId?: string): Promise<Asset | null> {
+    try {
+      const res = await fetch(`/api/assets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size || 0,
+          url: file.url,
+          projectId
+        }),
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newAsset: Asset = {
+          id: data.id,
+          name: data.name,
+          category: 'images',
+          url: data.url,
+          size: data.size ? `${(data.size / 1024).toFixed(1)} KB` : '12 KB',
+          createdAt: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'Just now',
+        };
+        
+        if (/\.(png|jpe?g|webp|gif)$/i.test(data.name)) newAsset.category = 'images';
+        else if (/\.(mp4|webm)$/i.test(data.name)) newAsset.category = 'videos';
+        else if (/\.(svg)$/i.test(data.name)) newAsset.category = 'icons';
+        else if (/\.(woff2?|ttf)$/i.test(data.name)) newAsset.category = 'fonts';
+        else newAsset.category = 'documents';
+
+        this.assets.unshift(newAsset);
+        return newAsset;
+      }
+    } catch {
+      // Handle error
+    }
+    return null;
   }
 
-  delete(id: string): boolean {
-    const idx = this.assets.findIndex(a => a.id === id);
-    if (idx !== -1) {
-      this.assets.splice(idx, 1);
-      return true;
+  async delete(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/assets/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const idx = this.assets.findIndex(a => a.id === id);
+        if (idx !== -1) {
+          this.assets.splice(idx, 1);
+        }
+        return true;
+      }
+    } catch {
+      // Handle error
     }
     return false;
   }

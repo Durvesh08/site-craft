@@ -248,6 +248,8 @@ export async function runGeneration(
 
   logger.info({ jobId, projectId }, "Starting generation pipeline");
 
+  let businessAnalysis: BusinessAnalysis | undefined = undefined;
+
   try {
     await db.update(aiJobsTable)
       .set({ status: "running", updatedAt: new Date() })
@@ -298,7 +300,6 @@ export async function runGeneration(
 
     const agentOutputs: Record<string, string> = {};
     let archetype: DesignArchetype | undefined = undefined;
-    let businessAnalysis: BusinessAnalysis | undefined = undefined;
 
     let currentPhase = "";
     
@@ -1614,7 +1615,6 @@ export async function runChatEdit(
         id: projectId,
         name: projForDomain?.name || "AI Website",
         generatedHtml: finalStoredHtml,
-        domain: projForDomain?.domain ?? null,
       });
       logger.info({ projectId }, "Successfully published chat edit to R2 via republishToDefaultSubdomain");
     } catch (publishErr) {

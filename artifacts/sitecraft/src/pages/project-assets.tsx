@@ -60,7 +60,10 @@ export default function ProjectAssets() {
     else if (file.name.endsWith('.woff') || file.name.endsWith('.woff2') || file.name.endsWith('.ttf')) category = 'fonts';
 
     const url = URL.createObjectURL(file);
-    assetsService.addUploadedAsset(url, file.name, category);
+    assetsService.addUploadedAsset(
+      { name: file.name, type: file.type, size: file.size, url },
+      id
+    );
     setRefresh(r => r + 1);
     toast.success(`Uploaded "${file.name}" to asset library`);
     e.target.value = '';

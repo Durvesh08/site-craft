@@ -24,11 +24,14 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+// meRouter must be before workspace middleware so logout works with expired sessions
+router.use(meRouter);
+// storageRouter serves public assets that don't require workspace tenancy
+router.use(storageRouter);
 
 // Apply workspace tenancy resolution for all authenticated API routes
 router.use(ensureUserWorkspace);
 
-router.use(meRouter);
 router.use(projectsRouter);
 router.use(generationRouter);
 router.use(jobsRouter);
@@ -38,7 +41,6 @@ router.use(analyticsRouter);
 router.use(promptsRouter);
 router.use(versionsRouter);
 router.use(settingsRouter);
-router.use(storageRouter);
 router.use(domainsRouter);
 router.use(workspaceRouter);
 router.use(feedbackRouter);

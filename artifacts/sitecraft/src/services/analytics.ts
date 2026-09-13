@@ -26,7 +26,7 @@ class AnalyticsService {
           totalDeployments: data.totalDeployments || 0,
           lastGenerated: data.lastGenerated ? new Date(data.lastGenerated).toLocaleString() : null,
           lastDeployed: data.lastDeployed ? new Date(data.lastDeployed).toLocaleString() : null,
-          qualityScores: data.qualityScores || { visual: 92, seo: 95, accessibility: 90, performance: 94 },
+          qualityScores: data.qualityScores || null,
           chatMessages: data.chatMessages || 0,
           versionsCount: data.versionsCount || 0,
         };

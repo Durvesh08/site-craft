@@ -128,10 +128,7 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
       })
       .where(eq(projectsTable.id, project.id));
 
-    // Dispatch generation asynchronously so it works on both serverless & traditional nodes
-    runGeneration(job.id, project.id, req.user!.id, payload).catch((err) =>
-      logger.error({ err, jobId: job.id }, "Generation dispatch failed")
-    );
+    // The background worker will pick up the 'pending' job.
 
     res.status(202).json({
       job: toJobResponse(job, steps),
@@ -171,10 +168,7 @@ router.post("/projects/:id/chat-edit", async (req: Request, res: Response) => {
       .set({ activeJobId: job.id, updatedAt: new Date() })
       .where(eq(projectsTable.id, params.data.id));
 
-    // Dispatch chat edit asynchronously
-    runChatEdit(job.id, params.data.id, req.user!.id, payload).catch((err) =>
-      logger.error({ err, jobId: job.id }, "Chat edit dispatch failed")
-    );
+    // The background worker will pick up the 'pending' job.
 
     res.status(202).json(toJobResponse(job, steps));
   } catch (err) {
@@ -273,10 +267,7 @@ router.post("/projects/:id/sections/regenerate-all", async (req: Request, res: R
     const { job, steps } = await createJob(projectId, req.user!.id, "chat-edit", CHAT_EDIT_STEPS);
     await db.update(projectsTable).set({ activeJobId: job.id, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
 
-    runChatEdit(job.id, projectId, req.user!.id, {
-      message: instruction,
-      currentHtml: project.generatedHtml ?? undefined,
-    }).catch((err) => logger.error({ err, jobId: job.id }, "Section regeneration failed"));
+    // The background worker will pick up the 'pending' job.
 
     res.status(202).json(toJobResponse(job, steps));
   } catch (err) {

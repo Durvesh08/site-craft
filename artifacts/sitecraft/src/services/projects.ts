@@ -170,7 +170,6 @@ class ProjectsService {
       status: 'draft',
       updatedAt: 'Just now',
     };
-    this.projects.unshift(copy);
     this.createRemoteProject(copy.name, copy.category, copy.description);
     return copy;
   }

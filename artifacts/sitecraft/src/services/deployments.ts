@@ -35,7 +35,7 @@ class DeploymentsService {
 
   async getByProject(projectId: string, projectName: string = projectId): Promise<Deployment[]> {
     const res = await fetch(`/api/projects/${projectId}/deployments`, {
-      credentials: "omit", 
+      credentials: "include", 
     });
     if (!res.ok) {
       if (res.status === 404) return [];
@@ -59,6 +59,7 @@ class DeploymentsService {
         environment: "production",
         protocol: "default",
       }),
+      credentials: "include",
     });
     
     if (!res.ok) {

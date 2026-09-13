@@ -120,7 +120,7 @@ class GenerationService {
   async pollJobUntilCompletion(
     jobId: string,
     onProgress: (status: JobStatus) => void,
-    maxWaitSeconds: number = 60
+    maxWaitSeconds: number = 180
   ): Promise<boolean> {
     const startTime = Date.now();
 

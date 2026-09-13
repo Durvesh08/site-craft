@@ -94,14 +94,29 @@ workspaceRouter.get("/workspace/settings", async (req: Request, res: Response) =
   }
 });
 
-// PATCH /api/workspace/settings — Update workspace settings in DB
+// PATCH /api/workspace/settings — Update workspace settings in DB (OWNER/ADMIN only)
 workspaceRouter.patch("/workspace/settings", async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId;
+    const user = (req as any).user;
     const { name, slug, defaultAiProvider, defaultAiModel, timezone } = req.body;
 
     if (!workspaceId) {
       return res.status(400).json({ success: false, error: "Workspace ID required" });
+    }
+
+    // Check caller has OWNER or ADMIN role
+    const [membership] = await db
+      .select({ role: workspaceMembersTable.role })
+      .from(workspaceMembersTable)
+      .where(and(
+        eq(workspaceMembersTable.workspaceId, workspaceId),
+        eq(workspaceMembersTable.userId, user!.id),
+      ))
+      .limit(1);
+
+    if (!membership || !["OWNER", "ADMIN"].includes(membership.role)) {
+      return res.status(403).json({ success: false, error: "Only workspace owners and admins can update settings" });
     }
 
     const updateFields: Record<string, any> = { updatedAt: new Date() };
@@ -176,7 +191,7 @@ workspaceRouter.get("/workspace/members", async (req: Request, res: Response) =>
   }
 });
 
-// POST /api/workspace/invitations — Invite new team member
+// POST /api/workspace/invitations — Invite new team member (OWNER/ADMIN only)
 workspaceRouter.post("/workspace/invitations", async (req: Request, res: Response) => {
   try {
     const workspaceId = req.workspaceId || "default-ws";
@@ -185,6 +200,20 @@ workspaceRouter.post("/workspace/invitations", async (req: Request, res: Respons
 
     if (!email) {
       return res.status(400).json({ success: false, error: "Email is required" });
+    }
+
+    // Check caller has OWNER or ADMIN role
+    const [membership] = await db
+      .select({ role: workspaceMembersTable.role })
+      .from(workspaceMembersTable)
+      .where(and(
+        eq(workspaceMembersTable.workspaceId, workspaceId),
+        eq(workspaceMembersTable.userId, user?.id),
+      ))
+      .limit(1);
+
+    if (!membership || !["OWNER", "ADMIN"].includes(membership.role)) {
+      return res.status(403).json({ success: false, error: "Only workspace owners and admins can invite members" });
     }
 
     const token = crypto.randomBytes(24).toString("hex");

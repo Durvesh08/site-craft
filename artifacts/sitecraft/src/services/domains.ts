@@ -28,7 +28,7 @@ class DomainsService {
 
   async syncFromBackend(): Promise<DomainItem[]> {
     try {
-      const res = await fetch('/api/domains');
+      const res = await fetch('/api/domains', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (data.domains && Array.isArray(data.domains)) {
@@ -81,7 +81,8 @@ class DomainsService {
       const res = await fetch('/api/domains', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hostname: domain, projectId, projectName })
+        body: JSON.stringify({ hostname: domain, projectId, projectName }),
+        credentials: 'include'
       });
       
       if (res.ok) {
@@ -146,7 +147,7 @@ class DomainsService {
     if (idx !== -1) {
       this.domains.splice(idx, 1);
       try {
-        await fetch(`/api/domains/${id}`, { method: 'DELETE' });
+        await fetch(`/api/domains/${id}`, { method: 'DELETE', credentials: 'include' });
       } catch (err) {
         console.error('[domains] remove failed:', err);
       }

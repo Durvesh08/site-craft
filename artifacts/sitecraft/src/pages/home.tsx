@@ -7,6 +7,7 @@ import {
   Volume2,
   VolumeX,
   CheckCircle2,
+  Check,
   Sparkles,
   Code,
   Layers,

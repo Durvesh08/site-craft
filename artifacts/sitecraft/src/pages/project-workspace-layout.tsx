@@ -9,20 +9,17 @@ import {
   Code,
   Folder,
   Image as ImageIcon,
-  Plug,
-  Key,
-  GitBranch,
   Globe,
   Rocket,
   History,
-  ShieldCheck,
   Terminal,
   Settings,
   CheckCircle2,
   AlertCircle,
   FileText,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  BarChart2
 } from "lucide-react";
 
 export function ProjectWorkspaceLayout({ children, activeTab }: { children: React.ReactNode; activeTab: string }) {
@@ -57,6 +54,7 @@ export function ProjectWorkspaceLayout({ children, activeTab }: { children: Reac
     { id: 'domains', label: 'Domains', href: `/projects/${projectId}/domains`, icon: Globe },
     { id: 'deployments', label: 'Deployments', href: `/projects/${projectId}/deployments`, icon: Rocket },
     { id: 'versions', label: 'Versions', href: `/projects/${projectId}/versions`, icon: History },
+    { id: 'analytics', label: 'Analytics', href: `/projects/${projectId}/analytics`, icon: BarChart2 },
     { id: 'settings', label: 'Settings', href: `/projects/${projectId}/settings`, icon: Settings },
   ];
 

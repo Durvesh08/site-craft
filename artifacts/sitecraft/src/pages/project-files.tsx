@@ -4,6 +4,7 @@ import { useGetProject } from "@workspace/api-client-react";
 import { filesService, VFSFile } from "@/services/files";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Folder,
   FileText,
@@ -44,6 +45,7 @@ export default function ProjectFiles() {
 
   const [activeFilter, setActiveFilter] = useState<'All' | 'Source' | 'Assets' | 'Config' | 'Public'>('All');
   const [search, setSearch] = useState("");
+  const [refresh, setRefresh] = useState(0);
 
   const filteredFiles = filesTree.filter(f => {
     const matchesSearch = f.name.toLowerCase().includes(search.toLowerCase()) || f.path.toLowerCase().includes(search.toLowerCase());
@@ -156,12 +158,32 @@ export default function ProjectFiles() {
                       <Code className="h-3.5 w-3.5" />
                     </button>
                     <button
+                      onClick={() => {
+                        const blob = new Blob([file.content || ''], { type: 'text/plain' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = file.name;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
                       className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
                       title="Download"
                     >
                       <Download className="h-3.5 w-3.5" />
                     </button>
                     <button
+                      onClick={async () => {
+                        if (confirm(`Are you sure you want to delete ${file.name}?`)) {
+                          const success = await filesService.deleteFile(projectId, file.path);
+                          if (success) {
+                            toast.success(`Deleted ${file.name}`);
+                            setRefresh(r => r + 1);
+                          } else {
+                            toast.error(`Failed to delete ${file.name}`);
+                          }
+                        }
+                      }}
                       className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-white/10 transition-colors"
                       title="Delete"
                     >

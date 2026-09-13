@@ -57,10 +57,12 @@ router.patch("/auth/me", async (req: Request, res: Response) => {
   }
 });
 
-// POST /auth/logout — session-based logout
+// POST /auth/logout — clears both session and JWT cookies
 router.post("/auth/logout", async (req: Request, res: Response) => {
   const sid = getSessionId(req);
   await clearSession(res, sid);
+  // Also clear the JWT token cookie used by authMiddleware
+  res.clearCookie("token", { path: "/" });
   res.json({ message: "Logged out" });
 });
 

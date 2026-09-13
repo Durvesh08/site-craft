@@ -110,9 +110,9 @@ export default function ProjectPreview() {
             </button>
 
             <a
-              href="/"
+              href={`/preview-frame/${projectId}`}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs bg-white text-black font-semibold hover:bg-white/90 transition-colors"
             >
               <ExternalLink className="h-3.5 w-3.5" /> Open Tab

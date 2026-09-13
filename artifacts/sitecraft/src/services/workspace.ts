@@ -34,7 +34,7 @@ class WorkspaceService {
 
   async syncFromBackend(): Promise<WorkspaceUsage> {
     try {
-      const res = await fetch('/api/workspace/usage');
+      const res = await fetch('/api/workspace/usage', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (data.usage) {
@@ -51,11 +51,8 @@ class WorkspaceService {
   }
 
   getMembers(): WorkspaceMember[] {
-    return [
-      { id: 'mem-1', name: 'Durvesh Narkhede', email: 'durvesh@zovaix.com', role: 'Owner', status: 'active' },
-      { id: 'mem-2', name: 'Alex Chen', email: 'alex@zovaix.com', role: 'Developer', status: 'active' },
-      { id: 'mem-3', name: 'Sarah Jenkins', email: 'sarah@agency.com', role: 'Admin', status: 'invited' },
-    ];
+    // The real members endpoint should be used directly
+    return [];
   }
 
   getUsage(): WorkspaceUsage {

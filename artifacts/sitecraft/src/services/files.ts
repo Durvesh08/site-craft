@@ -59,7 +59,7 @@ class FilesService {
 
   async fetchRemoteFiles(projectId: string): Promise<VFSFile[]> {
     try {
-      const res = await fetch(`/api/projects/${projectId}/files`);
+      const res = await fetch(`/api/projects/${projectId}/files`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (data.files && Array.isArray(data.files) && data.files.length > 0) {
@@ -103,11 +103,31 @@ class FilesService {
     }
 
     try {
-      await fetch(`/api/projects/${projectId}/files/save`, {
+      const res = await fetch(`/api/projects/${projectId}/files/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filePath: path, content }),
+        credentials: 'include'
       });
+      if (!res.ok) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async deleteFile(projectId: string, path: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/files/delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath: path }),
+        credentials: 'include'
+      });
+      if (!res.ok) return false;
+      
+      const filesList = this.filesByProject[projectId] || [];
+      this.filesByProject[projectId] = filesList.filter((f: VFSFile) => f.path !== path);
       return true;
     } catch {
       return false;
