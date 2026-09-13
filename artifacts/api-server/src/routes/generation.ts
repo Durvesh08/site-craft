@@ -13,6 +13,7 @@ import {
 import { runGeneration, runChatEdit, runSectionRegeneration } from "../ai/orchestrator";
 import { logger } from "../lib/logger";
 import { toJobResponse } from "./jobs";
+import { resolveAutoCategory } from "../lib/categorization";
 
 const router: IRouter = Router();
 
@@ -102,6 +103,8 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
 
     const rawBody = req.body || {};
     const businessDesc = String(rawBody.businessDescription || project.businessDescription || project.description || project.name || "Web Application");
+    const combinedPrompt = `${project.name} ${businessDesc} ${rawBody.additionalInstructions || ""}`;
+    const autoCat = resolveAutoCategory(combinedPrompt, rawBody.category || project.category);
 
     const payload = {
       businessDescription: businessDesc,
@@ -118,6 +121,8 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
         status: "generating",
         activeJobId: job.id,
         businessDescription: businessDesc,
+        category: autoCat.category,
+        industry: autoCat.industryKey,
         logoUrl: rawBody.logoUrl ? String(rawBody.logoUrl) : project.logoUrl,
         updatedAt: new Date(),
       })

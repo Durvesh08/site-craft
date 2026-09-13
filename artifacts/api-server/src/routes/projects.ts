@@ -21,6 +21,7 @@ import {
   deleteProjectFile,
   initializeProjectDefaultFiles,
 } from "../lib/projectFilesystem";
+import { resolveAutoCategory } from "../lib/categorization";
 
 // ── Multi-page helpers ─────────────────────────────────────────────────────
 // generatedHtml can be either:
@@ -354,6 +355,8 @@ router.post("/projects", async (req: Request, res: Response) => {
     const rawBody = req.body || {};
     const name = String(rawBody.name || "AI Application");
     const businessDescription = String(rawBody.businessDescription || rawBody.prompt || `${name} application built with AI.`);
+    const combinedPrompt = `${name} ${businessDescription}`;
+    const autoCat = resolveAutoCategory(combinedPrompt, rawBody.category);
 
     const workspaceId = req.workspaceId || "default-ws";
     const initialHtml = buildSynthesizedWebsiteHtml(name, businessDescription);
@@ -365,6 +368,8 @@ router.post("/projects", async (req: Request, res: Response) => {
         userId: req.user!.id,
         name,
         businessDescription,
+        category: autoCat.category,
+        industry: autoCat.industryKey,
         pixelCode: rawBody.pixelCode ? String(rawBody.pixelCode) : null,
         generatedHtml: initialHtml,
         status: "ready",
@@ -1283,6 +1288,8 @@ router.patch("/projects/:id", async (req: Request, res: Response) => {
 
     if (rawBody.name !== undefined) updates.name = String(rawBody.name);
     if (rawBody.businessDescription !== undefined) updates.businessDescription = String(rawBody.businessDescription);
+    if (rawBody.category !== undefined) updates.category = String(rawBody.category);
+    if (rawBody.industry !== undefined) updates.industry = String(rawBody.industry);
     if (rawBody.pixelCode !== undefined) updates.pixelCode = String(rawBody.pixelCode);
     if (rawBody.status !== undefined) updates.status = rawBody.status as any;
     if (rawBody.isStarred !== undefined) updates.isStarred = Boolean(rawBody.isStarred);

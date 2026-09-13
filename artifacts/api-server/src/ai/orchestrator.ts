@@ -43,6 +43,7 @@ import {
   formatBusinessAnalysisContext,
 } from "./steps/businessAnalysis";
 import { writeProjectFileTree } from "./assembler/fileTreeWriter";
+import { resolveAutoCategory } from "../lib/categorization";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
@@ -971,9 +972,21 @@ ${generatedHtml}
       generatedHtml,
     });
 
+    const finalCat = resolveAutoCategory(
+      `${input.businessDescription} ${input.additionalInstructions || ""}`,
+      undefined,
+      businessAnalysis ? {
+        industryKey: businessAnalysis.industryKey,
+        category: businessAnalysis.category,
+        businessModel: businessAnalysis.businessModel,
+      } : undefined
+    );
+
     await db.update(projectsTable)
       .set({
         generatedHtml,
+        category:          finalCat.category,
+        industry:          finalCat.industryKey,
         status:            "ready",
         activeJobId:       null,
         visualScore:       scores.visual,
@@ -1052,9 +1065,21 @@ ${generatedHtml}
       generatedHtml: synthesizedHtml,
     });
 
+    const finalFallbackCat = resolveAutoCategory(
+      `${input.businessDescription} ${input.additionalInstructions || ""}`,
+      undefined,
+      businessAnalysis ? {
+        industryKey: businessAnalysis.industryKey,
+        category: businessAnalysis.category,
+        businessModel: businessAnalysis.businessModel,
+      } : undefined
+    );
+
     await db.update(projectsTable)
       .set({
         generatedHtml: synthesizedHtml,
+        category: finalFallbackCat.category,
+        industry: finalFallbackCat.industryKey,
         status: "ready",
         activeJobId: null,
         visualScore: 92,

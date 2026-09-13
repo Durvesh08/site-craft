@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useListProjects } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { getCategoryBadgeStyle, PROJECT_CATEGORIES } from "@/lib/categories";
 import {
   Search,
   Plus,
@@ -20,6 +22,7 @@ export default function ProjectsList() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<'all' | 'recent' | 'starred' | 'folders' | 'archived'>('all');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const { data, isLoading } = useListProjects();
@@ -76,6 +79,10 @@ export default function ProjectsList() {
     filtered = filtered.filter(p => p.folderId === selectedFolder);
   }
 
+  if (selectedCategory && selectedCategory !== 'All') {
+    filtered = filtered.filter(p => p.category.toLowerCase() === selectedCategory.toLowerCase());
+  }
+
   if (search.trim()) {
     filtered = filtered.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()));
   }
@@ -118,6 +125,17 @@ export default function ProjectsList() {
             <option value="" className="bg-black">All Folders</option>
             {folders.map(f => (
               <option key={f.id} value={f.id} className="bg-black">{f.name} ({f.count})</option>
+            ))}
+          </select>
+
+          {/* Category Dropdown */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="bg-white/5 text-xs text-foreground px-3 py-1.5 rounded-xl border border-white/10 outline-none cursor-pointer"
+          >
+            {PROJECT_CATEGORIES.map(cat => (
+              <option key={cat} value={cat} className="bg-black">{cat === "All" ? "All Categories" : cat}</option>
             ))}
           </select>
         </div>
@@ -201,6 +219,9 @@ export default function ProjectsList() {
                       <span className="text-[10px] font-mono text-muted-foreground block uppercase">{p.category}</span>
                     </div>
                   )}
+                  <span className={cn("absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium backdrop-blur-md border", getCategoryBadgeStyle(p.category))}>
+                    {p.category}
+                  </span>
                   <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400">
                     {p.status}
                   </span>
@@ -240,7 +261,12 @@ export default function ProjectsList() {
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-foreground">{p.name}</h4>
-                    <p className="text-xs text-muted-foreground">{p.domain} • {p.category}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-muted-foreground">{p.domain}</p>
+                      <span className={cn("px-2 py-0.5 rounded-full text-[9px] font-mono font-medium border", getCategoryBadgeStyle(p.category))}>
+                        {p.category}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

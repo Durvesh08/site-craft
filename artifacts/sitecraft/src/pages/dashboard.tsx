@@ -17,6 +17,7 @@ import { AttachmentsModal, AttachmentFile } from "@/components/dashboard/attachm
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getCategoryBadgeStyle } from "@/lib/categories";
 import {
   Sparkles,
   ArrowRight,
@@ -413,6 +414,9 @@ export default function Dashboard() {
                         <span className="text-[10px] font-mono text-muted-foreground block uppercase">{p.category}</span>
                       </div>
                     )}
+                    <span className={cn("absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium backdrop-blur-md border", getCategoryBadgeStyle(p.category))}>
+                      {p.category}
+                    </span>
                     <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400">
                       {p.status}
                     </span>
