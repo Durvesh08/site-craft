@@ -4,29 +4,29 @@ import { useGetJob, useGetProject } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Sparkles, ArrowRight, Cpu } from "lucide-react";
+import { CheckCircle2, Sparkles, ArrowRight, Cpu, AlertCircle, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ── The 18 Specialized AI Designers ───────────────────────────────────────────
+// ── The 18 Specialized AI Designers (mapped to backend GENERATION_STEPS) ──
 const AI_AGENTS = [
-  { id: "business", name: "Research", role: "Analyzing Business & Competitors", icon: "🔍" },
-  { id: "audience", name: "UX Strategy", role: "Profiling Target Customer Intent", icon: "🎯" },
-  { id: "brand", name: "Brand Strategy", role: "Curating Color Tokens & Typography", icon: "🎨" },
-  { id: "color", name: "Palette curation", role: "Designing HSL Color Themes", icon: "✨" },
-  { id: "layout", name: "Layout Planner", role: "Structuring Bento Layouts", icon: "📐" },
-  { id: "copywriting", name: "Copywriter", role: "Crafting High-Conversion Copy", icon: "✍️" },
-  { id: "content", name: "Personalization AI", role: "Customizing Micro-Copy & Social Proof", icon: "💡" },
-  { id: "seo", name: "SEO Expert", role: "Optimizing Meta Tags & Hierarchy", icon: "🚀" },
-  { id: "image", name: "Creative Director", role: "Curating High-Res Imagery", icon: "🖼️" },
-  { id: "components", name: "Component Planner", role: "Selecting React Bento Components", icon: "🧩" },
-  { id: "motion", name: "Motion Designer", role: "Choreographing Interactive States", icon: "⚡" },
-  { id: "animation", name: "Animation Engine", role: "Keyframing Page Transitions", icon: "🌌" },
-  { id: "fx3d", name: "3D Graphics Agent", role: "Configuring Interactive Three.js elements", icon: "💎" },
-  { id: "section", name: "React Architect", role: "Synthesizing Clean Section Code", icon: "⚛️" },
-  { id: "assembly", name: "Assembler Engine", role: "Linking Sections & CSS Custom Props", icon: "🛠️" },
-  { id: "a11y", name: "Accessibility Audit", role: "Enforcing WCAG Focus & Contrast", icon: "♿" },
-  { id: "perf", name: "Performance AI", role: "Minifying Styles & Deferring Assets", icon: "⚡" },
-  { id: "critic", name: "Smart Design Critic", role: "Running Pre-Flight Audit", icon: "🛡️" },
+  { id: "business", stepName: "Business Analysis", name: "Research", role: "Analyzing Business & Competitors", icon: "🔍" },
+  { id: "audience", stepName: "Audience Profiling", name: "UX Strategy", role: "Profiling Target Customer Intent", icon: "🎯" },
+  { id: "brand", stepName: "Brand Strategy", name: "Brand Strategy", role: "Curating Color Tokens & Typography", icon: "🎨" },
+  { id: "color", stepName: "Color & Typography", name: "Palette curation", role: "Designing HSL Color Themes", icon: "✨" },
+  { id: "layout", stepName: "Layout Planning", name: "Layout Planner", role: "Structuring Bento Layouts", icon: "📐" },
+  { id: "copywriting", stepName: "Copywriting", name: "Copywriter", role: "Crafting High-Conversion Copy", icon: "✍️" },
+  { id: "content", stepName: "Content Personalization", name: "Personalization AI", role: "Customizing Micro-Copy & Social Proof", icon: "💡" },
+  { id: "seo", stepName: "SEO Strategy", name: "SEO Expert", role: "Optimizing Meta Tags & Hierarchy", icon: "🚀" },
+  { id: "image", stepName: "Image Direction", name: "Creative Director", role: "Curating High-Res Imagery", icon: "🖼️" },
+  { id: "components", stepName: "Component Selection", name: "Component Planner", role: "Selecting React Bento Components", icon: "🧩" },
+  { id: "motion", stepName: "Motion & Interaction", name: "Motion Designer", role: "Choreographing Interactive States", icon: "⚡" },
+  { id: "animation", stepName: "Animation Choreography", name: "Animation Engine", role: "Keyframing Page Transitions", icon: "🌌" },
+  { id: "fx3d", stepName: "3D & Visual Effects", name: "3D Graphics Agent", role: "Configuring Interactive Three.js elements", icon: "💎" },
+  { id: "section", stepName: "Section Generation", name: "React Architect", role: "Synthesizing Clean Section Code", icon: "⚛️" },
+  { id: "assembly", stepName: "Assembly", name: "Assembler Engine", role: "Linking Sections & CSS Custom Props", icon: "🛠️" },
+  { id: "a11y", stepName: "Accessibility Audit", name: "Accessibility Audit", role: "Enforcing WCAG Focus & Contrast", icon: "♿" },
+  { id: "perf", stepName: "Performance Optimization", name: "Performance AI", role: "Minifying Styles & Deferring Assets", icon: "⚡" },
+  { id: "critic", stepName: "Quality Review", name: "Smart Design Critic", role: "Running Pre-Flight Audit", icon: "🛡️" },
 ];
 
 export default function GenerateProject() {
@@ -52,50 +52,9 @@ export default function GenerateProject() {
     }
   });
 
-  const [clientProgress, setClientProgress] = useState(0);
-
-  // Smooth client-side step progress animator
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setClientProgress((prev) => {
-        if (prev >= 96) {
-          clearInterval(timer);
-          return 96;
-        }
-        return prev + 4;
-      });
-    }, 700);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  const jobFinished = job?.status === "completed";
-  const isCompleted = jobFinished || clientProgress >= 96;
-  const progress = isCompleted ? 100 : Math.max(clientProgress, job?.progress || 0);
-
-  let activeIndex = 0;
-  if (isCompleted) {
-    activeIndex = AI_AGENTS.length;
-  } else {
-    activeIndex = Math.min(Math.floor((progress / 100) * AI_AGENTS.length), AI_AGENTS.length - 1);
-  }
-
-  // Live activity logs stream
-  const [logs, setLogs] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (isCompleted) {
-      setLogs((prev) => [...prev, "[SYSTEM] AI Generation Complete. Pre-flight checks passed."]);
-    } else {
-      const currentAgent = AI_AGENTS[activeIndex];
-      if (currentAgent) {
-        setLogs((prev) => [
-          ...prev.slice(-15),
-          `[${new Date().toLocaleTimeString()}] ${currentAgent.icon} ${currentAgent.name}: ${currentAgent.role}...`
-        ]);
-      }
-    }
-  }, [activeIndex, isCompleted]);
+  const isCompleted = job?.status === "completed" || (project?.status === "ready" && !!project?.generatedHtml);
+  const isFailed = job?.status === "failed";
+  const progress = isCompleted ? 100 : isFailed ? 100 : Math.max(0, job?.progress ?? 0);
 
   const iframeUrl = project?.id
     ? `/api/projects/${project.id}/preview?t=${new Date(project.updatedAt).getTime()}`
@@ -116,12 +75,29 @@ export default function GenerateProject() {
                 <p className="text-xs text-muted-foreground truncate max-w-[200px]">{project?.name || "Initializing..."}</p>
               </div>
             </div>
-            <Badge variant="outline" className="text-xs font-semibold px-2 py-0.5 bg-primary/10 text-primary border-primary/20">
-              {Math.round(progress)}%
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-xs font-semibold px-2 py-0.5 border",
+                isFailed
+                  ? "bg-red-500/10 text-red-400 border-red-500/30"
+                  : isCompleted
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                  : "bg-primary/10 text-primary border-primary/20"
+              )}
+            >
+              {isFailed ? "Failed" : `${Math.round(progress)}%`}
             </Badge>
           </div>
 
-          <Progress value={progress} className="h-1.5 bg-muted/40" />
+          <Progress
+            value={progress}
+            className={cn(
+              "h-1.5 bg-muted/40",
+              isFailed && "[&>div]:bg-red-500",
+              isCompleted && "[&>div]:bg-emerald-500"
+            )}
+          />
 
           {isCompleted && (
             <Button
@@ -131,20 +107,43 @@ export default function GenerateProject() {
               <Sparkles className="h-4 w-4" /> Open Editor <ArrowRight className="h-4 w-4" />
             </Button>
           )}
+
+          {isFailed && (
+            <div className="space-y-2">
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Generation Failed</p>
+                  <p className="text-[11px] opacity-90">{job?.error || "The AI encountered an error while assembling the site."}</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full gap-2 border-white/10 h-10 text-xs"
+                onClick={() => setLocation(`/projects/${id}/editor`)}
+              >
+                Open Editor Anyway <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* DESIGNERS SCROLL LIST */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
           {AI_AGENTS.map((agent, i) => {
-            const isDone = i < activeIndex || isCompleted;
-            const isWorking = i === activeIndex && !isCompleted;
+            const step = job?.steps?.find(s => s.name === agent.stepName) || job?.steps?.[i];
+            const isDone = isCompleted || step?.status === "completed";
+            const isWorking = !isCompleted && !isFailed && (step?.status === "running" || (!step && job?.currentStep === agent.stepName));
+            const isStepFailed = step?.status === "failed";
 
             return (
               <div
                 key={agent.id}
                 className={cn(
                   "p-3 rounded-xl border transition-all duration-200 flex items-center justify-between gap-3 text-xs",
-                  isDone
+                  isStepFailed
+                    ? "bg-red-500/10 border-red-500/30 text-red-400"
+                    : isDone
                     ? "bg-emerald-500/5 border-emerald-500/20 text-muted-foreground"
                     : isWorking
                     ? "bg-primary/10 border-primary/40 text-foreground"
@@ -160,7 +159,11 @@ export default function GenerateProject() {
                 </div>
 
                 <div>
-                  {isDone ? (
+                  {isStepFailed ? (
+                    <span className="flex items-center gap-1 text-[10px] font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
+                      <AlertCircle className="h-3 w-3" /> Error
+                    </span>
+                  ) : isDone ? (
                     <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                       <CheckCircle2 className="h-3 w-3" /> Done
                     </span>

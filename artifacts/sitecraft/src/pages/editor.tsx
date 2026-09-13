@@ -1,15 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import { useGetProject } from "@workspace/api-client-react";
-import { generationService } from "@/services/generation";
-import { filesService } from "@/services/files";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  RotateCcw, Monitor, Tablet, Smartphone, Sparkles, Send,
-  Rocket, Code, Layers, Paperclip, Check, CornerDownLeft, ChevronLeft, ChevronRight,
-  Wrench, Bug, HelpCircle, FileSearch, Undo2, CheckCircle2, Circle
+  Monitor, Tablet, Smartphone, Sparkles, Send,
+  Layers, Paperclip, CheckCircle2, Undo2, Loader2,
+  AlertCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -19,7 +16,7 @@ type AgentMode = "Build" | "Plan" | "Debug" | "Explain" | "Review";
 
 interface TaskStep {
   label: string;
-  status: 'done' | 'active' | 'pending';
+  status: 'done' | 'active' | 'pending' | 'failed';
 }
 
 interface ChatMessage {
@@ -28,14 +25,32 @@ interface ChatMessage {
   mode?: AgentMode;
   text: string;
   timestamp: string;
-  filesChanged?: string[];
   tasks?: TaskStep[];
+  isError?: boolean;
 }
+
+interface ParsedSection {
+  id: string;
+  name: string;
+  type: string;
+}
+
+// Contextual thinking messages that cycle during AI processing
+const THINKING_MESSAGES = [
+  "Understanding your request...",
+  "Analyzing current design...",
+  "Planning improvements...",
+  "Detecting affected sections...",
+  "Generating layout changes...",
+  "Optimizing responsiveness...",
+  "Reviewing design quality...",
+  "Applying changes...",
+];
 
 export default function ProjectEditor() {
   const { id } = useParams<{ id?: string }>();
   const projectId = id || 'lumina';
-  const { data } = useGetProject(projectId);
+  const { data, refetch: refetchProject } = useGetProject(projectId);
   
   const rawProject = data || {
     id: projectId,
@@ -52,9 +67,11 @@ export default function ProjectEditor() {
   const project = rawProject;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [isSectionsOpen, setIsSectionsOpen] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<string | null>("Hero Section");
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
 
   // Agent States
   const [agentMode, setAgentMode] = useState<AgentMode>("Build");
@@ -62,22 +79,97 @@ export default function ProjectEditor() {
   const [attachments, setAttachments] = useState<string[]>([]);
   const [isBuilding, setIsBuilding] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [thinkingIdx, setThinkingIdx] = useState(0);
+
+  // Dynamic sections parsed from the real generated HTML
+  const [sections, setSections] = useState<ParsedSection[]>([]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'msg-1',
       sender: 'ai',
       mode: 'Build',
-      text: `Hello! I am Zovaix AI Agent. I have synthesized the initial application codebase for ${project.name}. Describe what changes or features you want to build.`,
+      text: `Hello! I'm the Zovaix AI Agent. I've synthesized the initial codebase for ${project.name}. Describe what changes you'd like to make.`,
       timestamp: 'Just now',
     },
   ]);
 
-  const [sections] = useState([
-    { id: "Hero Section", name: "Hero Section", elements: ["Headline", "CTA Button", "Visual"] },
-    { id: "Features Section", name: "Features Grid", elements: ["Feature Cards", "Icons"] },
-    { id: "Pricing Section", name: "Pricing Table", elements: ["Plan Cards", "CTA"] },
-  ]);
+  // Parse sections from the project's generated HTML
+  const parseSectionsFromHtml = useCallback((html: string | null | undefined): ParsedSection[] => {
+    if (!html) return [];
+    const parsed: ParsedSection[] = [];
+    let match: RegExpExecArray | null;
+
+    // Strategy 1: component markers  // ── Type (ComponentName) ──
+    const markerRegex = /<!-- ── (\w+(?:\s*\w+)*)\s*\(([^)]+)\)\s*──/g;
+    while ((match = markerRegex.exec(html)) !== null) {
+      parsed.push({ id: match[2], name: match[2].replace(/Section$/, '').replace(/([A-Z])/g, ' $1').trim(), type: match[1] });
+    }
+    if (parsed.length > 0) return parsed;
+
+    // Strategy 2: <section id="...">
+    const sectionTagRegex = /<section[^>]*\bid=["']([^"']+)["'][^>]*>/gi;
+    while ((match = sectionTagRegex.exec(html)) !== null) {
+      parsed.push({ id: match[1], name: match[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), type: 'section' });
+    }
+    if (parsed.length > 0) return parsed;
+
+    // Strategy 3: common div ids
+    const divRegex = /<div[^>]*\bid=["']((?:hero|features?|pricing|about|contact|testimonials?|faq|cta|footer|header|services?|portfolio|team|blog|gallery)[^"']*)["'][^>]*>/gi;
+    while ((match = divRegex.exec(html)) !== null) {
+      parsed.push({ id: match[1], name: match[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), type: 'div-section' });
+    }
+    return parsed;
+  }, []);
+
+  // Update sections whenever project data changes
+  useEffect(() => {
+    if (data?.generatedHtml) {
+      const parsed = parseSectionsFromHtml(data.generatedHtml);
+      if (parsed.length > 0) {
+        setSections(parsed);
+        if (!selectedSection) setSelectedSection(parsed[0].id);
+      }
+    }
+  }, [data?.generatedHtml, parseSectionsFromHtml, selectedSection]);
+
+  // Cycle thinking messages while building
+  useEffect(() => {
+    if (!isBuilding) return;
+    const timer = setInterval(() => setThinkingIdx(prev => (prev + 1) % THINKING_MESSAGES.length), 2500);
+    return () => clearInterval(timer);
+  }, [isBuilding]);
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isBuilding]);
+
+  // Scroll iframe to a section
+  const scrollToSection = (sectionId: string) => {
+    setSelectedSection(sectionId);
+    iframeRef.current?.contentWindow?.postMessage({ type: 'scrollToSection', sectionId }, '*');
+  };
+
+  // Poll a job until completion
+  const pollJob = async (jobId: string, onStep: (stepName: string) => void): Promise<boolean> => {
+    const maxWait = 120_000;
+    const start = Date.now();
+    while (Date.now() - start < maxWait) {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`, { credentials: 'include' });
+        if (!res.ok) break;
+        const job = await res.json();
+        if (job.currentStep) onStep(job.currentStep);
+        if (job.status === 'completed') return true;
+        if (job.status === 'failed') throw new Error(job.error || 'AI generation failed');
+      } catch (err) {
+        if ((err as Error).message?.includes('failed')) throw err;
+      }
+      await new Promise(r => setTimeout(r, 1500));
+    }
+    throw new Error('Generation timed out');
+  };
 
   const handleSendPrompt = async () => {
     if (!editInstruction.trim() || isBuilding) return;
@@ -95,62 +187,84 @@ export default function ProjectEditor() {
     setEditInstruction("");
     setAttachments([]);
     setIsBuilding(true);
+    setThinkingIdx(0);
+
+    const realSteps: TaskStep[] = [];
+    let lastStepName = "";
 
     try {
-      const jobRes = await generationService.sendChatEdit(projectId, promptText);
-      if (jobRes && jobRes.jobId) {
-        await generationService.pollJobUntilCompletion(jobRes.jobId, (status) => {
-          // Progress update
-        });
+      // 1. Send chat-edit to the real backend
+      const res = await fetch(`/api/projects/${projectId}/chat-edit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: promptText }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error((errData as any).message || `Server error ${res.status}`);
       }
-    } catch {
-      // Fallback response if offline
+
+      const { id: jobId } = await res.json();
+      if (!jobId) throw new Error('No job ID returned from server');
+
+      // 2. Poll for real progress
+      await pollJob(jobId, (stepName) => {
+        if (stepName !== lastStepName) {
+          if (realSteps.length > 0) realSteps[realSteps.length - 1].status = 'done';
+          realSteps.push({ label: stepName, status: 'active' });
+          lastStepName = stepName;
+        }
+      });
+
+      // Mark final step done
+      if (realSteps.length > 0) realSteps[realSteps.length - 1].status = 'done';
+
+      // 3. Refetch project to get updated generatedHtml
+      const { data: freshProject } = await refetchProject();
+      if (freshProject?.generatedHtml) {
+        const newSections = parseSectionsFromHtml(freshProject.generatedHtml);
+        if (newSections.length > 0) setSections(newSections);
+      }
+
+      // 4. Refresh the iframe
+      setIframeKey(k => k + 1);
+
+      // 5. Real AI response
+      const aiMsg: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        mode: agentMode,
+        text: `Done! I've applied your changes. The preview has been updated.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        tasks: realSteps.length > 0 ? realSteps : [
+          { label: 'Intent Analysis', status: 'done' },
+          { label: 'Targeted Regeneration', status: 'done' },
+          { label: 'Quality Check', status: 'done' },
+        ],
+      };
+      setMessages(prev => [...prev, aiMsg]);
+      toast.success("AI Agent updated your website successfully.");
+
+    } catch (err: any) {
+      if (realSteps.length > 0 && realSteps[realSteps.length - 1].status === 'active') {
+        realSteps[realSteps.length - 1].status = 'failed';
+      }
+      const errorMsg: ChatMessage = {
+        id: `ai-err-${Date.now()}`,
+        sender: 'ai',
+        mode: agentMode,
+        text: `Something went wrong: ${err.message || 'Unknown error'}. Please try again.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        tasks: realSteps.length > 0 ? realSteps : undefined,
+        isError: true,
+      };
+      setMessages(prev => [...prev, errorMsg]);
+      toast.error("AI edit failed. Please try again.");
     }
 
-    // Finished AI generation
-    const aiMsg: ChatMessage = {
-      id: `ai-${Date.now()}`,
-      sender: 'ai',
-      mode: agentMode,
-      text: `Completed ${agentMode.toLowerCase()} request: "${promptText}". Refactored components and compiled Vite bundle.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      filesChanged: ['src/App.tsx', 'src/index.css'],
-      tasks: [
-        { label: 'Inspecting project files', status: 'done' },
-        { label: 'Planning architectural changes', status: 'done' },
-        { label: 'Editing component files', status: 'done' },
-        { label: 'Testing layout & responsiveness', status: 'done' },
-      ],
-    };
-
-    setMessages(prev => [...prev, aiMsg]);
     setIsBuilding(false);
-    setIframeKey(k => k + 1);
-    toast.success("AI Agent updated codebase successfully.");
-  };
-
-  const handleApprovePlan = (planMsgId: string) => {
-    setIsBuilding(true);
-    setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: `ai-approved-${Date.now()}`,
-          sender: 'ai',
-          mode: 'Build',
-          text: `Plan approved! Executed file edits and compiled Vite bundle.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          filesChanged: ['src/components/Hero.tsx', 'src/types/schema.ts', 'src/routes.ts'],
-          tasks: [
-            { label: 'Editing files per approved plan', status: 'done' },
-            { label: 'Running build & type check', status: 'done' },
-          ]
-        }
-      ]);
-      setIsBuilding(false);
-      setIframeKey(k => k + 1);
-      toast.success("Approved plan executed successfully.");
-    }, 1500);
   };
 
   return (
@@ -166,20 +280,26 @@ export default function ProjectEditor() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 space-y-2 text-xs">
-              {sections.map(sec => (
+              {sections.length > 0 ? sections.map(sec => (
                 <div
                   key={sec.id}
-                  onClick={() => setSelectedSection(sec.name)}
+                  onClick={() => scrollToSection(sec.id)}
                   className={`p-2.5 rounded-xl border cursor-pointer transition-colors ${
-                    selectedSection === sec.name ? 'bg-primary/15 border-primary text-primary font-semibold' : 'bg-white/5 border-white/10 text-muted-foreground hover:text-foreground'
+                    selectedSection === sec.id ? 'bg-primary/15 border-primary text-primary font-semibold' : 'bg-white/5 border-white/10 text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <Layers className="h-3.5 w-3.5" />
                     <span>{sec.name}</span>
                   </div>
+                  <span className="text-[9px] font-mono text-muted-foreground/60 ml-6">{sec.type}</span>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center text-muted-foreground/60 py-6 space-y-2">
+                  <Layers className="h-6 w-6 mx-auto opacity-40" />
+                  <p className="text-[11px]">Sections will appear after your website is generated.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -223,6 +343,7 @@ export default function ProjectEditor() {
                 : 'w-full h-full'
             }`}>
               <iframe
+                ref={iframeRef}
                 key={iframeKey}
                 src={`/preview-frame/${projectId}`}
                 title={project.name}
@@ -271,6 +392,8 @@ export default function ProjectEditor() {
                   "p-3.5 rounded-2xl max-w-[90%] inline-block leading-relaxed border",
                   msg.sender === 'user'
                     ? "bg-primary text-primary-foreground border-primary/30 rounded-br-none"
+                    : msg.isError
+                    ? "bg-red-500/10 border-red-500/30 text-foreground rounded-bl-none"
                     : "bg-white/5 border-white/10 text-foreground rounded-bl-none"
                 )}>
                   {msg.mode && (
@@ -278,62 +401,65 @@ export default function ProjectEditor() {
                       [{msg.mode} Mode]
                     </span>
                   )}
+                  {msg.isError && (
+                    <span className="text-[10px] font-mono uppercase text-red-400 font-bold block mb-1">
+                      <AlertCircle className="h-3 w-3 inline mr-1" />Error
+                    </span>
+                  )}
                   <p>{msg.text}</p>
                 </div>
 
-                {/* Compact Task Status Timeline */}
+                {/* Task Status Timeline */}
                 {msg.tasks && (
                   <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-1.5 font-mono text-[11px] text-white/80">
-                    <span className="text-[10px] uppercase text-muted-foreground block mb-1">Task Progress Timeline</span>
+                    <span className="text-[10px] uppercase text-muted-foreground block mb-1">Pipeline Progress</span>
                     {msg.tasks.map((task, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                        <span>{task.label}</span>
+                        {task.status === 'done' ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        ) : task.status === 'failed' ? (
+                          <AlertCircle className="h-3.5 w-3.5 text-red-400 shrink-0" />
+                        ) : task.status === 'active' ? (
+                          <Loader2 className="h-3.5 w-3.5 text-primary animate-spin shrink-0" />
+                        ) : (
+                          <div className="h-3.5 w-3.5 rounded-full border border-white/20 shrink-0" />
+                        )}
+                        <span className={cn(
+                          task.status === 'failed' && 'text-red-400',
+                          task.status === 'active' && 'text-primary'
+                        )}>
+                          {task.label}
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Changed Files & Review/Undo Controls */}
-                {msg.filesChanged && (
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2">
-                    <span className="text-[10px] font-mono uppercase text-muted-foreground block">Modified Files:</span>
-                    <div className="flex flex-wrap gap-1 font-mono text-[11px]">
-                      {msg.filesChanged.map(f => (
-                        <span key={f} className="px-2 py-0.5 rounded bg-black/60 text-emerald-400 border border-emerald-500/20">{f}</span>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2 pt-1">
-                      {msg.mode === 'Plan' ? (
-                        <Button
-                          size="sm"
-                          onClick={() => handleApprovePlan(msg.id)}
-                          className="h-7 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white gap-1"
-                        >
-                          <CheckCircle2 className="h-3 w-3" /> Approve Plan →
-                        </Button>
-                      ) : (
-                        <>
-                          <Button size="sm" variant="outline" className="h-7 text-[11px] border-white/10 gap-1">
-                            Review Changes
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-7 text-[11px] border-white/10 gap-1 text-muted-foreground hover:text-foreground">
-                            <Undo2 className="h-3 w-3" /> Undo
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                {/* Undo Controls */}
+                {msg.sender === 'ai' && !msg.isError && msg.tasks && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] border-white/10 gap-1 text-muted-foreground hover:text-foreground">
+                      <Undo2 className="h-3 w-3" /> Undo
+                    </Button>
                   </div>
                 )}
               </div>
             ))}
 
+            {/* Live thinking indicator */}
             {isBuilding && (
-              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs space-y-2 animate-pulse">
-                <span className="text-[10px] font-mono text-primary font-bold uppercase">Executing Task...</span>
-                <p className="text-muted-foreground font-mono">Agent inspecting dependencies and compiling edits...</p>
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs space-y-2">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+                  <span className="text-[10px] font-mono text-primary font-bold uppercase">Working...</span>
+                </div>
+                <p className="text-muted-foreground font-mono transition-opacity duration-300">
+                  {THINKING_MESSAGES[thinkingIdx]}
+                </p>
               </div>
             )}
+
+            <div ref={chatEndRef} />
           </div>
 
           {/* Prompt Composer Box with Attachment Support */}
@@ -358,6 +484,7 @@ export default function ProjectEditor() {
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendPrompt(); } }}
                 placeholder={`Ask Zovaix AI in [${agentMode} Mode]...`}
                 className="w-full h-20 p-3 bg-transparent text-xs text-foreground outline-none resize-none placeholder:text-muted-foreground/50"
+                disabled={isBuilding}
               />
               <div className="p-2 border-t flex items-center justify-between bg-white/[0.02]" style={{ borderColor: 'var(--surface-border)' }}>
                 <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -378,6 +505,7 @@ export default function ProjectEditor() {
                     onClick={() => fileInputRef.current?.click()}
                     className="p-1 rounded-lg hover:text-foreground hover:bg-white/10 transition-colors flex items-center gap-1 text-[11px] font-mono"
                     title="Attach Image or Source File"
+                    disabled={isBuilding}
                   >
                     <Paperclip className="h-3.5 w-3.5 text-primary" /> Attach Image / File
                   </button>
@@ -391,7 +519,8 @@ export default function ProjectEditor() {
                     disabled={(!editInstruction.trim() && attachments.length === 0) || isBuilding}
                     className="h-7 px-3 text-xs font-semibold gap-1 bg-primary text-primary-foreground"
                   >
-                    <Send className="h-3 w-3" /> Send
+                    {isBuilding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                    {isBuilding ? 'Working...' : 'Send'}
                   </Button>
                 </div>
               </div>

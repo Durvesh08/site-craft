@@ -10,7 +10,6 @@ import {
   Plug,
   Globe,
   Settings,
-  CreditCard,
   Sparkles,
   ArrowRight,
   Code,
@@ -88,7 +87,6 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
               </span>
               <CommandItem icon={PlusCircle} label="Create New Project" action={() => navigateTo("/new")} />
               <CommandItem icon={Globe} label="Open Domain Manager" action={() => navigateTo("/domains")} />
-              <CommandItem icon={CreditCard} label="Billing & Usage" action={() => navigateTo("/billing")} />
               <CommandItem icon={Settings} label="Workspace Settings" action={() => navigateTo("/settings")} />
             </div>
           )}

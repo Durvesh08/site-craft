@@ -187,9 +187,6 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
             <DropdownMenuItem className="cursor-pointer gap-2 mt-1" onClick={() => window.location.href = '/settings'}>
               <User className="h-3.5 w-3.5" /> Account Settings
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => window.location.href = '/billing'}>
-              <Sparkles className="h-3.5 w-3.5" /> Usage & Account
-            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/10" />
             <DropdownMenuItem className="cursor-pointer gap-2 text-destructive" onClick={() => logout()}>
               Sign Out

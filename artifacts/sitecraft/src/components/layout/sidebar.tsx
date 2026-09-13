@@ -77,7 +77,6 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
         {/* WORKSPACE SECTION */}
         <NavGroup title="WORKSPACE" collapsed={collapsed}>
-          <NavItem href="/billing" icon={Activity} label="Usage & Account" active={location === "/billing"} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/settings?tab=security" icon={ShieldCheck} label="Security" active={location.includes("tab=security")} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/settings?tab=team" icon={Users} label="Team" active={location.includes("tab=team")} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/settings" icon={Settings} label="Settings" active={location === "/settings"} collapsed={collapsed} onNavigate={onNavigate} />
