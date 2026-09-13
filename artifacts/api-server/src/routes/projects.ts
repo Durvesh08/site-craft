@@ -406,7 +406,38 @@ router.get("/projects/:id/files", async (req: Request, res: Response) => {
   try {
     const projectId = String(req.params.id);
     const workspaceId = req.workspaceId || "default-ws";
-    const files = await listProjectFiles(workspaceId, projectId);
+    let files = await listProjectFiles(workspaceId, projectId);
+
+    if (files.length === 0) {
+      const [proj] = await db
+        .select()
+        .from(projectsTable)
+        .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
+
+      if (proj?.generatedHtml) {
+        const rawHtml = proj.generatedHtml.trim();
+        if (rawHtml.startsWith("{")) {
+          try {
+            const pages: Record<string, string> = JSON.parse(rawHtml);
+            for (const [pName, pHtml] of Object.entries(pages)) {
+              await saveProjectFile(workspaceId, projectId, pName, pHtml);
+            }
+          } catch {
+            await saveProjectFile(workspaceId, projectId, "index.html", proj.generatedHtml);
+          }
+        } else {
+          await saveProjectFile(workspaceId, projectId, "index.html", proj.generatedHtml);
+        }
+        await saveProjectFile(
+          workspaceId,
+          projectId,
+          "package.json",
+          JSON.stringify({ name: proj.name.toLowerCase().replace(/[^a-z0-9]/g, "-"), version: "1.0.0", private: true }, null, 2)
+        );
+        files = await listProjectFiles(workspaceId, projectId);
+      }
+    }
+
     return res.json({ files });
   } catch (err) {
     req.log.error({ err }, "Failed to list project files");
@@ -427,6 +458,27 @@ router.post("/projects/:id/files/save", async (req: Request, res: Response) => {
     }
 
     const savedFile = await saveProjectFile(workspaceId, projectId, filePath, content || "", !!isDir);
+
+    // If the saved file is an HTML page, sync back to projectsTable.generatedHtml and republish
+    if (filePath.endsWith(".html")) {
+      const [proj] = await db.select().from(projectsTable).where(eq(projectsTable.id, projectId));
+      if (proj) {
+        let pages: Record<string, string> = {};
+        const curr = proj.generatedHtml || "";
+        if (isMultiPageJson(curr)) {
+          try { pages = JSON.parse(curr); } catch { pages = { "index.html": curr }; }
+        } else {
+          pages = { "index.html": curr };
+        }
+        pages[filePath] = content || "";
+        const updated = JSON.stringify(pages);
+        await db.update(projectsTable).set({ generatedHtml: updated, updatedAt: new Date() }).where(eq(projectsTable.id, projectId));
+        try {
+          await republishToDefaultSubdomain({ id: proj.id, name: proj.name, generatedHtml: updated, domain: proj.domain });
+        } catch {}
+      }
+    }
+
     return res.json({ file: savedFile, success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to save project file");

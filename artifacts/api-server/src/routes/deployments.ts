@@ -1157,25 +1157,75 @@ router.post("/projects/:id/deploy/github-pages", async (req: Request, res: Respo
     const readmeData = await readmeRes.json() as { sha?: string };
     const readmeSha = readmeData?.sha;
 
-    // 4. Push index.html
-    const htmlContent = patchHtmlForDeployment(project.generatedHtml);
-    const htmlBase64 = Buffer.from(htmlContent).toString("base64");
-
-    const pushRes = await fetch(
-      `https://api.github.com/repos/${username}/${repoName}/contents/index.html`,
-      {
-        method: "PUT",
-        headers: ghHeaders,
-        body: JSON.stringify({
-          message: "Deploy via SiteCraft",
-          content: htmlBase64,
-        }),
-      },
-    );
-
-    if (!pushRes.ok) {
-      const err = await pushRes.json() as { message?: string };
-      throw new Error(`GitHub file push failed: ${err?.message}`);
+    // 4. Push all pages (index.html, about.html, etc.)
+    const rawHtml = (project.generatedHtml || "").trimStart();
+    if (rawHtml.startsWith("{")) {
+      try {
+        const pages: Record<string, string> = JSON.parse(rawHtml);
+        for (const [pagePath, pageHtml] of Object.entries(pages)) {
+          const cleanPath = pagePath.startsWith("/") ? pagePath.slice(1) : pagePath;
+          const htmlContent = patchHtmlForDeployment(pageHtml);
+          const htmlBase64 = Buffer.from(htmlContent).toString("base64");
+          await fetch(
+            `https://api.github.com/repos/${username}/${repoName}/contents/${cleanPath}`,
+            {
+              method: "PUT",
+              headers: ghHeaders,
+              body: JSON.stringify({
+                message: `Deploy ${cleanPath} via SiteCraft`,
+                content: htmlBase64,
+              }),
+            }
+          );
+        }
+        if (!pages["index.html"] && Object.values(pages).length > 0) {
+          const htmlContent = patchHtmlForDeployment(Object.values(pages)[0]);
+          const htmlBase64 = Buffer.from(htmlContent).toString("base64");
+          await fetch(
+            `https://api.github.com/repos/${username}/${repoName}/contents/index.html`,
+            {
+              method: "PUT",
+              headers: ghHeaders,
+              body: JSON.stringify({
+                message: "Deploy index.html via SiteCraft",
+                content: htmlBase64,
+              }),
+            }
+          );
+        }
+      } catch {
+        const htmlContent = patchHtmlForDeployment(project.generatedHtml);
+        const htmlBase64 = Buffer.from(htmlContent).toString("base64");
+        await fetch(
+          `https://api.github.com/repos/${username}/${repoName}/contents/index.html`,
+          {
+            method: "PUT",
+            headers: ghHeaders,
+            body: JSON.stringify({
+              message: "Deploy via SiteCraft",
+              content: htmlBase64,
+            }),
+          }
+        );
+      }
+    } else {
+      const htmlContent = patchHtmlForDeployment(project.generatedHtml);
+      const htmlBase64 = Buffer.from(htmlContent).toString("base64");
+      const pushRes = await fetch(
+        `https://api.github.com/repos/${username}/${repoName}/contents/index.html`,
+        {
+          method: "PUT",
+          headers: ghHeaders,
+          body: JSON.stringify({
+            message: "Deploy via SiteCraft",
+            content: htmlBase64,
+          }),
+        },
+      );
+      if (!pushRes.ok) {
+        const err = (await pushRes.json()) as { message?: string };
+        throw new Error(`GitHub file push failed: ${err?.message}`);
+      }
     }
 
     // 5. Enable GitHub Pages (source: main branch, root path)
