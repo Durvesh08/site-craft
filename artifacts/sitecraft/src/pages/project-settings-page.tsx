@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useGetProject } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ProjectWorkspaceLayout } from "./project-workspace-layout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -9,12 +10,15 @@ import {
   AlertTriangle,
   Save,
   Trash2,
-  Code
+  Code,
+  Tag
 } from "lucide-react";
+import { PROJECT_CATEGORIES, getCategoryBadgeStyle } from "@/lib/categories";
 
 export default function ProjectSettingsPage() {
   const { id } = useParams<{ id?: string }>();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const isProjectContext = Boolean(id);
   const projectId = id || 'lumina';
 
@@ -25,11 +29,13 @@ export default function ProjectSettingsPage() {
     name: projectId,
     description: 'Custom AI web application',
     pixelCode: '',
+    category: 'SaaS',
   };
   const project = rawProject;
 
   const [name, setName] = useState(project.name);
   const [desc, setDesc] = useState(project.description || '');
+  const [category, setCategory] = useState((project as any).category || 'SaaS');
   const [pixelCode, setPixelCode] = useState((project as any).pixelCode || '');
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -38,6 +44,7 @@ export default function ProjectSettingsPage() {
     if (rawProject) {
       setName(rawProject.name);
       setDesc(rawProject.description || '');
+      setCategory((rawProject as any).category || 'SaaS');
       setPixelCode((rawProject as any).pixelCode || '');
     }
   }, [rawProject?.id]);
@@ -52,12 +59,15 @@ export default function ProjectSettingsPage() {
         body: JSON.stringify({
           name,
           businessDescription: desc,
+          category,
           pixelCode,
         }),
       });
 
       if (res.ok) {
         toast.success("Project settings saved successfully.");
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/projects`] });
       } else {
         toast.error("Failed to save project settings.");
       }
@@ -82,6 +92,7 @@ export default function ProjectSettingsPage() {
 
       if (res.ok) {
         toast.success("Project deleted successfully.");
+        queryClient.invalidateQueries({ queryKey: [`/api/projects`] });
         setLocation("/projects");
       } else {
         toast.error("Failed to delete project.");
@@ -92,6 +103,8 @@ export default function ProjectSettingsPage() {
       setIsDeleting(false);
     }
   };
+
+  const availableCategories = PROJECT_CATEGORIES.filter(c => c !== "All");
 
   const content = (
     <div className="p-6 space-y-10 max-w-4xl mx-auto h-full overflow-y-auto">
@@ -111,6 +124,29 @@ export default function ProjectSettingsPage() {
               onChange={(e) => setName(e.target.value)}
               className="w-full h-10 px-4 rounded-xl bg-white/5 border border-white/10 text-foreground outline-none font-sans"
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="font-mono text-muted-foreground uppercase flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5 text-primary" /> Vertical Category
+              </label>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${getCategoryBadgeStyle(category)}`}>
+                {category}
+              </span>
+            </div>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl bg-white/5 border border-white/10 text-foreground outline-none font-sans"
+            >
+              {availableCategories.map((cat) => (
+                <option key={cat} value={cat} className="bg-zinc-900 text-white">
+                  {cat}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-muted-foreground">Automatically assigned during AI generation or manually specified here.</p>
           </div>
 
           <div className="space-y-2">
