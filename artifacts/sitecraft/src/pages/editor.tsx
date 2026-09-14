@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   Monitor, Tablet, Smartphone, Sparkles, Send,
   Layers, Paperclip, CheckCircle2, Undo2, Loader2,
-  AlertCircle, Plus, FileText, Trash2, Globe
+  AlertCircle, Plus, FileText, Trash2, Globe, ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -84,6 +84,7 @@ const THINKING_MESSAGES = [
 
 export default function ProjectEditor() {
   const { id } = useParams<{ id?: string }>();
+  const [, setLocation] = useLocation();
   const projectId = id || 'lumina';
   const { data, refetch: refetchProject } = useGetProject(projectId);
   
@@ -501,13 +502,33 @@ export default function ProjectEditor() {
                 ? 'w-[768px] h-[90%] max-h-[850px] shrink-0 my-auto'
                 : 'w-full h-full'
             }`}>
-              <iframe
-                ref={iframeRef}
-                key={`${iframeKey}-${activePage}`}
-                src={`/preview-frame/${projectId}?page=${encodeURIComponent(activePage)}&t=${iframeKey}`}
-                title={`${project.name} - ${activePage}`}
-                className="w-full h-full border-none"
-              />
+              {(!data?.generatedHtml || project.status === "generating") ? (
+                <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center space-y-4 rounded-2xl" style={{ backgroundColor: 'var(--surface-1)' }}>
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary animate-pulse">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-1.5 max-w-md">
+                    <h3 className="font-bold text-base text-foreground">AI Generation In Progress</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Your website is currently being synthesized by the AI agent team. Monitor the live multi-phase design steps or review the code when finished.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => setLocation(`/projects/${projectId}/generate`)}
+                    className="h-9 px-4 text-xs font-semibold gap-2 bg-primary text-primary-foreground"
+                  >
+                    View Live Generation Canvas <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <iframe
+                  ref={iframeRef}
+                  key={`${iframeKey}-${activePage}`}
+                  src={`/preview-frame/${projectId}?page=${encodeURIComponent(activePage)}&t=${iframeKey}`}
+                  title={`${project.name} - ${activePage}`}
+                  className="w-full h-full border-none"
+                />
+              )}
             </div>
           </div>
         </div>

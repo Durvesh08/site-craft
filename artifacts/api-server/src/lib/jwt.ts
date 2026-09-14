@@ -74,3 +74,16 @@ export function verifyJwt(token: string): JwtPayload | null {
     return null;
   }
 }
+
+export const TOKEN_COOKIE = 'token';
+export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+export function setJwtCookie(res: any, token: string) {
+  res.cookie(TOKEN_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: SESSION_TTL,
+    path: '/',
+  });
+}

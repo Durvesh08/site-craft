@@ -96,7 +96,7 @@ router.post("/projects/:id/generate", async (req: Request, res: Response) => {
       return;
     }
 
-    if (project.status === "generating") {
+    if (project.status === "generating" && project.activeJobId) {
       res.status(409).json({ error: "Conflict", message: "Generation already in progress" });
       return;
     }

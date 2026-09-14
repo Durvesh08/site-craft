@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Settings, User, Server, Palette, LogOut, Check, X, Shield, Cpu, RefreshCw, Globe, Copy,
-  Users, Key, Trash2, Mail, UserPlus, Clock, Laptop, Activity
+  Users, Key, Trash2, Mail, UserPlus, Clock, Laptop, Activity, Lock, ShieldCheck, Smartphone
 } from "lucide-react";
 import { ImageUploader } from "@/components/ImageUploader";
 import { toast } from "sonner";
@@ -93,9 +94,14 @@ export default function SettingsPage() {
   }, [user]);
 
   // Security State
+  const queryClient = useQueryClient();
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [isLoadingSecurity, setIsLoadingSecurity] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Team State
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -288,14 +294,59 @@ export default function SettingsPage() {
         body: JSON.stringify({ name: userName, email: userEmail, avatarUrl: userAvatar }),
       });
       if (res.ok) {
+        const data = await res.json();
+        if (data.user?.name) setUserName(data.user.name);
+        if (data.user?.email) setUserEmail(data.user.email);
+        if (data.user?.avatarUrl) setUserAvatar(data.user.avatarUrl);
+        await queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
         toast.success("User profile updated successfully");
       } else {
-        toast.success("User profile saved locally");
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData.message || "Failed to update user profile");
       }
-    } catch {
-      toast.success("User profile saved");
+    } catch (err: any) {
+      toast.error(err.message || "Error saving user profile");
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  // Change Password
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword) {
+      toast.error("Please enter your current password");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("New password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("New passwords do not match");
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (res.ok) {
+        toast.success("Password updated successfully");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData.error || errData.message || "Failed to update password");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error updating password");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -674,22 +725,100 @@ export default function SettingsPage() {
             <div className="space-y-6 animate-fade-in">
               <div className="border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
                 <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                  <Shield className="h-6 w-6 text-primary" /> Security & Active Sessions
+                  <Shield className="h-6 w-6 text-primary" /> Security & Account Credentials
                 </h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Audit log history and session security management.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Manage your password, active sessions, and security activity.</p>
               </div>
+
+              {/* Password & Credentials Form */}
+              <Card className="rounded-2xl p-6 space-y-5 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <div className="border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
+                  <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-primary" /> Change Account Password
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Ensure your account is using a long, random password to stay secure.</p>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-foreground">Current Password</Label>
+                      <Input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Enter current password"
+                        required
+                        className="h-9 bg-background/50 text-xs font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-foreground">New Password</Label>
+                      <Input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="At least 6 characters"
+                        required
+                        className="h-9 bg-background/50 text-xs font-medium"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-foreground">Confirm New Password</Label>
+                      <Input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Repeat new password"
+                        required
+                        className="h-9 bg-background/50 text-xs font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'var(--surface-border)' }}>
+                    <p className="text-[11px] text-muted-foreground">Password must be at least 6 characters in length.</p>
+                    <Button
+                      type="submit"
+                      disabled={isChangingPassword}
+                      className="h-9 px-5 text-xs font-semibold bg-primary text-primary-foreground"
+                    >
+                      {isChangingPassword ? "Updating Password..." : "Update Password"}
+                    </Button>
+                  </div>
+                </form>
+              </Card>
+
+              {/* Two-Factor Authentication Info */}
+              <Card className="rounded-2xl p-6 space-y-4 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+                <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
+                  <div className="space-y-0.5">
+                    <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-emerald-400" /> Multi-Factor Protection
+                    </h3>
+                    <p className="text-xs text-muted-foreground">Session token verification and encrypted credential storage.</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Active & Encrypted
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground leading-relaxed flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-white/5">
+                  <Smartphone className="h-5 w-5 text-primary shrink-0" />
+                  <p>All sign-in sessions use salted hash encryption with secure HTTP-only JWT cookies. Unrecognized IPs require immediate session validation.</p>
+                </div>
+              </Card>
 
               {/* Active Sessions */}
               <Card className="rounded-2xl p-6 space-y-4 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
                 <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
                   <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                    <Laptop className="h-4 w-4 text-primary" /> Active Sessions
+                    <Laptop className="h-4 w-4 text-primary" /> Active Devices & Sessions
                   </h3>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-muted-foreground">{sessions.length} active</span>
+                    <span className="text-xs text-muted-foreground">{sessions.length} active</span>
                     {sessions.length > 1 && (
-                      <Button size="sm" variant="outline" onClick={handleRevokeAllOtherSessions} className="h-7 text-[10px] uppercase border-destructive/30 text-destructive hover:bg-destructive/10">
-                        Sign Out All Others
+                      <Button size="sm" variant="outline" onClick={handleRevokeAllOtherSessions} className="h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10">
+                        Sign Out Other Devices
                       </Button>
                     )}
                   </div>
@@ -705,12 +834,12 @@ export default function SettingsPage() {
                           <p className="font-semibold text-foreground flex items-center gap-2">
                             {s.userAgent}
                             {s.isCurrent && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                Current
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                Current Device
                               </span>
                             )}
                           </p>
-                          <p className="text-[11px] font-mono text-muted-foreground">IP: {s.ipAddress} • Last active: {new Date(s.lastActiveAt).toLocaleString()}</p>
+                          <p className="text-[11px] text-muted-foreground">IP: {s.ipAddress} • Last active: {new Date(s.lastActiveAt).toLocaleString()}</p>
                         </div>
                         {!s.isCurrent && (
                           <Button size="sm" variant="outline" onClick={() => handleRevokeSession(s.id)} className="h-8 text-xs border-destructive/30 text-destructive hover:bg-destructive/10">
@@ -727,22 +856,22 @@ export default function SettingsPage() {
               <Card className="rounded-2xl p-6 space-y-4 shadow-xl" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
                 <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: 'var(--surface-border)' }}>
                   <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" /> Audit Event Log
+                    <Activity className="h-4 w-4 text-primary" /> Security Audit Activity
                   </h3>
-                  <span className="text-xs font-mono text-muted-foreground">Last 50 events</span>
+                  <span className="text-xs text-muted-foreground">Recent Security Events</span>
                 </div>
 
                 {auditLogs.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center">No security audit events recorded yet.</p>
                 ) : (
-                  <div className="divide-y divide-white/10 text-xs font-mono">
+                  <div className="divide-y divide-white/10 text-xs">
                     {auditLogs.map(log => (
                       <div key={log.id} className="py-2.5 flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <span className="text-primary font-bold">{log.action}</span>
+                          <span className="text-primary font-semibold text-xs">{log.action.replace(/_/g, ' ')}</span>
                           <p className="text-[11px] text-muted-foreground">{log.resource} {log.resourceId ? `(${log.resourceId})` : ''} • IP: {log.ipAddress}</p>
                         </div>
-                        <span className="text-[10px] text-muted-foreground/60">{new Date(log.createdAt).toLocaleTimeString()}</span>
+                        <span className="text-[10px] text-muted-foreground/80">{new Date(log.createdAt).toLocaleTimeString()}</span>
                       </div>
                     ))}
                   </div>

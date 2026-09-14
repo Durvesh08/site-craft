@@ -4,7 +4,7 @@ import {
   GetCurrentAuthUserResponse,
   LogoutMobileSessionResponse,
 } from '@workspace/api-zod';
-import { db, usersTable } from '@workspace/db';
+import { db, usersTable, auditLogsTable } from '@workspace/db';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import * as oidc from 'openid-client';
 import { hashPassword, comparePassword } from '../lib/passwords';
@@ -178,6 +178,72 @@ router.post('/auth/login', async (req: Request, res: Response) => {
   } catch (err) {
     req.log.error(err, 'Local login error');
     res.status(500).json({ error: 'Failed to log in' });
+  }
+});
+
+// Change Password
+const ChangePasswordBody = z.object({
+  currentPassword: z.string(),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+});
+
+router.post('/auth/change-password', async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: 'Unauthorized', message: 'Authentication required' });
+    return;
+  }
+
+  try {
+    const parsed = ChangePasswordBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', details: parsed.error.format() });
+      return;
+    }
+
+    const { currentPassword, newPassword } = parsed.data;
+    const [dbUser] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.id)).limit(1);
+    if (!dbUser) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    // Verify existing password if one was set
+    if (dbUser.passwordHash) {
+      const isMatch = comparePassword(currentPassword, dbUser.passwordHash);
+      if (!isMatch) {
+        res.status(400).json({ error: 'Incorrect current password' });
+        return;
+      }
+    }
+
+    const newHash = hashPassword(newPassword);
+    await db
+      .update(usersTable)
+      .set({
+        passwordHash: newHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, req.user!.id));
+
+    // Log security event
+    try {
+      await db.insert(auditLogsTable).values({
+        userId: req.user!.id,
+        action: 'PASSWORD_CHANGE',
+        resource: 'user',
+        resourceId: req.user!.id,
+        ipAddress: req.ip || '127.0.0.1',
+        userAgent: req.headers['user-agent'] || 'Modern Web Browser',
+        metadataJson: JSON.stringify({ message: 'User updated their account password' }),
+      });
+    } catch {
+      // Non-blocking audit log
+    }
+
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (err: any) {
+    req.log.error(err, 'Failed to update password');
+    res.status(500).json({ error: 'InternalError', message: err.message || 'Failed to update password' });
   }
 });
 

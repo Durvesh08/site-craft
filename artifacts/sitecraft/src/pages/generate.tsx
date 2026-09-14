@@ -52,11 +52,11 @@ export default function GenerateProject() {
     }
   });
 
-  const isCompleted = job?.status === "completed" || (project?.status === "ready" && !!project?.generatedHtml);
+  const isCompleted = job?.status === "completed" || (!activeJobId && project?.status === "ready" && !!project?.generatedHtml);
   const isFailed = job?.status === "failed";
   const progress = isCompleted ? 100 : isFailed ? 100 : Math.max(0, job?.progress ?? 0);
 
-  const iframeUrl = project?.id
+  const iframeUrl = (isCompleted && project?.id && project?.generatedHtml)
     ? `/api/projects/${project.id}/preview?t=${new Date(project.updatedAt).getTime()}`
     : null;
 
@@ -280,10 +280,65 @@ export default function GenerateProject() {
               title="Generated Site Preview"
             />
           ) : (
-            <div className="w-full h-full border rounded-2xl shadow-xl flex items-center justify-center relative z-10" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-              <div className="text-center space-y-4">
-                <div className="h-8 w-8 rounded-full border-2 border-t-primary animate-spin mx-auto" style={{ borderColor: 'var(--surface-border) var(--surface-border) var(--surface-border) var(--primary)' }} />
-                <p className="text-sm text-muted-foreground">Drafting layout preview...</p>
+            <div className="w-full h-full border rounded-2xl shadow-2xl relative z-10 flex flex-col overflow-hidden animate-fade-in" style={{ backgroundColor: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
+              {/* Canvas Overlay Header */}
+              <div className="p-4 border-b flex items-center justify-between bg-black/20" style={{ borderColor: 'var(--surface-border)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">AI Generative Canvas</span>
+                  <span className="text-xs text-muted-foreground hidden sm:inline">• Assembling bespoke layout</span>
+                </div>
+                <Badge variant="outline" className="text-[11px] font-medium border-primary/30 text-primary bg-primary/5 gap-1.5 py-1">
+                  <Sparkles className="h-3 w-3" />
+                  {job?.currentStep ? `Phase: ${job.currentStep}` : "Synthesizing Design System..."}
+                </Badge>
+              </div>
+
+              {/* Wireframe Mockup */}
+              <div className="flex-1 p-6 md:p-8 space-y-6 overflow-y-auto custom-scrollbar">
+                {/* Navbar Skeleton */}
+                <div className="flex items-center justify-between p-3 rounded-xl border border-white/5 bg-white/[0.02]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-white/10 animate-pulse" />
+                    <div className="h-4 w-28 rounded bg-white/10 animate-pulse" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-16 rounded bg-white/5 animate-pulse hidden sm:block" />
+                    <div className="h-3 w-16 rounded bg-white/5 animate-pulse hidden sm:block" />
+                    <div className="h-7 w-20 rounded-lg bg-primary/20 animate-pulse" />
+                  </div>
+                </div>
+
+                {/* Hero Skeleton */}
+                <div className="text-center py-10 px-4 max-w-xl mx-auto space-y-4">
+                  <div className="h-5 w-36 mx-auto rounded-full bg-primary/10 border border-primary/20 animate-pulse" />
+                  <div className="space-y-2">
+                    <div className="h-8 w-3/4 mx-auto rounded-lg bg-white/15 animate-pulse" />
+                    <div className="h-8 w-1/2 mx-auto rounded-lg bg-white/15 animate-pulse" />
+                  </div>
+                  <div className="h-4 w-5/6 mx-auto rounded bg-white/5 animate-pulse" />
+                  <div className="flex items-center justify-center gap-3 pt-3">
+                    <div className="h-9 w-28 rounded-xl bg-primary/30 animate-pulse" />
+                    <div className="h-9 w-28 rounded-xl bg-white/10 animate-pulse" />
+                  </div>
+                </div>
+
+                {/* Bento Grid Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  {[1, 2, 3].map((cardIdx) => (
+                    <div key={cardIdx} className="p-5 rounded-2xl border border-white/5 bg-white/[0.02] space-y-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary/15 animate-pulse" />
+                      <div className="h-4 w-32 rounded bg-white/10 animate-pulse" />
+                      <div className="space-y-1.5">
+                        <div className="h-3 w-full rounded bg-white/5 animate-pulse" />
+                        <div className="h-3 w-4/5 rounded bg-white/5 animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}

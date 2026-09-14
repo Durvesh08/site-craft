@@ -70,6 +70,100 @@ function mapAllPages(html: string, fn: (pageHtml: string, pageName: string) => s
   }
 }
 
+export function extractCleanProjectTitle(prompt: string, fallback: string = "Modern Website"): string {
+  if (!prompt || !prompt.trim()) return fallback;
+
+  let text = prompt.trim();
+
+  // 1. Explicit quotes check: "Lumina Dental" or 'Apex Capital'
+  const quoteMatch = text.match(/["'“]([^"'“”]{2,36})["'”]/);
+  if (quoteMatch && quoteMatch[1]?.trim().length >= 2) {
+    const candidate = quoteMatch[1].trim();
+    if (!/^(website|landing page|web app|app|site|application)$/i.test(candidate)) {
+      return toTitleCase(candidate);
+    }
+  }
+
+  // 2. Named/called/brand phrases
+  const nameMatch = text.match(/(?:called|named|titled|brand is|brand name is|brand|company is)\s+([A-Za-z0-9&'\s-]{2,36})/i);
+  if (nameMatch && nameMatch[1]) {
+    const candidate = nameMatch[1].split(/[.,\n]/)[0].trim();
+    if (candidate.length >= 2) {
+      return toTitleCase(candidate);
+    }
+  }
+
+  // 3. Remove typical prompt preambles
+  let cleaned = text
+    .replace(/^act\s+as\s+an?\s+expert\s+web\s+designer\s*/i, "")
+    .replace(/^act\s+as\s+an?\s+expert\s*/i, "")
+    .replace(/^(?:please\s+)?(?:create|build|design|make|generate|develop)\s+an?\s+(?:modern\s+|full\s+|responsive\s+|clean\s+)?(?:website|landing\s+page|web\s+app|app|site)\s+(?:for|about|representing)?\s*/i, "")
+    .replace(/^(?:a\s+website\s+for|a\s+landing\s+page\s+for|a\s+site\s+for)\s*/i, "")
+    .replace(/^(?:i\s+need\s+a\s+|i\s+want\s+a\s+)/i, "")
+    .replace(/^(?:my\s+|our\s+)/i, "")
+    .trim();
+
+  if (!cleaned) return fallback;
+
+  let words = cleaned.split(/\s+/);
+  while (words.length > 0 && /^(my|our|a|an|the|for|in|at|with|of|about)$/i.test(words[0])) {
+    words.shift();
+  }
+
+  words = words.slice(0, 4);
+
+  while (words.length > 0 && /^(in|at|for|with|to|on|by|near|and|or|of)$/i.test(words[words.length - 1])) {
+    words.pop();
+  }
+
+  if (words.length === 0) return fallback;
+  return toTitleCase(words.join(" "));
+}
+
+function toTitleCase(str: string): string {
+  return str
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ")
+    .trim();
+}
+
+export async function generateSemanticProjectSlug(title: string, category?: string): Promise<string> {
+  let base = title
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const parts = base.split("-").filter(Boolean).slice(0, 3);
+  let cleanBase = parts.join("-");
+  if (!cleanBase || cleanBase.length < 2) {
+    cleanBase = (category || "site").toLowerCase().replace(/[^a-z0-9]+/g, "-") || "site";
+  }
+  cleanBase = cleanBase.slice(0, 20);
+
+  const suffix = Math.random().toString(36).substring(2, 6);
+  const candidate = `${cleanBase}-${suffix}`;
+
+  try {
+    const existing = await db
+      .select({ id: projectsTable.id })
+      .from(projectsTable)
+      .where(eq(projectsTable.id, candidate))
+      .limit(1);
+
+    if (existing.length === 0) {
+      return candidate;
+    }
+  } catch {
+    // If query fails, proceed with candidate
+    return candidate;
+  }
+
+  const fallbackSuffix = Math.random().toString(36).substring(2, 8);
+  return `${cleanBase}-${fallbackSuffix}`;
+}
+
 const router: IRouter = Router();
 
 function requireAuth(req: Request, res: Response): boolean {
@@ -354,17 +448,25 @@ router.post("/projects", async (req: Request, res: Response) => {
   if (!requireAuth(req, res)) return;
   try {
     const rawBody = req.body || {};
-    const name = String(rawBody.name || "AI Application");
-    const businessDescription = String(rawBody.businessDescription || rawBody.prompt || `${name} application built with AI.`);
+    const promptText = String(rawBody.businessDescription || rawBody.prompt || "").trim();
+    let name = (rawBody.name && typeof rawBody.name === "string") ? rawBody.name.trim() : "";
+    
+    // If name is absent or generic fallback, extract a polished title from the prompt
+    if (!name || name === "AI Application" || name === "Untitled Project") {
+      name = extractCleanProjectTitle(promptText, "New Website");
+    }
+
+    const businessDescription = promptText || `${name} website built with AI.`;
     const combinedPrompt = `${name} ${businessDescription}`;
     const autoCat = resolveAutoCategory(combinedPrompt, rawBody.category);
 
     const workspaceId = req.workspaceId || "default-ws";
-    const initialHtml = buildSynthesizedWebsiteHtml(name, businessDescription);
+    const projectSlug = await generateSemanticProjectSlug(name, autoCat.category);
 
     const [project] = await db
       .insert(projectsTable)
       .values({
+        id: projectSlug,
         workspaceId,
         userId: req.user!.id,
         name,
@@ -372,12 +474,12 @@ router.post("/projects", async (req: Request, res: Response) => {
         category: autoCat.category,
         industry: autoCat.industryKey,
         pixelCode: rawBody.pixelCode ? String(rawBody.pixelCode) : null,
-        generatedHtml: initialHtml,
-        status: "ready",
-        visualScore: 92,
-        seoScore: 95,
-        accessibilityScore: 90,
-        performanceScore: 96,
+        generatedHtml: null, // Keep null until bespoke AI generation finishes
+        status: promptText ? "generating" : "draft",
+        visualScore: null,
+        seoScore: null,
+        accessibilityScore: null,
+        performanceScore: null,
       })
       .returning();
 

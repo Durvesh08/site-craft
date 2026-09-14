@@ -1,7 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getSessionId, clearSession } from "../lib/auth";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, auditLogsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { signJwt, setJwtCookie, type JwtPayload } from "../lib/jwt";
 
 const router: IRouter = Router();
 
@@ -29,31 +30,81 @@ router.patch("/auth/me", async (req: Request, res: Response) => {
     return;
   }
   try {
-    const { firstName, lastName, profileImageUrl } = req.body;
-    
+    const body = req.body || {};
+    let firstName = body.firstName;
+    let lastName = body.lastName;
+    const email = body.email ? String(body.email).trim().toLowerCase() : undefined;
+    const profileImageUrl = body.profileImageUrl !== undefined ? body.profileImageUrl : (body.avatarUrl !== undefined ? body.avatarUrl : undefined);
+
+    // If a full 'name' string is supplied, cleanly split it into first and last names
+    if (body.name && typeof body.name === "string") {
+      const parts = body.name.trim().split(/\s+/);
+      firstName = parts[0] || "";
+      lastName = parts.slice(1).join(" ") || "";
+    }
+
+    const current = req.user!;
+    const newFirstName = firstName !== undefined ? firstName : (current.firstName || "");
+    const newLastName = lastName !== undefined ? lastName : (current.lastName || "");
+    const newEmail = email !== undefined ? email : (current.email || "");
+    const newProfileImage = profileImageUrl !== undefined ? profileImageUrl : (current.profileImageUrl || "");
+
     const [updated] = await db
       .update(usersTable)
       .set({
-        firstName: firstName !== undefined ? firstName : req.user!.firstName,
-        lastName: lastName !== undefined ? lastName : req.user!.lastName,
-        profileImageUrl: profileImageUrl !== undefined ? profileImageUrl : req.user!.profileImageUrl,
+        firstName: newFirstName,
+        lastName: newLastName,
+        email: newEmail,
+        profileImageUrl: newProfileImage,
         updatedAt: new Date(),
       })
-      .where(eq(usersTable.id, req.user!.id))
+      .where(eq(usersTable.id, current.id))
       .returning();
 
+    // Re-issue fresh JWT cookie so the user session immediately reflects the changes
+    const payload: JwtPayload = {
+      id: updated.id,
+      email: updated.email,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      profileImageUrl: updated.profileImageUrl,
+    };
+    const token = signJwt(payload);
+    setJwtCookie(res, token);
+    req.user = payload;
+
+    // Log security audit trail if audit table exists
+    try {
+      await db.insert(auditLogsTable).values({
+        userId: updated.id,
+        action: "PROFILE_UPDATE",
+        resource: "user",
+        resourceId: updated.id,
+        ipAddress: req.ip || "127.0.0.1",
+        userAgent: req.headers["user-agent"] || "Modern Web Browser",
+        metadataJson: JSON.stringify({ name: [updated.firstName, updated.lastName].filter(Boolean).join(" "), email: updated.email }),
+      });
+    } catch {
+      // Non-blocking audit log
+    }
+
+    const displayName = [updated.firstName, updated.lastName].filter(Boolean).join(" ") || updated.email || "User";
+
     res.json({
+      success: true,
       user: {
         id: updated.id,
         email: updated.email,
         firstName: updated.firstName,
         lastName: updated.lastName,
+        name: displayName,
         profileImageUrl: updated.profileImageUrl,
+        avatarUrl: updated.profileImageUrl,
       }
     });
-  } catch (err) {
+  } catch (err: any) {
     req.log.error(err, "Failed to update profile");
-    res.status(500).json({ error: "InternalError", message: "Failed to update profile" });
+    res.status(500).json({ error: "InternalError", message: err.message || "Failed to update profile" });
   }
 });
 

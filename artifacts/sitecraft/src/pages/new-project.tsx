@@ -16,24 +16,62 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function extractCleanBusinessName(prompt: string, defaultFallback: string = "AI Application"): string {
+export function extractCleanBusinessName(prompt: string, defaultFallback: string = "Modern Website"): string {
   if (!prompt || !prompt.trim()) return defaultFallback;
 
-  let cleaned = prompt
+  let text = prompt.trim();
+
+  // 1. Explicit quotes check: "Lumina Dental" or 'Apex Capital'
+  const quoteMatch = text.match(/["'“]([^"'“”]{2,36})["'”]/);
+  if (quoteMatch && quoteMatch[1]?.trim().length >= 2) {
+    const candidate = quoteMatch[1].trim();
+    if (!/^(website|landing page|web app|app|site|application)$/i.test(candidate)) {
+      return toTitleCase(candidate);
+    }
+  }
+
+  // 2. Named/called/brand phrases
+  const nameMatch = text.match(/(?:called|named|titled|brand is|brand name is|brand|company is)\s+([A-Za-z0-9&'\s-]{2,36})/i);
+  if (nameMatch && nameMatch[1]) {
+    const candidate = nameMatch[1].split(/[.,\n]/)[0].trim();
+    if (candidate.length >= 2) {
+      return toTitleCase(candidate);
+    }
+  }
+
+  // 3. Remove prompt prefixes
+  let cleaned = text
     .replace(/^act\s+as\s+an?\s+expert\s+web\s+designer\s*/i, "")
     .replace(/^act\s+as\s+an?\s+expert\s*/i, "")
-    .replace(/^create\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
-    .replace(/^build\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
-    .replace(/^design\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
-    .replace(/^make\s+a\s+(full\s+)?(website|landing\s+page|web\s+app|app|site)\s+(for|about)?\s*/i, "")
+    .replace(/^(?:please\s+)?(?:create|build|design|make|generate|develop)\s+an?\s+(?:modern\s+|full\s+|responsive\s+|clean\s+)?(?:website|landing\s+page|web\s+app|app|site)\s+(?:for|about|representing)?\s*/i, "")
+    .replace(/^(?:a\s+website\s+for|a\s+landing\s+page\s+for|a\s+site\s+for)\s*/i, "")
+    .replace(/^(?:i\s+need\s+a\s+|i\s+want\s+a\s+)/i, "")
+    .replace(/^(?:my\s+|our\s+)/i, "")
     .trim();
 
   if (!cleaned) return defaultFallback;
 
-  const words = cleaned.split(/\s+/).slice(0, 4);
-  const nameCandidate = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+  let words = cleaned.split(/\s+/);
+  while (words.length > 0 && /^(my|our|a|an|the|for|in|at|with|of|about)$/i.test(words[0])) {
+    words.shift();
+  }
 
-  return nameCandidate.length > 2 ? nameCandidate : defaultFallback;
+  words = words.slice(0, 4);
+
+  while (words.length > 0 && /^(in|at|for|with|to|on|by|near|and|or|of)$/i.test(words[words.length - 1])) {
+    words.pop();
+  }
+
+  if (words.length === 0) return defaultFallback;
+  return toTitleCase(words.join(" "));
+}
+
+function toTitleCase(str: string): string {
+  return str
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ")
+    .trim();
 }
 
 // ── Type definitions ────────────────────────────────────────────────────────────
