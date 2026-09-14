@@ -14,7 +14,7 @@ export function BeforeAfterSlider() {
           See the difference between <span className="text-gradient-primary">templates & AI OS.</span>
         </h2>
         <p className="text-muted-foreground text-lg">
-          Drag the interactive slider below to compare generic website builders against SiteCraft 18-Agent AI synthesis.
+          Drag the interactive slider below to compare generic website builders against Zovaix Sites 18-Agent AI synthesis.
         </p>
       </div>
 
@@ -24,10 +24,10 @@ export function BeforeAfterSlider() {
         {/* Left Side: Generic Old Builder (Static / Flat) */}
         <div className="absolute inset-0 w-full h-full bg-slate-950 p-8 flex flex-col justify-between">
           <div className="flex items-center justify-between border-b border-white/10 pb-4">
-            <span className="text-xs font-mono text-rose-400 flex items-center gap-1.5">
+            <span className="text-xs text-rose-400 flex items-center gap-1.5 font-medium">
               <AlertTriangle className="h-4 w-4" /> TRADITIONAL WEBSITE BUILDER
             </span>
-            <span className="text-xs font-mono text-muted-foreground">SEO Score: 42/100 · Speed: Slow</span>
+            <span className="text-xs text-muted-foreground font-medium">SEO Score: 42/100 · Speed: Slow</span>
           </div>
 
           <div className="space-y-4 max-w-md my-auto">
@@ -40,25 +40,25 @@ export function BeforeAfterSlider() {
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-mono text-rose-300">
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-300">
             ❌ Static HTML template · Generic boilerplate · Slow mobile response · Zero AI motion
           </div>
         </div>
 
-        {/* Right Side: SiteCraft Synthesized AI OS (Vibrant / Motion / Glass) */}
+        {/* Right Side: Zovaix Sites Synthesized AI OS (Vibrant / Motion / Glass) */}
         <div
           className="absolute inset-0 h-full bg-gradient-to-br from-slate-900 via-primary/20 to-purple-950 p-8 flex flex-col justify-between overflow-hidden"
           style={{ clipPath: `polygon(${sliderPos}% 0, 100% 0, 100% 100%, ${sliderPos}% 100%)` }}
         >
           <div className="flex items-center justify-between border-b border-primary/30 pb-4">
-            <span className="text-xs font-mono text-emerald-400 font-bold flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4" /> SITECRAFT V6 AI OS SYNTHESIZED
+            <span className="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+              <CheckCircle2 className="h-4 w-4" /> ZOVAIX SITES AI SYNTHESIZED
             </span>
-            <span className="text-xs font-mono text-primary font-bold">SEO Score: 99/100 · Speed: 99ms Edge</span>
+            <span className="text-xs text-primary font-bold">SEO Score: 99/100 · Speed: 99ms Edge</span>
           </div>
 
           <div className="space-y-6 max-w-md my-auto relative z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-mono font-bold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-semibold">
               <Sparkles className="h-3.5 w-3.5" /> 18-AGENT SWARM SYNTHESIZED
             </div>
             <h3 className="text-3xl font-extrabold text-foreground leading-tight">
@@ -74,7 +74,7 @@ export function BeforeAfterSlider() {
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-mono text-emerald-300">
+          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-medium text-emerald-300">
             ✨ WAI-ARIA compliant · Framer motion physics · Multi-model LLM router · Auto SSL Edge deployment
           </div>
         </div>

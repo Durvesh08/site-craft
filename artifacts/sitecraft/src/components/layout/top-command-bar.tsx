@@ -85,7 +85,7 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Search projects, files, domains...</span>
           </div>
-          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono rounded bg-white/5 border border-white/10 text-muted-foreground">
+          <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[11px] font-semibold rounded bg-white/5 border border-white/10 text-muted-foreground">
             ⌘K
           </kbd>
         </button>
@@ -99,17 +99,17 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white/5 border-white/10 hover:bg-white/10 text-foreground transition-colors font-medium">
               <Building2 className="h-3.5 w-3.5 text-primary" />
-              <span>Production Workspace</span>
+              <span>My Workspace</span>
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 bg-black/90 backdrop-blur-xl border-white/10 text-xs">
-            <DropdownMenuLabel className="text-[10px] font-mono uppercase text-muted-foreground">Switch Workspace</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground">Switch Workspace</DropdownMenuLabel>
             <DropdownMenuItem className="cursor-pointer font-bold text-primary gap-2">
-              <Building2 className="h-3.5 w-3.5" /> Production Workspace (Active)
+              <Building2 className="h-3.5 w-3.5" /> My Workspace (Active)
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer text-muted-foreground gap-2">
-              <Building2 className="h-3.5 w-3.5" /> Staging Sandbox
+              <Building2 className="h-3.5 w-3.5" /> Test Environment
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-white/10" />
             <DropdownMenuItem className="cursor-pointer text-xs font-semibold text-primary">
@@ -138,7 +138,7 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
                   <CheckCheck className="h-3 w-3" /> Mark all read
                 </button>
               ) : (
-                <span className="text-[10px] font-mono text-muted-foreground">Up to date</span>
+                <span className="text-xs font-medium text-muted-foreground">Up to date</span>
               )}
             </div>
             <div className="divide-y divide-white/10 max-h-64 overflow-y-auto">
@@ -152,7 +152,7 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
                   <div key={n.id} className={`p-3 space-y-1 hover:bg-white/5 cursor-pointer transition-colors ${!n.read ? 'bg-primary/5' : ''}`}>
                     <div className="flex items-center justify-between">
                       <p className="font-semibold text-foreground text-xs">{n.title}</p>
-                      <span className="text-[9px] font-mono text-muted-foreground">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-xs font-medium text-muted-foreground">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">{n.message}</p>
                   </div>
@@ -181,7 +181,7 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 bg-black/90 backdrop-blur-xl border-white/10 text-xs">
             <div className="p-2 border-b border-white/10 space-y-0.5">
-              <p className="font-bold text-foreground truncate">{user?.firstName ? `${user.firstName} ${user.lastName ?? ""}` : 'Developer'}</p>
+              <p className="font-bold text-foreground truncate">{user?.firstName ? `${user.firstName} ${user.lastName ?? ""}` : 'User'}</p>
               <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
             </div>
             <DropdownMenuItem className="cursor-pointer gap-2 mt-1" onClick={() => window.location.href = '/settings'}>

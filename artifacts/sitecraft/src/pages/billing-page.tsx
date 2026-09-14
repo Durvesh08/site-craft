@@ -33,7 +33,7 @@ export default function BillingPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 rounded-2xl border space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-mono uppercase">AI Generation Credits</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">AI Generation Credits</span>
             <Zap className="h-4 w-4 text-amber-400" />
           </div>
           <div>
@@ -47,7 +47,7 @@ export default function BillingPage() {
 
         <div className="p-6 rounded-2xl border space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-mono uppercase">Asset Storage</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Asset Storage</span>
             <HardDrive className="h-4 w-4 text-blue-400" />
           </div>
           <div>
@@ -61,7 +61,7 @@ export default function BillingPage() {
 
         <div className="p-6 rounded-2xl border space-y-4" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-mono uppercase">Deployments</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Deployments</span>
             <Rocket className="h-4 w-4 text-emerald-400" />
           </div>
           <div>
@@ -95,7 +95,7 @@ export default function BillingPage() {
           <div>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground">Pro Creator Tier</h3>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-primary/20 text-primary border border-primary/30 uppercase">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-primary/20 text-primary border border-primary/30 uppercase tracking-wider">
                 Active
               </span>
             </div>

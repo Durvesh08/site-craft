@@ -260,7 +260,7 @@ export default function GenerateProject() {
               <div className="w-3 h-3 rounded-full bg-amber-500/80" />
               <div className="w-3 h-3 rounded-full bg-green-500/80" />
             </div>
-            <div className="ml-4 h-6 px-3 rounded-md text-xs flex items-center font-mono text-muted-foreground" style={{ backgroundColor: 'var(--surface-2)', border: '1px solid var(--surface-border)' }}>
+            <div className="ml-4 h-6 px-3 rounded-md text-xs flex items-center font-medium text-muted-foreground" style={{ backgroundColor: 'var(--surface-2)', border: '1px solid var(--surface-border)' }}>
               zovaix.preview / {project?.name}
             </div>
           </div>

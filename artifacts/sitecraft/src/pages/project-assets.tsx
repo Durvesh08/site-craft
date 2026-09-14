@@ -174,7 +174,7 @@ export default function ProjectAssets() {
 
                 <div className="p-3 space-y-1">
                   <p className="font-bold text-xs text-foreground truncate">{asset.name}</p>
-                  <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground font-medium">
                     <span>{asset.size}</span>
                     <span>{asset.createdAt}</span>
                   </div>

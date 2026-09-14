@@ -77,7 +77,7 @@ export default function DeploymentsPage() {
           >
             <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
               <div>
-                <span className="text-[10px] font-mono uppercase text-primary font-bold">Pipeline Verification</span>
+                <span className="text-[11px] font-semibold tracking-wider uppercase text-primary">Pipeline Verification</span>
                 <h3 className="font-bold text-base text-foreground">Production Preflight Check</h3>
               </div>
               <button onClick={() => setPreflightOpen(false)} className="p-1 text-muted-foreground hover:text-foreground">
@@ -86,7 +86,7 @@ export default function DeploymentsPage() {
             </div>
 
             {/* Checklist */}
-            <div className="space-y-3 font-mono text-xs">
+            <div className="space-y-3 text-xs font-medium">
               <div className="flex items-center justify-between p-3 rounded-xl bg-black/40 border border-white/10">
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-emerald-400" />
@@ -150,8 +150,8 @@ export default function DeploymentsPage() {
         <div className="p-6 rounded-2xl border space-y-4 relative overflow-hidden" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
           <div className="absolute top-0 inset-x-0 h-1 bg-emerald-400" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono text-emerald-400 uppercase font-semibold">● Production Environment</span>
-            <span className="text-xs font-mono text-muted-foreground">{deployments[0]?.createdAt || 'Live'}</span>
+            <span className="text-xs text-emerald-400 uppercase font-semibold tracking-wider">● Production Environment</span>
+            <span className="text-xs text-muted-foreground">{deployments[0]?.createdAt || 'Live'}</span>
           </div>
           <div>
             <h3 className="text-lg font-bold text-foreground">{deployments[0]?.url || `https://${project.domain}`}</h3>
@@ -167,8 +167,8 @@ export default function DeploymentsPage() {
         <div className="p-6 rounded-2xl border space-y-4 relative overflow-hidden" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
           <div className="absolute top-0 inset-x-0 h-1 bg-blue-400" />
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono text-blue-400 uppercase font-semibold">● Preview Branch</span>
-            <span className="text-xs font-mono text-muted-foreground">Auto-PR</span>
+            <span className="text-xs text-blue-400 uppercase font-semibold tracking-wider">● Preview Branch</span>
+            <span className="text-xs text-muted-foreground">Auto-PR</span>
           </div>
           <div>
             <h3 className="text-lg font-bold text-foreground">https://preview-{project.id}.site.zovaix.com</h3>
@@ -189,7 +189,7 @@ export default function DeploymentsPage() {
             {deployments.map(dep => (
               <div key={dep.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-mono font-bold text-xs shrink-0">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
                     #{dep.number}
                   </div>
                   <div>
@@ -206,7 +206,7 @@ export default function DeploymentsPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setSelectedDep(selectedDep?.id === dep.id ? null : dep)}
-                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-mono"
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
                   >
                     <Terminal className="h-3.5 w-3.5" /> Logs
                   </button>

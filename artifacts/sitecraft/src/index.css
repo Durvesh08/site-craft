@@ -152,8 +152,8 @@
     --surface-border-hover: #3E434B;
 
     /* ── Typography Tokens ── */
-    --font-sans: "Geist", "Inter", system-ui, -apple-system, sans-serif;
-    --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+    --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
     /* ── Semantic Colors ── */
     --success: #10B981;

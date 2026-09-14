@@ -261,7 +261,7 @@ export default function ProjectCode() {
         
         {/* Left File Tree Sidebar */}
         <div className="w-64 border-r flex flex-col shrink-0 select-none" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-          <div className="p-3 border-b flex items-center justify-between font-mono text-[11px] uppercase text-muted-foreground" style={{ borderColor: 'var(--surface-border)' }}>
+          <div className="p-3 border-b flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground" style={{ borderColor: 'var(--surface-border)' }}>
             <span className="flex items-center gap-1.5 font-semibold text-foreground">
               <Code2 className="h-3.5 w-3.5 text-primary" /> Source Explorer
             </span>
@@ -349,14 +349,14 @@ export default function ProjectCode() {
             <div className="flex items-center gap-2">
               <span className="font-mono text-[11px] text-white/70">{activeFile.path}</span>
               {isDirty && (
-                <span className="text-[10px] font-mono text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">Unsaved Changes</span>
+                <span className="text-[10px] font-semibold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">Unsaved Changes</span>
               )}
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setAiEditing(!aiEditing)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-mono font-semibold transition-colors border border-primary/20"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-semibold transition-colors border border-primary/20"
               >
                 <Sparkles className="h-3 w-3" /> AI Edit File
               </button>
@@ -365,7 +365,7 @@ export default function ProjectCode() {
                 onClick={handleSaveFile}
                 disabled={isSaving || !isDirty}
                 className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold transition-colors border",
+                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors border",
                   isDirty
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30"
                     : "bg-white/5 text-muted-foreground/50 border-white/5 cursor-not-allowed"

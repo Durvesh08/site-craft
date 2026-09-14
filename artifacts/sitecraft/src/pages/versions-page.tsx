@@ -148,16 +148,16 @@ export default function VersionsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-white/10 text-foreground">
+                        <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-white/10 text-foreground">
                           v{v.versionNumber}
                         </span>
                         {isLatest && (
-                          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          <span className="text-[10px] font-semibold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase">
                             Active
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] font-mono text-muted-foreground/80 flex items-center gap-1">
+                      <span className="text-[10px] font-medium text-muted-foreground/80 flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {new Date(v.createdAt).toLocaleDateString(undefined, {
                           month: "short",
@@ -172,7 +172,7 @@ export default function VersionsPage() {
                       {v.label || `Version snapshot ${v.versionNumber}`}
                     </p>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground/70 pt-1 font-mono">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground/70 pt-1 font-medium">
                       <span>HTML: {v.generatedHtml ? `${Math.round(v.generatedHtml.length / 1024)} KB` : "None"}</span>
                       {isSelected && (
                         <span className="text-primary font-semibold flex items-center gap-1">
@@ -203,7 +203,7 @@ export default function VersionsPage() {
                       <span className="font-bold text-sm text-foreground">
                         {selectedVersion.label || `Version ${selectedVersion.versionNumber}`}
                       </span>
-                      <span className="text-xs font-mono text-muted-foreground">
+                      <span className="text-xs text-muted-foreground font-medium">
                         • {new Date(selectedVersion.createdAt).toLocaleString()}
                       </span>
                     </div>

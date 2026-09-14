@@ -86,7 +86,7 @@ export default function ProjectPreview() {
           </div>
 
           {/* URL Address Bar */}
-          <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs font-mono text-white/70 w-96">
+          <div className="hidden md:flex items-center gap-2 px-4 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs font-medium text-white/70 w-96">
             <span className="text-emerald-400">https://</span>
             <span className="truncate">{project.domain}</span>
           </div>

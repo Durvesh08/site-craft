@@ -216,13 +216,13 @@ export default function ProjectsList() {
                   ) : (
                     <div className="text-center space-y-1 p-4">
                       <FileCode className="h-8 w-8 text-primary/60 mx-auto" />
-                      <span className="text-[10px] font-mono text-muted-foreground block uppercase">{p.category}</span>
+                      <span className="text-[10px] font-semibold text-muted-foreground block uppercase">{p.category}</span>
                     </div>
                   )}
-                  <span className={cn("absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium backdrop-blur-md border", getCategoryBadgeStyle(p.category))}>
+                  <span className={cn("absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-md border", getCategoryBadgeStyle(p.category))}>
                     {p.category}
                   </span>
-                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400">
+                  <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400">
                     {p.status}
                   </span>
                 </div>
@@ -263,16 +263,16 @@ export default function ProjectsList() {
                     <h4 className="font-bold text-sm text-foreground">{p.name}</h4>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-xs text-muted-foreground">{p.domain}</p>
-                      <span className={cn("px-2 py-0.5 rounded-full text-[9px] font-mono font-medium border", getCategoryBadgeStyle(p.category))}>
+                      <span className={cn("px-2 py-0.5 rounded-full text-[9px] font-medium border", getCategoryBadgeStyle(p.category))}>
                         {p.category}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs font-mono text-muted-foreground">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span className="hidden sm:inline">{p.updatedAt}</span>
-                  <span className="px-2.5 py-1 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
                     {p.status}
                   </span>
                   <Button size="sm" variant="outline" className="h-8 text-xs border-white/10" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setLocation(`/projects/${p.id}/build`); }}>
@@ -299,7 +299,7 @@ function TabButton({ label, count, active, onClick, icon: Icon }: { label: strin
       {Icon && <Icon className="h-3.5 w-3.5" />}
       <span>{label}</span>
       {count !== undefined && (
-        <span className={`px-1.5 py-0.2 text-[10px] font-mono rounded-full ${active ? 'bg-white/20 text-white' : 'bg-white/5 text-muted-foreground'}`}>
+        <span className={`px-1.5 py-0.2 text-[10px] font-semibold rounded-full ${active ? 'bg-white/20 text-white' : 'bg-white/5 text-muted-foreground'}`}>
           {count}
         </span>
       )}

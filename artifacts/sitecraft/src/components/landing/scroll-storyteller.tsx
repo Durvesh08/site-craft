@@ -22,7 +22,7 @@ export function ScrollStoryteller() {
     {
       badge: "01. AI ARCHITECTURE",
       title: "Say goodbye to empty templates.",
-      desc: "Every website built by SiteCraft is synthesized from scratch using specialized AI agents designed for UX conversion, copy generation, and Framer micro-animations.",
+      desc: "Every website built by Zovaix Sites is synthesized from scratch using specialized AI agents designed for UX conversion, copy generation, and Framer micro-animations.",
       icon: Layers,
     },
     {
@@ -33,8 +33,8 @@ export function ScrollStoryteller() {
     },
     {
       badge: "03. INSTANT EDGE DEPLOY",
-      title: "Global CDN distribution in seconds.",
-      desc: "One-click deployment to Vercel, Netlify, Cloudflare, GitHub Pages, or your own custom domain with automated SSL certificates.",
+      title: "1-Click custom domain hosting.",
+      desc: "Automated SSL certificates, global edge routing via Cloudflare, and instant cache invalidation with zero downtime.",
       icon: Globe,
     },
   ];
@@ -42,7 +42,7 @@ export function ScrollStoryteller() {
   return (
     <div ref={containerRef} className="w-full max-w-6xl mx-auto px-6 py-24 space-y-24">
       <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-semibold">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold uppercase tracking-wider">
           <Zap className="h-3.5 w-3.5" /> CINEMATIC STORYTELLING
         </div>
         <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground">

@@ -132,7 +132,7 @@ export default function ProjectEditor() {
       id: 'msg-1',
       sender: 'ai',
       mode: 'Build',
-      text: `Hello! I'm the Zovaix AI Agent. I've synthesized the initial codebase for ${project.name}. Describe what changes you'd like to make.`,
+      text: `Hello! I'm the Zovaix AI Agent. Your website is ready! Here is what was built: ${project.name}. Describe what changes you'd like to make.`,
       timestamp: 'Just now',
     },
   ]);
@@ -355,8 +355,8 @@ export default function ProjectEditor() {
         text: `Done! I've applied your changes. The preview has been updated.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         tasks: realSteps.length > 0 ? realSteps : [
-          { label: 'Intent Analysis', status: 'done' },
-          { label: 'Targeted Regeneration', status: 'done' },
+          { label: 'Understanding your request', status: 'done' },
+          { label: 'Updating your website', status: 'done' },
           { label: 'Quality Check', status: 'done' },
         ],
       };
@@ -390,7 +390,7 @@ export default function ProjectEditor() {
         {/* ── LEFT: SECTION LAYERS (Collapsible) ── */}
         {isSectionsOpen && (
           <div className="w-64 border-r flex flex-col shrink-0 select-none z-20" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-            <div className="p-3 border-b flex items-center justify-between font-mono text-[11px] uppercase text-muted-foreground" style={{ borderColor: 'var(--surface-border)' }}>
+            <div className="p-3 border-b flex items-center justify-between text-[11px] font-semibold tracking-wider uppercase text-muted-foreground" style={{ borderColor: 'var(--surface-border)' }}>
               <span>Sections Tree</span>
               <button onClick={() => setIsSectionsOpen(false)} className="hover:text-foreground">✕</button>
             </div>
@@ -408,7 +408,7 @@ export default function ProjectEditor() {
                     <Layers className="h-3.5 w-3.5" />
                     <span>{sec.name}</span>
                   </div>
-                  <span className="text-[9px] font-mono text-muted-foreground/60 ml-6">{sec.type}</span>
+                  <span className="text-[9px] font-medium text-muted-foreground/60 ml-6">{sec.type}</span>
                 </div>
               )) : (
                 <div className="text-center text-muted-foreground/60 py-6 space-y-2">
@@ -524,7 +524,7 @@ export default function ProjectEditor() {
                 </div>
                 <span className="font-bold text-xs text-foreground">Zovaix AI Agent</span>
               </div>
-              <span className="text-[10px] font-mono text-emerald-400 font-semibold uppercase">● Context Aware</span>
+              <span className="text-[10px] text-emerald-400 font-bold">●</span>
             </div>
 
             {/* Agent Modes: Build, Plan, Debug, Explain, Review */}
@@ -556,12 +556,12 @@ export default function ProjectEditor() {
                     : "bg-white/5 border-white/10 text-foreground rounded-bl-none"
                 )}>
                   {msg.mode && (
-                    <span className="text-[10px] font-mono uppercase text-primary font-bold block mb-1">
-                      [{msg.mode} Mode]
+                    <span className="text-[10px] font-semibold uppercase text-primary block mb-1">
+                      {msg.mode} Mode
                     </span>
                   )}
                   {msg.isError && (
-                    <span className="text-[10px] font-mono uppercase text-red-400 font-bold block mb-1">
+                    <span className="text-[10px] font-semibold uppercase text-red-400 block mb-1">
                       <AlertCircle className="h-3 w-3 inline mr-1" />Error
                     </span>
                   )}
@@ -570,8 +570,8 @@ export default function ProjectEditor() {
 
                 {/* Task Status Timeline */}
                 {msg.tasks && (
-                  <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-1.5 font-mono text-[11px] text-white/80">
-                    <span className="text-[10px] uppercase text-muted-foreground block mb-1">Pipeline Progress</span>
+                  <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-1.5 text-[11px] font-medium text-white/80">
+                    <span className="text-[10px] uppercase text-muted-foreground block mb-1">Building your website...</span>
                     {msg.tasks.map((task, i) => (
                       <div key={i} className="flex items-center gap-2">
                         {task.status === 'done' ? (
@@ -610,9 +610,9 @@ export default function ProjectEditor() {
               <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs space-y-2">
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-                  <span className="text-[10px] font-mono text-primary font-bold uppercase">Working...</span>
+                  <span className="text-[10px] font-semibold text-primary uppercase">Working...</span>
                 </div>
-                <p className="text-muted-foreground font-mono transition-opacity duration-300">
+                <p className="text-muted-foreground transition-opacity duration-300">
                   {THINKING_MESSAGES[thinkingIdx]}
                 </p>
               </div>
@@ -626,13 +626,13 @@ export default function ProjectEditor() {
             
             {/* Active Page Context Target Chip */}
             <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground">
-              <span className="flex items-center gap-1.5 font-mono text-white/70">
+              <span className="flex items-center gap-1.5 font-medium text-white/70">
                 <FileText className="h-3.5 w-3.5 text-primary" />
                 Targeting: <strong className="text-primary font-semibold">{formatPageLabel(activePage)}</strong>
                 <span className="text-muted-foreground/60 text-[10px]">({activePage})</span>
               </span>
               {pages.length > 1 && (
-                <span className="text-[10px] text-muted-foreground/60 font-mono">
+                <span className="text-[10px] font-medium text-muted-foreground/60">
                   {pages.length} pages total
                 </span>
               )}
@@ -640,7 +640,7 @@ export default function ProjectEditor() {
 
             {/* Attachment Chips Display */}
             {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 px-1 font-mono text-[10px]">
+              <div className="flex flex-wrap gap-1.5 px-1 text-[10px] font-semibold">
                 {attachments.map((file, idx) => (
                   <span key={idx} className="px-2 py-0.5 rounded-md bg-white/10 text-primary border border-primary/30 flex items-center gap-1">
                     <Paperclip className="h-3 w-3" /> {file}
@@ -676,7 +676,7 @@ export default function ProjectEditor() {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-1 rounded-lg hover:text-foreground hover:bg-white/10 transition-colors flex items-center gap-1 text-[11px] font-mono"
+                    className="p-1 rounded-lg hover:text-foreground hover:bg-white/10 transition-colors flex items-center gap-1 text-[11px] font-medium"
                     title="Attach Image or Source File"
                     disabled={isBuilding}
                   >
@@ -685,7 +685,7 @@ export default function ProjectEditor() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline">Press Enter to send</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground hidden sm:inline">Press Enter to send</span>
                   <Button
                     size="sm"
                     onClick={handleSendPrompt}
@@ -739,7 +739,7 @@ export default function ProjectEditor() {
             </div>
 
             <div className="space-y-1.5 pt-1">
-              <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider block">Quick Presets</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Suggestions</span>
               <div className="flex flex-wrap gap-1.5">
                 {["About", "Pricing", "Features", "Contact", "FAQ", "Blog", "Terms"].map((preset) => (
                   <button

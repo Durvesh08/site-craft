@@ -41,7 +41,7 @@ export function LiveComponentSandbox() {
           Live Component <span className="text-gradient-primary">Synthesis Sandbox.</span>
         </h2>
         <p className="text-muted-foreground text-lg">
-          Watch SiteCraft synthesize clean React components with Tailwind CSS and Radix primitives in real time.
+          Watch Zovaix Sites synthesize clean React components with Tailwind CSS and Radix primitives in real time.
         </p>
       </div>
 

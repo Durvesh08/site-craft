@@ -944,7 +944,7 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="company-name">Company Name</Label>
-                  <Input id="company-name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="SiteCraft Studio" className="bg-background/50" />
+                  <Input id="company-name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Zovaix Sites Studio" className="bg-background/50" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="primary-color">Branding Color Theme</Label>

@@ -24,17 +24,17 @@ export function VisualShowcase() {
               <Terminal className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">SiteCraft Neural Operating System</h3>
-              <p className="text-xs text-muted-foreground font-mono">18 Active Agent Nodes · WAI-ARIA 99% Compliance</p>
+              <h3 className="text-base font-bold text-foreground">Zovaix Sites AI Platform</h3>
+              <p className="text-xs text-muted-foreground font-medium">18 Active Agent Nodes · WAI-ARIA 99% Compliance</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 font-bold">
+          <div className="flex items-center gap-2 text-xs text-emerald-400 font-bold tracking-wider">
             <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE TELEMETRY STREAM
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-xs">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs font-medium">
           <div className="p-6 rounded-2xl bg-secondary/20 border border-white/10 space-y-2">
             <span className="text-muted-foreground">01. COMPILATION SPEED</span>
             <div className="text-3xl font-black text-primary">99ms</div>

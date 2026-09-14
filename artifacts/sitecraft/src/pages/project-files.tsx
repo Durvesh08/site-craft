@@ -112,14 +112,14 @@ export default function ProjectFiles() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search files..."
-              className="w-full h-8 pl-9 pr-3 rounded-xl bg-white/5 border border-white/10 text-xs text-foreground outline-none font-mono"
+              className="w-full h-8 pl-9 pr-3 rounded-xl bg-white/5 border border-white/10 text-xs text-foreground outline-none font-medium"
             />
           </div>
         </div>
 
         {/* File Table Explorer */}
         <div className="rounded-2xl border overflow-hidden" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
-          <div className="p-3 bg-white/5 border-b font-mono text-[11px] text-muted-foreground uppercase grid grid-cols-12 gap-4" style={{ borderColor: 'var(--surface-border)' }}>
+          <div className="p-3 bg-white/5 border-b font-semibold text-[11px] text-muted-foreground uppercase grid grid-cols-12 gap-4" style={{ borderColor: 'var(--surface-border)' }}>
             <span className="col-span-5">Name</span>
             <span className="col-span-3">Path</span>
             <span className="col-span-2">Size</span>
@@ -137,13 +137,13 @@ export default function ProjectFiles() {
                 <div
                   key={file.path}
                   onClick={() => setLocation(`/projects/${projectId}/code`)}
-                  className="p-4 grid grid-cols-12 gap-4 items-center text-xs font-mono hover:bg-white/5 cursor-pointer transition-colors"
+                  className="p-4 grid grid-cols-12 gap-4 items-center text-xs hover:bg-white/5 cursor-pointer transition-colors"
                 >
-                  <div className="col-span-5 flex items-center gap-3 font-bold text-foreground truncate">
+                  <div className="col-span-5 flex items-center gap-3 font-bold text-foreground truncate font-mono">
                     <IconComp className="h-4 w-4 text-primary shrink-0" />
                     <span className="truncate">{file.name}</span>
                   </div>
-                  <div className="col-span-3 text-muted-foreground truncate">
+                  <div className="col-span-3 text-muted-foreground truncate font-mono">
                     {file.path}
                   </div>
                   <div className="col-span-2 text-muted-foreground">

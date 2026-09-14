@@ -303,7 +303,7 @@ export default function NewProject() {
                 placeholder={`Paste your full brief here. Include as much detail as you like:\n\n• What the business does\n• Target audience\n• Key features / benefits\n• Desired tone (minimal, bold, luxury…)\n• Primary CTA (Book a call, Start free trial…)\n• Brand colors, typography preferences\n• Any specific sections you want (testimonials, pricing, FAQ…)\n\nThe more detail you give, the better the result.`}
                 value={quickBrief}
                 onChange={(e) => setQuickBrief(e.target.value.slice(0, 3000))}
-                className="min-h-[260px] bg-background/50 resize-y font-mono text-sm leading-relaxed"
+                className="min-h-[260px] bg-background/50 resize-y text-sm leading-relaxed"
                 data-testid="textarea-quick-brief"
               />
               <p className="text-xs text-muted-foreground text-right">
@@ -574,7 +574,7 @@ export default function NewProject() {
                   placeholder="Leave blank = AI chooses"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="bg-background/50 font-mono text-sm max-w-[200px]"
+                  className="bg-background/50 text-sm max-w-[200px]"
                 />
                 {primaryColor && (
                   <button

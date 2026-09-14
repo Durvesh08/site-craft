@@ -8,17 +8,12 @@ import {
   Home,
   Layers,
   LayoutTemplate,
-  Plug,
-  Globe,
-  Activity,
   ShieldCheck,
   Users,
   Settings,
   LogOut,
   ChevronLeft,
-  ChevronRight,
-  PlusCircle,
-  Folder
+  ChevronRight
 } from "lucide-react";
 
 interface SidebarProps {
@@ -71,12 +66,13 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         <div className="space-y-1">
           <NavItem href="/dashboard" icon={Home} label="Home" active={location === "/dashboard"} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/projects" icon={Layers} label="Projects" active={location === "/projects"} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavItem href="/templates" icon={LayoutTemplate} label="Templates" active={location === "/templates"} collapsed={collapsed} onNavigate={onNavigate} />
         </div>
 
 
 
-        {/* WORKSPACE SECTION */}
-        <NavGroup title="WORKSPACE" collapsed={collapsed}>
+        {/* ACCOUNT SECTION */}
+        <NavGroup title="ACCOUNT" collapsed={collapsed}>
           <NavItem href="/settings?tab=security" icon={ShieldCheck} label="Security" active={location.includes("tab=security")} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/settings?tab=team" icon={Users} label="Team" active={location.includes("tab=team")} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/settings" icon={Settings} label="Settings" active={location === "/settings"} collapsed={collapsed} onNavigate={onNavigate} />
@@ -104,7 +100,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
               {!collapsed && (
                 <div className="flex flex-col truncate text-left">
                   <span className="text-xs font-medium truncate text-foreground">
-                    {user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : "Developer"}
+                    {user.firstName ? `${user.firstName} ${user.lastName ?? ""}`.trim() : "User"}
                   </span>
                   <span className="text-[10px] text-muted-foreground truncate">{user.email}</span>
                 </div>
@@ -131,7 +127,7 @@ function NavGroup({ title, children, collapsed }: { title: string; children: Rea
   return (
     <div className="space-y-1">
       {!collapsed && (
-        <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/50 px-3 block mb-1 font-semibold">
+        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/50 px-3 block mb-1">
           {title}
         </span>
       )}

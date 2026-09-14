@@ -25,7 +25,7 @@ export function ChapterConstellation() {
       
       {/* Chapter Title */}
       <div className="max-w-4xl text-center space-y-6 mb-16">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono font-bold tracking-widest uppercase">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-semibold tracking-wider uppercase">
           <Zap className="h-3.5 w-3.5" /> CHAPTER II — THE AGENT CONSTELLATION
         </div>
         <h2 className="text-5xl sm:text-7xl font-black tracking-tighter text-foreground leading-none">
@@ -33,7 +33,7 @@ export function ChapterConstellation() {
           <span className="text-gradient-primary">One Synchronized Mind.</span>
         </h2>
         <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-          Not a single LLM prompt. SiteCraft launches a synchronized swarm of neural agents, each dedicated to a single dimension of web engineering.
+          Not a single LLM prompt. Zovaix Sites launches a synchronized swarm of neural agents, each dedicated to a single dimension of web engineering.
         </p>
       </div>
 

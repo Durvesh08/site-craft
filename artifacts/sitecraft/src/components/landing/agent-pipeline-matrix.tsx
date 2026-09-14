@@ -36,7 +36,7 @@ export function AgentPipelineMatrix() {
       {/* Chapter Title */}
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 mb-16">
         <div className="space-y-4 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono font-bold tracking-widest uppercase">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-semibold tracking-wider uppercase">
             <Zap className="h-3.5 w-3.5" /> CHAPTER IV — REAL-TIME NEURAL PIPELINE
           </div>
           <h2 className="text-4xl sm:text-6xl font-black tracking-tighter text-foreground leading-none">
@@ -45,7 +45,7 @@ export function AgentPipelineMatrix() {
           </h2>
         </div>
         <p className="text-muted-foreground text-base max-w-md leading-relaxed">
-          SiteCraft's localized agent swarm executes parallel UX auditing, component compilation, and edge CDN deployment in under 99ms.
+          Zovaix Sites' localized agent swarm executes parallel UX auditing, component compilation, and edge CDN deployment in under 99ms.
         </p>
       </div>
 

@@ -85,7 +85,7 @@ export default function Dashboard() {
       .map((p) => ({
         id: p.id,
         name: p.name,
-        description: p.description || p.businessDescription || `Bespoke ${p.category || 'SaaS'} web experience`,
+        description: p.description || p.businessDescription || `Custom ${p.category || 'website'}`,
         category: (p.category || 'SaaS') as any,
         status: p.status === 'deployed' ? 'published' : p.status,
         domain: p.previewUrl || `${p.id}.site.zovaix.com`,
@@ -212,13 +212,13 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in">
           <div className="w-full max-w-lg rounded-2xl border p-6 space-y-6 shadow-2xl" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-xs font-mono text-primary font-bold uppercase">
-                <Sparkles className="h-4 w-4" /> Lightweight Architecture Plan
+              <div className="flex items-center gap-2 text-xs font-semibold text-primary uppercase tracking-wider">
+                <Sparkles className="h-4 w-4" /> AI Build Summary
               </div>
               <h3 className="font-bold text-base text-foreground">Plan Review Before Build</h3>
             </div>
 
-            <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-3 font-mono text-xs text-white/90">
+            <div className="p-4 rounded-xl bg-surface-2 border border-white/5 space-y-3 text-xs text-white/90">
               <div className="flex justify-between border-b border-white/10 pb-2">
                 <span className="text-muted-foreground">Category:</span>
                 <span className="text-primary font-bold">{selectedCategory}</span>
@@ -235,7 +235,7 @@ export default function Dashboard() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Architecture:</span>
-                <span>React 18 + Vite + Tailwind CSS + Responsive</span>
+                <span>Modern responsive website</span>
               </div>
             </div>
 
@@ -281,7 +281,7 @@ export default function Dashboard() {
             onClick={() => setImportOpen(true)}
             className="px-4 py-1.5 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/5 transition-all"
           >
-            Import Project
+            Import Existing Site
           </button>
         </div>
 
@@ -303,7 +303,7 @@ export default function Dashboard() {
             {attachments.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
                 {attachments.map(att => (
-                  <div key={att.id} className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-white/90">
+                  <div key={att.id} className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs font-medium text-white/90">
                     {att.type === 'image' ? (
                       <ImageIcon className="h-3.5 w-3.5 text-emerald-400" />
                     ) : att.type === 'reference' ? (
@@ -377,7 +377,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h2 className="text-xl font-bold tracking-tight text-foreground">Recent Projects</h2>
-            <p className="text-xs text-muted-foreground">Your active development workspaces & deployments</p>
+            <p className="text-xs text-muted-foreground">Your websites</p>
           </div>
           <Link href="/projects" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
             View All Projects ({projects.length}) <ArrowRight className="h-3.5 w-3.5" />
@@ -411,13 +411,13 @@ export default function Dashboard() {
                     ) : (
                       <div className="text-center space-y-1 p-4">
                         <FileCode className="h-8 w-8 text-primary/60 mx-auto" />
-                        <span className="text-[10px] font-mono text-muted-foreground block uppercase">{p.category}</span>
+                        <span className="text-[10px] font-medium tracking-wider text-muted-foreground block uppercase">{p.category}</span>
                       </div>
                     )}
-                    <span className={cn("absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium backdrop-blur-md border", getCategoryBadgeStyle(p.category))}>
+                    <span className={cn("absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-md border", getCategoryBadgeStyle(p.category))}>
                       {p.category}
                     </span>
-                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400">
+                    <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-black/60 backdrop-blur-md border border-white/10 text-emerald-400">
                       {p.status}
                     </span>
                   </div>

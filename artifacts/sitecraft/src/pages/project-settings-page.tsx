@@ -117,7 +117,7 @@ export default function ProjectSettingsPage() {
         
         <div className="space-y-4 text-xs">
           <div className="space-y-2">
-            <label className="font-mono text-muted-foreground uppercase">Project Name</label>
+            <label className="font-semibold tracking-wider text-xs text-muted-foreground uppercase">Project Name</label>
             <input
               type="text"
               value={name}
@@ -128,7 +128,7 @@ export default function ProjectSettingsPage() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="font-mono text-muted-foreground uppercase flex items-center gap-1.5">
+              <label className="font-semibold tracking-wider text-xs text-muted-foreground uppercase flex items-center gap-1.5">
                 <Tag className="h-3.5 w-3.5 text-primary" /> Vertical Category
               </label>
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${getCategoryBadgeStyle(category)}`}>
@@ -150,7 +150,7 @@ export default function ProjectSettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="font-mono text-muted-foreground uppercase">Description</label>
+            <label className="font-semibold tracking-wider text-xs text-muted-foreground uppercase">Description</label>
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
@@ -159,7 +159,7 @@ export default function ProjectSettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="font-mono text-muted-foreground uppercase flex items-center gap-1.5">
+            <label className="font-semibold tracking-wider text-xs text-muted-foreground uppercase flex items-center gap-1.5">
               <Code className="h-3.5 w-3.5 text-primary" /> Custom Tracking & Pixel Code (Advanced)
             </label>
             <textarea

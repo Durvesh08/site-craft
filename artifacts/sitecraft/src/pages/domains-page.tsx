@@ -99,7 +99,7 @@ export default function DomainsPage() {
             {/* Step Progress Tracker */}
             <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--surface-border)' }}>
               <h3 className="font-bold text-base text-foreground">Connect Custom Domain</h3>
-              <span className="text-xs font-mono text-primary font-semibold">Step {wizardStep} of 5</span>
+              <span className="text-xs text-primary font-semibold">Step {wizardStep} of 5</span>
             </div>
 
             {/* STEP 1: Enter Domain */}
@@ -107,7 +107,7 @@ export default function DomainsPage() {
               <form onSubmit={handleStartWizard} className="space-y-4">
                 <p className="text-xs text-muted-foreground">Enter the apex domain or subdomain you wish to link to this website project.</p>
                 <div className="space-y-2">
-                  <label className="text-xs font-mono uppercase text-muted-foreground">Domain Name</label>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Domain Name</label>
                   <input
                     type="text"
                     value={newDomain}
@@ -205,14 +205,14 @@ export default function DomainsPage() {
           >
             <div className="space-y-3 flex-1">
               <div className="flex items-center gap-3">
-                <h3 className="font-bold text-base text-foreground font-mono">{dom.domain}</h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold border uppercase ${
+                <h3 className="font-bold text-base text-foreground">{dom.domain}</h3>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider border uppercase ${
                   dom.status === 'live' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                 }`}>
                   ● {dom.status}
                 </span>
                 {dom.isPrimary && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-primary/20 text-primary border border-primary/30 uppercase">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider bg-primary/20 text-primary border border-primary/30 uppercase">
                     Primary
                   </span>
                 )}

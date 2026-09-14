@@ -39,12 +39,12 @@ export function ChapterDashboardPreview() {
       <div className="w-full max-w-6xl rounded-3xl glass border border-white/10 overflow-hidden shadow-2xl backdrop-blur-2xl">
         
         {/* OS Top Bar */}
-        <div className="h-12 px-6 border-b border-white/10 bg-secondary/40 flex items-center justify-between font-mono text-xs text-muted-foreground">
+        <div className="h-12 px-6 border-b border-white/10 bg-secondary/40 flex items-center justify-between text-xs font-medium text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-red-500/80" />
             <div className="h-3 w-3 rounded-full bg-amber-500/80" />
             <div className="h-3 w-3 rounded-full bg-emerald-500/80" />
-            <span className="ml-4 font-bold text-foreground">SiteCraft Command Center v6.0</span>
+            <span className="ml-4 font-bold text-foreground">Zovaix Sites Studio v6.0</span>
           </div>
           <div className="flex items-center gap-2 text-emerald-400 font-bold">
             <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" /> SYSTEM NORMAL
@@ -62,9 +62,9 @@ export function ChapterDashboardPreview() {
                 activeMetric === i ? "bg-primary/10 border-primary/40 shadow-xl" : "bg-secondary/20 border-white/5"
               }`}
             >
-              <span className="text-[10px] font-mono text-muted-foreground uppercase">{m.label}</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{m.label}</span>
               <div className={`text-2xl font-black ${m.color} mt-1`}>{m.value}</div>
-              <p className="text-xs text-muted-foreground mt-1 font-mono">{m.sub}</p>
+              <p className="text-xs text-muted-foreground mt-1 font-medium">{m.sub}</p>
             </div>
           ))}
 
@@ -73,7 +73,7 @@ export function ChapterDashboardPreview() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Terminal className="h-4 w-4 text-primary" />
-                <h4 className="text-sm font-bold text-foreground">Active Workspace: app.sitecraft.ai</h4>
+                <h4 className="text-sm font-bold text-foreground">Active Workspace: app.zovaix.com</h4>
               </div>
               <p className="text-xs text-muted-foreground max-w-lg leading-relaxed">
                 18 agent nodes compiled 24 React components with Tailwind utility tokens. WAI-ARIA contrast ratio scored 99%. Automated SSL deployment ready.

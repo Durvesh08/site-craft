@@ -23,14 +23,14 @@ export function AgentGraph3D() {
   return (
     <div className="w-full max-w-6xl mx-auto px-6 py-24 space-y-12">
       <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-semibold">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold uppercase tracking-wider">
           <Zap className="h-3.5 w-3.5" /> 18-AGENT AUTONOMOUS NEURAL SWARM
         </div>
         <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground">
           A localized swarm of <span className="text-gradient-primary">specialized AI agents.</span>
         </h2>
         <p className="text-muted-foreground text-lg">
-          Unlike single-prompt LLMs, SiteCraft directs a synchronized neural graph where each agent is trained on specific design, copy, and performance tasks.
+          Unlike single-prompt LLMs, Zovaix Sites directs a synchronized neural graph where each agent is trained on specific design, copy, and performance tasks.
         </p>
       </div>
 

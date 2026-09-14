@@ -26,7 +26,7 @@ export function HeroComponent() {
 export function VisionNavbar() {
   return (
     <header className="fixed top-6 left-1/2 -translate-x-1/2 h-14 px-6 glass rounded-2xl border border-white/10 flex items-center justify-between z-50">
-      <span className="font-bold text-lg text-foreground">SiteCraft OS</span>
+      <span className="font-bold text-lg text-foreground">Zovaix Sites OS</span>
       <button className="h-9 px-4 bg-primary text-primary-foreground rounded-lg font-bold text-xs">
         Connect
       </button>
@@ -55,7 +55,7 @@ export function FeatureGrid() {
     <div className="w-full min-h-screen py-32 px-6 flex flex-col items-center justify-center relative z-10">
       
       <div className="max-w-4xl text-center space-y-6 mb-16">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-mono font-bold tracking-widest uppercase">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/30 text-xs font-semibold tracking-wider uppercase">
           <Zap className="h-3.5 w-3.5" /> CHAPTER III — PROCEDURAL SYNTHESIS MATRIX
         </div>
         <h2 className="text-5xl sm:text-7xl font-black tracking-tighter text-foreground leading-none">
@@ -63,7 +63,7 @@ export function FeatureGrid() {
           <span className="text-gradient-primary">Components That Evolve.</span>
         </h2>
         <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed">
-          Watch SiteCraft synthesize clean React code with Tailwind CSS and Radix UI accessibility primitives in real time.
+          Watch Zovaix Sites synthesize clean React code with Tailwind CSS and Radix UI accessibility primitives in real time.
         </p>
       </div>
 
@@ -126,7 +126,7 @@ export function FeatureGrid() {
 
             {activeTab === "nav" && (
               <div className="w-full h-14 px-6 glass rounded-2xl border border-white/10 flex items-center justify-between">
-                <span className="font-bold text-lg text-foreground">SiteCraft OS</span>
+                <span className="font-bold text-lg text-foreground">Zovaix Sites OS</span>
                 <button className="h-9 px-4 bg-primary text-primary-foreground rounded-lg font-bold text-xs">
                   Connect
                 </button>

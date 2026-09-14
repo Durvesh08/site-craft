@@ -234,7 +234,7 @@ export default function TemplatesPage() {
                   <div className="flex items-center justify-between">
                     <span
                       className={cn(
-                        "px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium backdrop-blur-md border",
+                        "px-2.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-md border",
                         getCategoryBadgeStyle(template.category)
                       )}
                     >
@@ -254,7 +254,7 @@ export default function TemplatesPage() {
                 {/* Highlights */}
                 <div className="space-y-1.5 pt-1">
                   {template.highlights.slice(0, 3).map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80 font-mono">
+                    <div key={idx} className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80 font-medium">
                       <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />
                       <span className="truncate">{item}</span>
                     </div>

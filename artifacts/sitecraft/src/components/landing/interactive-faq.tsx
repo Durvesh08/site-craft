@@ -6,8 +6,8 @@ export function InteractiveFAQ() {
 
   const faqs = [
     {
-      q: "How does SiteCraft differ from generic AI website builders?",
-      a: "Traditional AI website builders use simple text templates. SiteCraft coordinates an autonomous swarm of 18 specialized AI agents (UX Strategist, Copywriter, Framer Motion Designer, SEO Auditor, and Edge Deployer) that synthesize modular React components from scratch.",
+      q: "How does Zovaix Sites differ from generic AI website builders?",
+      a: "Traditional AI website builders use simple text templates. Zovaix Sites coordinates an autonomous swarm of 18 specialized AI agents (UX Strategist, Copywriter, Motion Designer, SEO Auditor, and Edge Deployer) that build modular React components from scratch.",
     },
     {
       q: "Can I export the full React / Next.js source code?",
@@ -15,7 +15,7 @@ export function InteractiveFAQ() {
     },
     {
       q: "How does custom domain deployment work?",
-      a: "SiteCraft includes a built-in enterprise DNS verification suite. You can connect your domain via CNAME, A, or TXT records with automated wildcard SSL certificates issued instantly.",
+      a: "Zovaix Sites includes a built-in enterprise DNS verification suite. You can connect your domain via CNAME, A, or TXT records with automated wildcard SSL certificates issued instantly.",
     },
     {
       q: "What deployment targets are supported out of the box?",

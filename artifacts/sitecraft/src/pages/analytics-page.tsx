@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
               key={range}
               onClick={() => setTimeRange(range)}
               className={cn(
-                "px-3 py-1 rounded-lg font-mono text-[11px] transition-colors",
+                "px-3 py-1 rounded-lg text-xs font-medium transition-colors",
                 timeRange === range
                   ? "bg-primary text-primary-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground"
@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-muted-foreground font-mono text-xs">Loading telemetry stream...</div>
+        <div className="p-12 text-center text-muted-foreground text-xs font-medium">Loading telemetry stream...</div>
       ) : (
         <>
           {/* KPI Cards */}
@@ -173,7 +173,7 @@ export default function AnalyticsPage() {
                 </h3>
                 <p className="text-xs text-muted-foreground">Daily visitors and page load volume</p>
               </div>
-              <div className="flex items-center gap-4 text-xs font-mono">
+              <div className="flex items-center gap-4 text-xs font-medium">
                 <span className="flex items-center gap-1.5 text-primary">
                   <span className="h-2.5 w-2.5 rounded-full bg-primary" /> Page Views
                 </span>
@@ -233,7 +233,7 @@ export default function AnalyticsPage() {
                           <Icon className="h-4 w-4 text-muted-foreground" />
                           <span>{device.name}</span>
                         </div>
-                        <span className="font-mono font-bold text-foreground">{device.count}</span>
+                        <span className="font-bold text-foreground">{device.count}</span>
                       </div>
                       <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                         <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${device.percent}%` }} />
@@ -253,7 +253,7 @@ export default function AnalyticsPage() {
                 {acquisitionChannels.map(channel => (
                   <div key={channel.source} className="flex items-center justify-between p-2.5 rounded-xl bg-black/30 border border-white/5">
                     <span className="text-muted-foreground">{channel.source}</span>
-                    <div className="flex items-center gap-2 font-mono">
+                    <div className="flex items-center gap-2 font-medium">
                       <span className="font-bold text-foreground">{channel.visitors.toLocaleString()}</span>
                       <span className="text-[10px] text-muted-foreground/60">({channel.percentage}%)</span>
                     </div>
@@ -273,7 +273,7 @@ export default function AnalyticsPage() {
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Automated scoring computed by Design Critic, A11Y & Performance agents</p>
               </div>
-              <span className="px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold uppercase">
+              <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold uppercase tracking-wider">
                 ● Live Audit Passed
               </span>
             </div>
@@ -285,7 +285,7 @@ export default function AnalyticsPage() {
               <QualityMetricCard label="Performance (CWV)" score={analytics.qualityScores.performance ?? 98} />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs font-mono">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs font-medium">
               <div className="p-3 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between">
                 <span className="text-muted-foreground">LCP (Largest Contentful Paint)</span>
                 <span className="text-emerald-400 font-bold">0.8s</span>
@@ -329,7 +329,7 @@ function AnalyticsStatCard({
   return (
     <div className="p-5 rounded-2xl border space-y-3 transition-all hover:border-white/20" style={{ background: 'var(--surface-1)', borderColor: 'var(--surface-border)' }}>
       <div className="flex items-center justify-between text-muted-foreground">
-        <span className="text-xs font-mono uppercase tracking-wider">{title}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider">{title}</span>
         <div className="h-7 w-7 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center text-primary">
           <Icon className="h-4 w-4" />
         </div>
@@ -350,7 +350,7 @@ function AnalyticsStatCard({
 function QualityMetricCard({ label, score }: { label: string; score: number }) {
   return (
     <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2 text-center">
-      <span className="text-xs font-mono uppercase text-muted-foreground">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
       <div className="text-2xl font-extrabold text-emerald-400">{score} / 100</div>
       <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
         <div className="h-full bg-emerald-400 rounded-full transition-all duration-700" style={{ width: `${score}%` }} />

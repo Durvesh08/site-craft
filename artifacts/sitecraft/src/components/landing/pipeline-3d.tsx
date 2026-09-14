@@ -28,8 +28,8 @@ export function Pipeline3D() {
         
         {/* Left Side: Pipeline Steps Selection */}
         <div className="w-full md:w-1/2 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-semibold">
-            <Zap className="h-3.5 w-3.5 animate-pulse" /> SITECRAFT AGENT TELEMETRY
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold uppercase tracking-wider">
+            <Zap className="h-3.5 w-3.5 animate-pulse" /> ZOVAIX SITES AGENT TELEMETRY
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-foreground">
             How the 18-Agent Studio builds your web app
@@ -58,7 +58,7 @@ export function Pipeline3D() {
                       <p className="text-xs text-muted-foreground line-clamp-1">{step.desc}</p>
                     </div>
                   </div>
-                  <span className="font-mono text-xs text-primary font-bold">{step.score}</span>
+                  <span className="text-xs text-primary font-bold">{step.score}</span>
                 </div>
               );
             })}
@@ -74,7 +74,7 @@ export function Pipeline3D() {
                 <div className="h-3 w-3 rounded-full bg-amber-500" />
                 <div className="h-3 w-3 rounded-full bg-emerald-500" />
               </div>
-              <span className="font-mono text-xs text-muted-foreground">app.sitecraft.ai</span>
+              <span className="text-xs text-muted-foreground">app.zovaix.com</span>
             </div>
 
             {/* Step visualization preview */}

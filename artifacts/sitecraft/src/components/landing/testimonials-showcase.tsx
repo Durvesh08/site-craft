@@ -7,14 +7,14 @@ export function TestimonialsShowcase() {
       role: "Head of Product, Veloce Labs",
       initials: "AR",
       color: "bg-gradient-to-tr from-blue-600 to-indigo-500",
-      quote: "SiteCraft's 18-agent studio synthesized our entire product launch site in under 3 minutes. The Framer motion physics and WAI-ARIA accessibility blew our engineering team away.",
+      quote: "Zovaix Sites' 18-agent studio synthesized our entire product launch site in under 3 minutes. The Framer motion physics and WAI-ARIA accessibility blew our engineering team away.",
     },
     {
       name: "Elena Rostova",
       role: "Founding Engineer, Prism AI",
       initials: "ER",
       color: "bg-gradient-to-tr from-purple-600 to-pink-500",
-      quote: "The ability to export clean React components with zero legacy bloat makes SiteCraft a staple in our workflow. It feels like Apple's design team built an AI OS.",
+      quote: "The ability to export clean React components with zero legacy bloat makes Zovaix Sites a staple in our workflow. It feels like Apple's design team built an AI OS.",
     },
     {
       name: "Marcus Vance",

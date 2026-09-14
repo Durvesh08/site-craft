@@ -30,11 +30,11 @@ export function HorizontalGallery() {
       
       <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-semibold mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-semibold uppercase tracking-wider mb-3">
             <Zap className="h-3.5 w-3.5" /> FEATURE GALLERY
           </div>
           <h2 className="text-4xl font-extrabold tracking-tight text-foreground">
-            Explore the SiteCraft Architecture
+            Explore Zovaix Sites Features
           </h2>
         </div>
         <p className="text-muted-foreground text-sm max-w-md">
