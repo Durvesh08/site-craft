@@ -24,7 +24,11 @@ import {
   Monitor,
   Tablet,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Link2,
+  Lock,
+  BarChart3,
+  Rocket
 } from "lucide-react";
 import { ZovaixLogo } from "@/components/ui/zovaix-logo";
 import { soundEngine } from "@/lib/sound-effects";
@@ -184,8 +188,8 @@ export default function Home() {
         </div>
         <nav className="hidden md:flex items-center gap-8 text-[13px] font-medium text-white/70">
           <a href="#story" className="hover:text-white transition-colors">Showcase</a>
-          <a href="#pipeline" className="hover:text-white transition-colors">18-Agent AI</a>
-          <a href="#frameworks" className="hover:text-white transition-colors">Frameworks</a>
+          <a href="#features" className="hover:text-white transition-colors">Features</a>
+          <a href="#frameworks" className="hover:text-white transition-colors">Comparison</a>
           <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
         </nav>
         <div className="flex items-center gap-3">
@@ -709,99 +713,179 @@ export default function Home() {
         </div>
 
         {/* ════════════════════════════════════════════════════════════════
-            SHOWCASE GALLERY (Unpinned Natural Section)
+            FEATURES & CAPABILITIES (Custom Domain Connector, Canvas Studio, etc.)
         ════════════════════════════════════════════════════════════════ */}
-        <section id="pipeline" className="w-full py-28 px-6 relative z-20 bg-[#070707] border-t border-white/10">
+        <section id="features" className="w-full py-28 px-6 relative z-20 bg-[#070707] border-t border-white/10">
           <div className="max-w-6xl mx-auto space-y-16">
             
-            <div className="text-center space-y-4 max-w-2xl mx-auto">
-              <span className="text-[11px] font-semibold tracking-wider text-violet-400 uppercase">REAL AI PRODUCTION SITES</span>
+            {/* Section Header */}
+            <div className="text-center space-y-4 max-w-3xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-xs font-semibold uppercase tracking-wider">
+                <Globe className="w-3.5 h-3.5" /> Production Infrastructure & Features
+              </div>
               <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white">
-                Bespoke Design, Not Generic Templates
+                Everything You Need to Build, <br className="hidden sm:inline" />
+                <span className="text-gradient-primary">Launch & Scale Online</span>
               </h2>
-              <p className="text-white/60 text-sm">
-                Every generated site features tailor-made color palettes, production typography, and responsive ergonomics designed specifically for that business.
+              <p className="text-white/60 text-base max-w-xl mx-auto leading-relaxed">
+                Connect your custom domain in seconds, edit visually with natural language, export clean code, and enjoy automated global edge performance.
               </p>
             </div>
 
-            {/* Showcase Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              
-              {/* Card 1: Healthcare */}
-              <div className="rounded-3xl border border-white/10 bg-black/60 backdrop-blur-xl overflow-hidden group hover:border-emerald-500/40 transition-all duration-300 flex flex-col">
-                <div className="h-52 bg-gradient-to-br from-emerald-950/60 via-slate-900 to-black p-6 flex flex-col justify-between relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl" />
-                  <div className="flex items-center justify-between relative z-10">
-                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold text-[10px] border border-emerald-500/30">
-                      🏥 Healthcare
+            {/* Feature Bento Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+              {/* Feature 1: Custom Domain Connector (Featured Span 2 Cols on Large) */}
+              <div className="lg:col-span-2 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] via-black/60 to-black/80 p-8 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/40 transition-all duration-300 shadow-2xl">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="space-y-4 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                      <Link2 className="h-6 w-6" />
+                    </div>
+                    <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold border border-emerald-500/20 flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" /> Instant Verification
                     </span>
-                    <span className="text-[10px] font-medium text-white/50">Multi-page</span>
                   </div>
-                  <div className="relative z-10 space-y-1">
-                    <div className="text-lg font-bold text-white">HealthPulse Pediatric</div>
-                    <div className="text-xs text-white/60">Family medicine & online appointment triage</div>
+
+                  <div>
+                    <h3 className="text-2xl font-bold text-white tracking-tight">Custom Domain Connector & Edge SSL</h3>
+                    <p className="text-white/60 text-sm mt-1.5 leading-relaxed max-w-lg">
+                      Link any apex domain (e.g. <span className="text-white font-medium">yourbrand.com</span>) or custom subdomain in 30 seconds. Zero-downtime DNS routing, automated wildcard SSL certificates, and instant Cloudflare edge cache propagation.
+                    </p>
                   </div>
                 </div>
-                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                  <div className="flex items-center gap-4 text-xs text-white/70">
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Patient Portal</span>
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 0.8s LCP</span>
+
+                {/* Interactive Domain Connector Widget Preview */}
+                <div className="mt-8 pt-6 border-t border-white/10 relative z-10 space-y-4">
+                  {/* Domain Mockup Box */}
+                  <div className="p-4 rounded-2xl bg-black/70 border border-white/10 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5">
+                      <div className="flex items-center gap-2.5">
+                        <Globe className="h-4 w-4 text-cyan-400" />
+                        <span className="text-sm font-semibold text-white">acmebrand.com</span>
+                        <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Live on Edge
+                        </span>
+                      </div>
+                      <span className="text-xs text-white/40 flex items-center gap-1">
+                        <Lock className="h-3 w-3 text-emerald-400" /> Auto Wildcard SSL
+                      </span>
+                    </div>
+
+                    {/* DNS Status Rows */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                      <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                        <span className="text-white/50 text-[11px]">CNAME Target</span>
+                        <span className="text-cyan-400 font-medium text-[11px]">edge.zovaix.com</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                        <span className="text-white/50 text-[11px]">DNS Propagation</span>
+                        <span className="text-emerald-400 font-semibold text-[11px] flex items-center gap-1">
+                          <Check className="h-3 w-3" /> Active (28ms)
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between">
+                        <span className="text-white/50 text-[11px]">Free Subdomain</span>
+                        <span className="text-white/70 font-medium text-[11px]">*.site.zovaix.com</span>
+                      </div>
+                    </div>
                   </div>
-                  <Button variant="outline" className="w-full rounded-xl border-white/10 hover:bg-white/5 text-xs text-white" onClick={goToLogin}>
-                    Inspect Architecture <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
                 </div>
               </div>
 
-              {/* Card 2: Fintech */}
-              <div className="rounded-3xl border border-white/10 bg-black/60 backdrop-blur-xl overflow-hidden group hover:border-blue-500/40 transition-all duration-300 flex flex-col">
-                <div className="h-52 bg-gradient-to-br from-blue-950/60 via-slate-900 to-black p-6 flex flex-col justify-between relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
-                  <div className="flex items-center justify-between relative z-10">
-                    <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 font-semibold text-[10px] border border-blue-500/30">
-                      📈 Fintech
-                    </span>
-                    <span className="text-[10px] font-medium text-white/50">Multi-page</span>
+              {/* Feature 2: Natural Language Visual Studio */}
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] via-black/60 to-black/80 p-8 flex flex-col justify-between relative overflow-hidden group hover:border-violet-500/40 transition-all duration-300 shadow-2xl">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="space-y-4 relative z-10">
+                  <div className="h-12 w-12 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                    <Sparkles className="h-6 w-6" />
                   </div>
-                  <div className="relative z-10 space-y-1">
-                    <div className="text-lg font-bold text-white">Apex Wealth Capital</div>
-                    <div className="text-xs text-white/60">Portfolio analytics & private equity advisory</div>
+
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight">Conversational Visual Editor</h3>
+                    <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
+                      Edit sections simply by speaking to the AI. Ask to tweak color schemes, adjust spacing, rewrite copy, or add new components.
+                    </p>
                   </div>
                 </div>
-                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                  <div className="flex items-center gap-4 text-xs text-white/70">
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Interactive Charts</span>
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> 99 SEO</span>
+
+                {/* Chat Snippet Mockup */}
+                <div className="mt-6 pt-5 border-t border-white/10 relative z-10 space-y-2.5">
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-white/80">
+                    <span className="text-violet-400 font-semibold text-[10px] uppercase tracking-wider block mb-1">Your Prompt</span>
+                    "Add a high-converting FAQ and make the pricing cards glassmorphic."
                   </div>
-                  <Button variant="outline" className="w-full rounded-xl border-white/10 hover:bg-white/5 text-xs text-white" onClick={goToLogin}>
-                    Inspect Architecture <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
+                  <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-200">
+                    <span className="text-violet-300 font-semibold text-[10px] uppercase tracking-wider block mb-1">AI Assistant</span>
+                    "Generated accessible accordion FAQ and updated pricing cards with blur glass tokens."
+                  </div>
                 </div>
               </div>
 
-              {/* Card 3: Restaurant */}
-              <div className="rounded-3xl border border-white/10 bg-black/60 backdrop-blur-xl overflow-hidden group hover:border-amber-500/40 transition-all duration-300 flex flex-col">
-                <div className="h-52 bg-gradient-to-br from-amber-950/60 via-slate-900 to-black p-6 flex flex-col justify-between relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl" />
-                  <div className="flex items-center justify-between relative z-10">
-                    <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 font-semibold text-[10px] border border-amber-500/30">
-                      🍽️ Restaurant
-                    </span>
-                    <span className="text-[10px] font-medium text-white/50">Multi-page</span>
+              {/* Feature 3: Multi-Page Site Engine */}
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] via-black/60 to-black/80 p-8 flex flex-col justify-between relative overflow-hidden group hover:border-emerald-500/40 transition-all duration-300 shadow-2xl">
+                <div className="space-y-4">
+                  <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <Layers className="h-6 w-6" />
                   </div>
-                  <div className="relative z-10 space-y-1">
-                    <div className="text-lg font-bold text-white">L'Osteria Nocturne</div>
-                    <div className="text-xs text-white/60">Artisanal Italian dining & chef reservations</div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight">Full Multi-Page Engine</h3>
+                    <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
+                      Don't settle for single landing pages. Generate complete multi-page sites with Home, About, Services, and Contact pages sharing unified navigation and branding.
+                    </p>
                   </div>
                 </div>
-                <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                  <div className="flex items-center gap-4 text-xs text-white/70">
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-amber-400" /> Table Booking</span>
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-amber-400" /> Dark Luxury</span>
+
+                <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-2 text-xs">
+                  <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">index.html</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/5 text-white/70 border border-white/10 font-medium">about.html</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/5 text-white/70 border border-white/10 font-medium">pricing.html</span>
+                  <span className="px-3 py-1 rounded-lg bg-white/5 text-white/70 border border-white/10 font-medium">contact.html</span>
+                </div>
+              </div>
+
+              {/* Feature 4: Clean React Export & Zero Lock-in */}
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] via-black/60 to-black/80 p-8 flex flex-col justify-between relative overflow-hidden group hover:border-blue-500/40 transition-all duration-300 shadow-2xl">
+                <div className="space-y-4">
+                  <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <Code className="h-6 w-6" />
                   </div>
-                  <Button variant="outline" className="w-full rounded-xl border-white/10 hover:bg-white/5 text-xs text-white" onClick={goToLogin}>
-                    Inspect Architecture <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
-                  </Button>
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight">Clean Code Export</h3>
+                    <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
+                      Own your source code 100%. Export clean React 18, Next.js, or HTML5 with Tailwind CSS in one click. Deploy freely to Vercel, Netlify, or your own servers.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center gap-2 text-xs text-white/70 font-medium">
+                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> React 18 + Vite</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Tailwind CSS</span>
+                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-blue-400" /> Next.js</span>
+                </div>
+              </div>
+
+              {/* Feature 5: Real-Time Analytics & Core Web Vitals */}
+              <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.04] via-black/60 to-black/80 p-8 flex flex-col justify-between relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300 shadow-2xl">
+                <div className="space-y-4">
+                  <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight">Analytics & 99+ Core Web Vitals</h3>
+                    <p className="text-white/60 text-sm mt-1.5 leading-relaxed">
+                      Track visitors, page views, and conversion channels with built-in telemetry. Every page is automatically pre-optimized for sub-second LCP and Google SEO.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs">
+                  <span className="text-white/50">Speed Index: <strong className="text-emerald-400">0.8s LCP</strong></span>
+                  <span className="text-white/50">SEO Score: <strong className="text-amber-400">99/100</strong></span>
+                  <span className="text-white/50">A11Y: <strong className="text-cyan-400">AAA Compliant</strong></span>
                 </div>
               </div>
 
