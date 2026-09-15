@@ -23,7 +23,6 @@ import DeploymentsPage from '@/pages/deployments-page';
 import VersionsPage from '@/pages/versions-page';
 import AnalyticsPage from '@/pages/analytics-page';
 import ProjectSettingsPage from '@/pages/project-settings-page';
-import TemplatesPage from '@/pages/templates-page';
 import BillingPage from '@/pages/billing-page';
 import SettingsPage from '@/pages/settings';
 import StandalonePreviewRoute from '@/pages/standalone-preview-route';
@@ -112,9 +111,6 @@ function Router() {
 
       <Route path="/domains">
         {() => <ProtectedRoute component={DomainsPage} />}
-      </Route>
-      <Route path="/templates">
-        {() => <ProtectedRoute component={TemplatesPage} />}
       </Route>
       <Route path="/billing">
         {() => <ProtectedRoute component={BillingPage} />}

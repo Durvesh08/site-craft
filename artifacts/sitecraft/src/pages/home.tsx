@@ -420,7 +420,7 @@ export default function Home() {
                 >
                   <div className="flex items-center gap-2 text-[11px] font-bold text-white">
                     <Zap className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Smart industry templates</span>
+                    <span>Bespoke Industry Architecture</span>
                   </div>
                   <div className="space-y-1.5 pt-1 text-[10px]">
                     <div className="flex items-center justify-between text-white/70">
@@ -429,7 +429,7 @@ export default function Home() {
                     </div>
                     <div className="flex items-center justify-between text-white/70">
                       <span>Schema Type:</span>
-                      <span className="font-medium text-white/90 text-[9px]">Smart industry templates</span>
+                      <span className="font-medium text-white/90 text-[9px]">MedicalClinic Schema</span>
                     </div>
                     <div className="flex items-center justify-between text-white/70">
                       <span>Target Audience:</span>
