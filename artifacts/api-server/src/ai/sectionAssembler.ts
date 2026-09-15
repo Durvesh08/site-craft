@@ -477,23 +477,31 @@ RESPONSIVE RULES per element type:
    Wrong: interface CardProps { title: string }              → remove entirely
    Wrong: const label: string = "hello"                     → use const label = "hello"
    No interfaces, no type aliases, no type annotations, no type casts, no generics
-3. ALL styling via inline style={{ }} objects — no external CSS classes, no Tailwind
-   EXCEPTION: inject layout-only CSS (grids, @media, @keyframes) via <style> tags in JSX
-4. Reference brand colors via var(--primary) etc. in style objects
-5. Use Framer Motion for EVERY entrance animation:
-   - whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 30 }}
-     viewport={{ once: true, margin: "0px" }} transition={{ duration: 0.6, ease: "easeOut" }}
-   - Stagger children with { delay: index * 0.1 }
-6. Responsive: ALWAYS inject layout CSS via <style> tag with @media breakpoints (480px, 768px)
-   Never use JS to toggle columns — CSS grid/flexbox + @media handles all layout changes
+3. MODERN TAILWIND CSS & BENTO STYLING: Tailwind CSS is fully configured and loaded. Use expressive Tailwind classes for all layouts, grids, flexboxes, typography, and states:
+   - Grids & Layouts: className="max-w-7xl mx-auto px-6 py-24", className="grid grid-cols-1 md:grid-cols-3 gap-6", className="flex flex-col md:flex-row items-center justify-between"
+   - Bento Cards: className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl hover:border-white/20 transition-all duration-300 shadow-xl"
+   - Gradient Headlines: className="text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent leading-tight"
+   - Buttons: className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+   - You may also use style={{ }} for CSS variables (e.g. style={{ color: 'var(--primary)', borderColor: 'var(--border)' }})
+4. VECTOR ICONS (NO RAW EMOJIS): Lucide icons are pre-loaded. Use clean inline SVGs or Lucide data tags:
+   - <i data-lucide="sparkles" className="w-5 h-5 text-indigo-400 inline-block mr-2"></i>
+   - <i data-lucide="check" className="w-4 h-4 text-emerald-400"></i>
+   - <i data-lucide="arrow-right" className="w-4 h-4 ml-1.5 transition-transform group-hover:translate-x-1"></i>
+   - ABSOLUTELY ZERO raw emojis (e.g. 🚀, ✨, 🔥, ⭐) anywhere in text or UI.
+5. Use Framer Motion for entrance animations and micro-interactions:
+   - whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 24 }}
+     viewport={{ once: true, margin: "0px" }} transition={{ duration: 0.5, ease: "easeOut" }}
+   - Stagger children with { delay: index * 0.08 }
+6. RESPONSIVE BY DEFAULT: Always use Tailwind responsive prefixes (sm:, md:, lg:, xl:).
+   - Mobile-first: single-column by default, scaling to 2 or 3 columns on md: and lg:
+   - Padding: px-4 sm:px-6 lg:px-8 py-16 md:py-24
 7. Use actual business copy extracted from the Copywriting context — no lorem ipsum
 8. Pull exact hex colors from the Color & Typography context — no made-up colors
 9. Every section root element must have id="${section.id}" for anchor navigation
-10. QUALITY BAR: the output must look like Stripe, Linear, or Framer — reject anything that
-    resembles Bootstrap, WordPress, or a generic website builder template
+10. QUALITY BAR: the output must look like Linear, Stripe, Framer, or Apple — reject anything that
+    resembles Bootstrap, generic WordPress, or an amateur template
 11. RENDER RESILIENCE: content must render even if images, fonts, Three.js, or WebGL fail.
     Never hide primary copy behind loading states. Never return null while waiting for assets.
-    Every visual effect must be decorative and safely skippable.
 
 ━━━ CRITICAL: IMAGES & MEDIA ━━━
 NEVER generate fake or random image URLs that 404.
@@ -1989,13 +1997,11 @@ export async function assembleHTML(
       `    React.createElement(_ScErrorBoundary, null, React.createElement(${n}, null)),`
     ).join("\n"),
     `    React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", padding: "40px 16px 64px", background: "transparent", position: "relative", zIndex: 10 } },`,
-    `      React.createElement("a", { href: "https://www.adsrahu.com/", target: "_blank", rel: "noopener noreferrer", style: { display: "flex", alignItems: "center", gap: "8px", textDecoration: "none", fontSize: "10px", fontWeight: "700", letterSpacing: "0.08em", color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.03)", padding: "6px 14px", borderRadius: "9999px", border: "1px solid rgba(255,255,255,0.05)", backdropFilter: "blur(8px)" } },`,
-    `        React.createElement("span", { style: { width: "5px", height: "5px", borderRadius: "50%", background: "var(--primary, #10b981)", boxShadow: "0 0 8px var(--primary, #10b981)" } }),`,
-    `        "CREATED BY SITECRAFT"`,
-    `      ),`,
-    `      React.createElement("a", { href: "https://www.adsrahu.com/", target: "_blank", rel: "noopener noreferrer", style: { fontSize: "8px", fontWeight: "600", letterSpacing: "0.05em", color: "rgba(255,255,255,0.25)", textDecoration: "none" } }, "(managed by ADSRAHU)")`,
-    `    )`
-,
+    `      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", textDecoration: "none", fontSize: "11px", fontWeight: "600", letterSpacing: "0.04em", color: "rgba(255,255,255,0.45)", background: "rgba(255,255,255,0.03)", padding: "6px 14px", borderRadius: "9999px", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(8px)" } },`,
+    `        React.createElement("span", { style: { width: "6px", height: "6px", borderRadius: "50%", background: "var(--primary, #6366f1)", boxShadow: "0 0 8px var(--primary, #6366f1)" } }),`,
+    `        "Crafted with Zovaix Sites"`,
+    `      )`,
+    `    )`,
     `  );`,
     `}`,
   ].join("\n");
@@ -2025,7 +2031,7 @@ export async function assembleHTML(
     `  createRoot(document.getElementById("root")).render(`,
     `    React.createElement(_ScErrorBoundary, null, React.createElement(App, null))`,
     `  );`,
-    `  requestAnimationFrame(function () { document.documentElement.setAttribute("data-sc-rendered", "true"); });`,
+    `  requestAnimationFrame(function () { document.documentElement.setAttribute("data-sc-rendered", "true"); if (window.lucide && typeof window.lucide.createIcons === "function") { window.lucide.createIcons(); } });`,
     `} catch (err) {`,
     `  var _e = document.getElementById("_sc-error");`,
     `  var _m = document.getElementById("_sc-error-msg");`,
@@ -2113,7 +2119,7 @@ export async function assembleHTML(
   const pixelScript = `\n  <!-- PIXEL_CODE_START -->${context.pixelCode || ""}<!-- PIXEL_CODE_END -->`;
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2121,6 +2127,27 @@ export async function assembleHTML(
   <meta name="description" content="${escHtml(context.description)}">${favicon}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: 'var(--primary, #6366f1)',
+              dark: 'var(--primary-dark, #4f46e5)',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
 ${context.globalCSS}
   </style>
