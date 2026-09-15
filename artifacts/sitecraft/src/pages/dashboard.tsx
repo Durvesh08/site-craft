@@ -24,7 +24,7 @@ import {
   Plus,
   Paperclip,
   Image as ImageIcon,
-  LayoutTemplate,
+  Bookmark,
   Globe,
   MoreVertical,
   Star,
@@ -341,7 +341,7 @@ export default function Dashboard() {
                   onClick={() => openAttachmentModal('reference')}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors border border-white/10"
                 >
-                  <LayoutTemplate className="h-3.5 w-3.5" /> References
+                  <Bookmark className="h-3.5 w-3.5" /> References
                 </button>
 
                 <div className="h-4 w-[1px] bg-white/10 mx-1 hidden sm:block" />
