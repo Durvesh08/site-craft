@@ -84,73 +84,6 @@ export function SmartTerminal({ projectId, projectName = "website", isOpen, onCl
         return;
       }
 
-      if (primary === "help") {
-        addLog("info", "Available Zovaix Shell Commands:");
-        addLog("info", "  install <package>  - Auto-install an NPM package into package.json");
-        addLog("info", "  add <package>      - Alias for install");
-        addLog("info", "  build              - Compile React components & verify JSX syntax");
-        addLog("info", "  export <format>    - Download bundle (react, nextjs, html, zip)");
-        addLog("info", "  deploy <target>    - Deploy to edge (vercel, netlify, cloudflare)");
-        addLog("info", "  clear              - Clear terminal output");
-        setIsExecuting(false);
-        return;
-      }
-
-      if (primary === "install" || primary === "add" || (primary === "npm" && parts[1] === "install")) {
-        const pkgName = primary === "npm" ? parts.slice(2).join(" ") : arg;
-        if (!pkgName) {
-          addLog("warning", "Usage: install <package-name>");
-          setIsExecuting(false);
-          return;
-        }
-
-        addLog("info", `[NPM] Resolving '${pkgName}' via global edge ESM registry...`);
-
-        // Fetch current package.json
-        const res = await fetch(`/api/projects/${projectId}/files`, { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          const pkgFile = data.files?.find((f: any) => f.filePath === "package.json");
-          let pkgJson: any = { dependencies: {} };
-          if (pkgFile?.content) {
-            try { pkgJson = JSON.parse(pkgFile.content); } catch {}
-          }
-          if (!pkgJson.dependencies) pkgJson.dependencies = {};
-          pkgJson.dependencies[pkgName] = "latest";
-
-          // Save back
-          await fetch(`/api/projects/${projectId}/files/save`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              filePath: "package.json",
-              content: JSON.stringify(pkgJson, null, 2),
-            }),
-          });
-
-          addLog("success", `[Auto-Install] Package '${pkgName}' installed successfully.`);
-          addLog("info", `[Vite] Reloaded dependencies. Ready for import in your React components.`);
-          toast.success(`Installed ${pkgName}`);
-          if (onRefreshFiles) onRefreshFiles();
-        } else {
-          addLog("error", "Could not access package.json");
-        }
-        setIsExecuting(false);
-        return;
-      }
-
-      if (primary === "build" || (primary === "npm" && parts[1] === "run" && parts[2] === "build")) {
-        addLog("info", "[Vite] Running production build simulation...");
-        await new Promise((r) => setTimeout(r, 600));
-        addLog("info", "[Vite] Checking TypeScript syntax in src/App.tsx and components/...");
-        await new Promise((r) => setTimeout(r, 400));
-        addLog("success", "[Vite] Build complete: 0 errors, 0 warnings.");
-        addLog("success", "[Bundle] dist/index.html (54 kB) ready for production deployment.");
-        setIsExecuting(false);
-        return;
-      }
-
       if (primary === "export") {
         const format = (parts[1] || "react").toLowerCase();
         addLog("info", `[Export] Preparing ${format.toUpperCase()} project bundle...`);
@@ -165,29 +98,27 @@ export function SmartTerminal({ projectId, projectName = "website", isOpen, onCl
         return;
       }
 
-      if (primary === "deploy") {
-        const target = (parts[1] || "default").toLowerCase();
-        addLog("info", `[Deploy] Initiating deployment to ${target.toUpperCase()}...`);
-        const res = await fetch(`/api/projects/${projectId}/deploy`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ protocol: target }),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          addLog("success", `[Deploy] Deployment started! ID: ${data.id}`);
-          if (data.liveUrl) {
-            addLog("success", `[Live URL] ${data.liveUrl}`);
-          }
-        } else {
-          addLog("error", `[Deploy Error] ${data.message || "Failed to start deployment"}`);
-        }
-        setIsExecuting(false);
-        return;
-      }
+      // Execute on backend Autonomous Terminal endpoint
+      const res = await fetch(`/api/projects/${projectId}/terminal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ command: cmd }),
+      });
 
-      addLog("warning", `Command not found: ${cmd}. Type 'help' to see supported commands.`);
+      if (res.ok) {
+        const data = await res.json();
+        const type = data.exitCode === 0 ? "info" : "error";
+        addLog(type, data.output || "Command completed.");
+
+        if (primary === "install" || primary === "add" || (primary === "npm" && parts[1] === "install")) {
+          toast.success(`Dependency updated`);
+          if (onRefreshFiles) onRefreshFiles();
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        addLog("error", data.message || "Failed to execute command.");
+      }
     } catch (err: any) {
       addLog("error", `Execution failed: ${err.message || String(err)}`);
     } finally {

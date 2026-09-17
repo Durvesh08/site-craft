@@ -26,6 +26,7 @@ import ProjectSettingsPage from '@/pages/project-settings-page';
 import BillingPage from '@/pages/billing-page';
 import SettingsPage from '@/pages/settings';
 import StandalonePreviewRoute from '@/pages/standalone-preview-route';
+import ProjectTerminalPage from '@/pages/project-terminal-page';
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,9 @@ function Router() {
       </Route>
       <Route path="/projects/:id/code">
         {() => <ProtectedRoute component={ProjectCode} />}
+      </Route>
+      <Route path="/projects/:id/terminal">
+        {() => <ProtectedRoute component={ProjectTerminalPage} />}
       </Route>
       <Route path="/projects/:id/files">
         {() => <ProtectedRoute component={ProjectFiles} />}

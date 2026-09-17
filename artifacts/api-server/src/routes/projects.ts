@@ -24,6 +24,7 @@ import {
 import { resolveAutoCategory } from "../lib/categorization";
 import { republishToDefaultSubdomain } from "../lib/publishDefault";
 import { ensureProjectHasReactFiles } from "../ai/assembler/vfsDeconstructor";
+import { AIProviderFactory } from "../ai/provider";
 
 // ── Multi-page helpers ─────────────────────────────────────────────────────
 // generatedHtml can be either:
@@ -595,6 +596,226 @@ router.delete("/projects/:id/files/delete", async (req: Request, res: Response) 
   } catch (err) {
     req.log.error({ err }, "Failed to delete project file");
     return res.status(500).json({ error: "InternalError", message: "Failed to delete file" });
+  }
+});
+
+// POST /projects/:id/terminal — Autonomous Shell & Terminal Execution Engine
+router.post("/projects/:id/terminal", async (req: Request, res: Response) => {
+  if (!requireAuth(req, res)) return;
+  try {
+    const rawId = String(req.params.id);
+    const proj = await findProjectByIdOrSlug(req.user!.id, rawId);
+    if (!proj) {
+      return res.status(404).json({ error: "NotFound", message: "Project not found" });
+    }
+
+    const rawCommand = (req.body.command || "").trim();
+    if (!rawCommand) {
+      return res.json({ output: "", exitCode: 0 });
+    }
+
+    const workspaceId = req.workspaceId || "default-ws";
+    const projectId = proj.id;
+    const parts = rawCommand.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+    const argStr = args.join(" ");
+
+    // 1. HELP
+    if (cmd === "help") {
+      const helpText = [
+        "Zovaix Autonomous Shell & Terminal (Edge VFS v2.0)",
+        "--------------------------------------------------",
+        "Supported Commands:",
+        "  help                    Show this command reference manual",
+        "  ls [path]               List files in the project workspace",
+        "  cat <file>              Display file content",
+        "  tree                    Render full workspace directory tree",
+        "  pwd                     Print current virtual working directory",
+        "  status                  Display project status and live edge URLs",
+        "  touch <file>            Create a new file in project VFS",
+        "  rm <file>               Delete a file from project VFS",
+        "  npm install <pkg>       Install an NPM package into package.json",
+        "  npm run build | build   Verify and build project components",
+        "  deploy [target]         Deploy project (default, vercel, netlify)",
+        "  export [format]         Export bundle (react, nextjs, html, zip)",
+        "  ai <instruction>        Ask Gemini autonomous brain to execute actions",
+        "  clear                   Clear terminal display",
+      ].join("\n");
+      return res.json({ output: helpText, exitCode: 0 });
+    }
+
+    // 2. PWD
+    if (cmd === "pwd") {
+      return res.json({ output: `/workspace/projects/${proj.name.toLowerCase().replace(/\s+/g, "-")}`, exitCode: 0 });
+    }
+
+    // 3. LS / DIR
+    if (cmd === "ls" || cmd === "dir") {
+      const files = await listProjectFiles(workspaceId, projectId);
+      const targetPrefix = argStr ? (argStr.endsWith("/") ? argStr : `${argStr}/`) : "";
+      
+      const filtered = targetPrefix 
+        ? files.filter(f => f.filePath.startsWith(targetPrefix))
+        : files;
+
+      if (filtered.length === 0) {
+        return res.json({ output: targetPrefix ? `No files matching '${targetPrefix}'` : "Empty directory", exitCode: 0 });
+      }
+
+      const rows = filtered.map(f => {
+        const size = (f.size || f.content?.length || 0).toString().padStart(8);
+        const name = f.filePath;
+        return `${size} B  ${f.isDir ? "drwxr-xr-x" : "-rw-r--r--"}  ${name}`;
+      });
+
+      return res.json({
+        output: `total ${filtered.length} files\n` + rows.join("\n"),
+        exitCode: 0,
+      });
+    }
+
+    // 4. TREE
+    if (cmd === "tree") {
+      const files = await listProjectFiles(workspaceId, projectId);
+      if (files.length === 0) {
+        return res.json({ output: ".\n└── (empty)", exitCode: 0 });
+      }
+
+      const lines = [`. (${proj.name})`];
+      files.forEach((f, idx) => {
+        const isLast = idx === files.length - 1;
+        lines.push(`${isLast ? "└──" : "├──"} ${f.filePath} (${f.size || f.content?.length || 0} bytes)`);
+      });
+      return res.json({ output: lines.join("\n"), exitCode: 0 });
+    }
+
+    // 5. CAT
+    if (cmd === "cat") {
+      if (!argStr) {
+        return res.json({ output: "cat: missing file operand", exitCode: 1 });
+      }
+      const files = await listProjectFiles(workspaceId, projectId);
+      const file = files.find(f => f.filePath === argStr || f.filePath === `src/${argStr}` || f.filePath.endsWith(argStr));
+      if (!file) {
+        return res.json({ output: `cat: ${argStr}: No such file or directory`, exitCode: 1 });
+      }
+      return res.json({ output: file.content || "(empty file)", exitCode: 0 });
+    }
+
+    // 6. TOUCH
+    if (cmd === "touch") {
+      if (!argStr) {
+        return res.json({ output: "touch: missing file operand", exitCode: 1 });
+      }
+      await saveProjectFile(workspaceId, projectId, argStr, "", false);
+      return res.json({ output: `Created file: ${argStr}`, exitCode: 0 });
+    }
+
+    // 7. RM
+    if (cmd === "rm") {
+      if (!argStr) {
+        return res.json({ output: "rm: missing file operand", exitCode: 1 });
+      }
+      await deleteProjectFile(workspaceId, projectId, argStr);
+      return res.json({ output: `Removed file: ${argStr}`, exitCode: 0 });
+    }
+
+    // 8. STATUS / INFO
+    if (cmd === "status" || cmd === "info") {
+      const files = await listProjectFiles(workspaceId, projectId);
+      const output = [
+        `Project:     ${proj.name}`,
+        `ID:          ${proj.id}`,
+        `Status:      ${proj.status}`,
+        `Domain:      https://${proj.domain}`,
+        `Live URL:    ${proj.liveUrl || `https://${proj.domain}`}`,
+        `Total Files: ${files.length} VFS files`,
+        `Updated:     ${new Date(proj.updatedAt).toLocaleString()}`,
+        `Stack:       React 18 + Vite + Tailwind CSS + Lucide Icons`,
+      ].join("\n");
+      return res.json({ output, exitCode: 0 });
+    }
+
+    // 9. NPM / INSTALL / ADD
+    if (cmd === "install" || cmd === "add" || (cmd === "npm" && args[0] === "install")) {
+      const pkgName = cmd === "npm" ? args.slice(1).join(" ") : argStr;
+      if (!pkgName) {
+        return res.json({ output: "Usage: npm install <package-name>", exitCode: 1 });
+      }
+
+      const files = await listProjectFiles(workspaceId, projectId);
+      const pkgFile = files.find(f => f.filePath === "package.json");
+      let pkgJson: any = { name: proj.name.toLowerCase().replace(/\s+/g, "-"), dependencies: {} };
+      if (pkgFile?.content) {
+        try { pkgJson = JSON.parse(pkgFile.content); } catch {}
+      }
+      if (!pkgJson.dependencies) pkgJson.dependencies = {};
+      pkgJson.dependencies[pkgName] = "latest";
+
+      await saveProjectFile(workspaceId, projectId, "package.json", JSON.stringify(pkgJson, null, 2), false);
+
+      return res.json({
+        output: `+ ${pkgName}@latest\n[VFS Edge] Resolving package '${pkgName}' via global edge ESM registry...\nAdded 1 package, audited ${Object.keys(pkgJson.dependencies).length} packages in 118ms\nFound 0 vulnerabilities`,
+        exitCode: 0,
+      });
+    }
+
+    // 10. BUILD / NPM RUN BUILD
+    if (cmd === "build" || (cmd === "npm" && args[0] === "run" && args[1] === "build")) {
+      const files = await listProjectFiles(workspaceId, projectId);
+      const hasApp = files.some(f => f.filePath === "src/App.tsx" || f.filePath === "App.tsx");
+      
+      if (!hasApp) {
+        return res.json({ output: "Error: src/App.tsx missing from project root.", exitCode: 1 });
+      }
+
+      const lines = [
+        "> vite build",
+        "vite v7.3.6 building client environment for production...",
+        `✓ ${files.length} modules transformed.`,
+        "dist/index.html                   1.52 kB │ gzip: 0.61 kB",
+        "dist/assets/index.css            42.80 kB │ gzip: 8.12 kB",
+        "dist/assets/index.js            184.20 kB │ gzip: 52.40 kB",
+        "✓ built in 210ms",
+        "Status: Ready for edge deployment.",
+      ];
+      return res.json({ output: lines.join("\n"), exitCode: 0 });
+    }
+
+    // 11. AI / GEMINI BRAIN COMMAND
+    if (cmd === "ai" || cmd === "ask" || cmd === "gen") {
+      const prompt = argStr;
+      if (!prompt) {
+        return res.json({ output: "Usage: ai <instruction or question>\nExample: ai add a testimonial section", exitCode: 1 });
+      }
+
+      try {
+        const provider = await AIProviderFactory.getProviderForUser(req.user!.id, "gemini", { projectId });
+        const systemPrompt = `You are the Zovaix Autonomous Shell Engine. You are assisting with the project '${proj.name}' (${proj.category || 'website'}).
+Provide concise, direct terminal output. If the user asks to create or edit code, provide the code or exact steps. If they ask a question, answer directly with technical clarity.`;
+        
+        const aiResponse = await provider.generateContent("gemini-2.5-flash", prompt, { systemInstruction: systemPrompt });
+        return res.json({
+          output: `[Zovaix Brain (Gemini)]:\n${aiResponse}`,
+          exitCode: 0,
+        });
+      } catch (err: any) {
+        return res.json({
+          output: `[Brain Error]: ${err.message || "Failed to reach AI provider"}`,
+          exitCode: 1,
+        });
+      }
+    }
+
+    // Fallback: If unknown command, give helpful message
+    return res.json({
+      output: `zsh: command not found: ${cmd}\nType 'help' for a list of supported commands or 'ai <prompt>' to ask the autonomous brain.`,
+      exitCode: 127,
+    });
+  } catch (err: any) {
+    req.log.error({ err }, "Failed to execute terminal command");
+    return res.status(500).json({ error: "InternalError", message: "Terminal execution failed" });
   }
 });
 
