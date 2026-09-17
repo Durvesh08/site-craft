@@ -12,7 +12,8 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Terminal
 } from "lucide-react";
 
 interface SidebarProps {
@@ -65,6 +66,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
         <div className="space-y-1">
           <NavItem href="/dashboard" icon={Home} label="Home" active={location === "/dashboard"} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem href="/projects" icon={Layers} label="Projects" active={location === "/projects"} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavItem href="/terminal" icon={Terminal} label="Terminal" active={location === "/terminal" || location.includes("/terminal")} collapsed={collapsed} onNavigate={onNavigate} />
         </div>
 
 

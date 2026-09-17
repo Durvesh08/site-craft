@@ -113,6 +113,9 @@ function Router() {
       </Route>
 
 
+      <Route path="/terminal">
+        {() => <ProtectedRoute component={ProjectTerminalPage} />}
+      </Route>
       <Route path="/domains">
         {() => <ProtectedRoute component={DomainsPage} />}
       </Route>

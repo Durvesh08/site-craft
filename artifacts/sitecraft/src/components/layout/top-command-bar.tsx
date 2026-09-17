@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { workspaceService } from "@/services/workspace";
 import {
@@ -9,7 +10,8 @@ import {
   Building2,
   User,
   Sparkles,
-  CheckCheck
+  CheckCheck,
+  Terminal
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -91,9 +93,20 @@ export function TopCommandBar({ onOpenCommandPalette }: TopCommandBarProps) {
         </button>
       </div>
 
-      {/* Right Actions: Workspace Selector, Notifications, Help, User */}
+      {/* Right Actions: Terminal Launcher, Workspace Selector, Notifications, Help, User */}
       <div className="flex items-center gap-3 text-xs">
         
+        {/* Quick Terminal Launcher */}
+        <Link
+          href="/terminal"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border bg-white/5 border-white/10 hover:bg-white/10 hover:border-primary/40 text-foreground transition-all font-medium text-xs group"
+          title="Open Autonomous Terminal & Shell"
+        >
+          <Terminal className="h-3.5 w-3.5 text-primary group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline font-mono">Terminal</span>
+          <span className="px-1.5 py-0.2 rounded bg-white/5 text-[9px] text-muted-foreground font-mono hidden md:inline">⌥`</span>
+        </Link>
+
         {/* Workspace Selector */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
