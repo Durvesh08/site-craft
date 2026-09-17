@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, isLoading, isError } = useQuery({
     queryKey: ["auth", "user"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/user");
+      const res = await fetch("/api/auth/user", { credentials: "include" });
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) return null;
         throw new Error("Failed to fetch user");
@@ -50,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const localLogin = async (data: any) => {
     const res = await fetch("/api/auth/login", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const localRegister = async (data: any) => {
     const res = await fetch("/api/auth/register", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
