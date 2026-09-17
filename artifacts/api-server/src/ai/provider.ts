@@ -48,8 +48,10 @@ export class GeminiProvider implements AIProvider {
   }
 
   getFallbackModel(model: string): string | null {
-    const fallbackChain: Record<string, string> = {};
-    return fallbackChain[model] ?? (model !== "gemini-2.5-flash" ? "gemini-2.5-flash" : null);
+    const fallbackChain: Record<string, string> = {
+      "gemini-3.6-flash": "gemini-2.5-flash",
+    };
+    return fallbackChain[model] ?? (model !== "gemini-3.6-flash" ? "gemini-3.6-flash" : null);
   }
 
   async generateContent(model: string, prompt: string, options?: GenerateOptions): Promise<string> {

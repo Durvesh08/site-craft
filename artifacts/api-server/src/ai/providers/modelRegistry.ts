@@ -1,6 +1,7 @@
 export const ALLOWED_PROVIDERS = ["gemini", "anthropic", "deepseek"] as const;
 
 export const ALLOWED_MODELS = [
+  "gemini-3.6-flash",
   "gemini-2.5-pro",
   "gemini-2.5-flash",
   "gemini-embedding-2",
@@ -18,5 +19,5 @@ export function getBestAvailableModel(preferred: string, fallbacks: string[]): s
   for (const fallback of fallbacks) {
     if (allModels.includes(fallback)) return fallback;
   }
-  return "gemini-2.5-flash"; // Ultimate fallback guaranteed to exist
+  return "gemini-3.6-flash"; // Ultimate fallback guaranteed to exist
 }

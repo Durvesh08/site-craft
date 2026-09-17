@@ -795,7 +795,7 @@ router.post("/projects/:id/terminal", async (req: Request, res: Response) => {
         const systemPrompt = `You are the Zovaix Autonomous Shell Engine. You are assisting with the project '${proj.name}' (${proj.category || 'website'}).
 Provide concise, direct terminal output. If the user asks to create or edit code, provide the code or exact steps. If they ask a question, answer directly with technical clarity.`;
         
-        const aiResponse = await provider.generateContent("gemini-2.5-flash", prompt, { systemInstruction: systemPrompt });
+        const aiResponse = await provider.generateContent("gemini-3.6-flash", prompt, { systemInstruction: systemPrompt });
         return res.json({
           output: `[Zovaix Brain (Gemini)]:\n${aiResponse}`,
           exitCode: 0,

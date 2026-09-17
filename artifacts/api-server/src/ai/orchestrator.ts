@@ -48,10 +48,10 @@ import { resolveAutoCategory } from "../lib/categorization";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
-const FLASH_LITE = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash"]);
-const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-2.5-flash"]);
-const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-2.5-flash"]);
-const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-2.5-flash"]);
+const FLASH_LITE = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-3.6-flash", "gemini-2.5-flash"]);
+const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-3.6-flash", "gemini-2.5-flash"]);
+const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-3.6-flash", "gemini-2.5-flash"]);
+const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-3.6-flash", "gemini-2.5-flash"]);
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.
@@ -454,7 +454,7 @@ export async function runGeneration(
                 // Retry once with PRO (verified against registry) specifically for code generation if Flash failed transpilation after retries
                 try {
                   await new Promise(r => setTimeout(r, 2000)); // brief back-off
-                  const PRO_FALLBACK = getBestAvailableModel("gemini-2.5-pro", ["gemini-2.5-flash"]);
+                  const PRO_FALLBACK = getBestAvailableModel("gemini-2.5-pro", ["gemini-3.6-flash", "gemini-2.5-flash"]);
                   let retryCode = await provider.generateContent(PRO_FALLBACK, prompt, { maxTokens: 32768, temperature: 0.8 });
 
                   let flashAttempts = 1;

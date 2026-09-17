@@ -32,6 +32,7 @@ interface PromptTemplate {
 
 const PROVIDER_MODELS: Record<string, { label: string; value: string }[]> = {
   gemini: [
+    { label: "Gemini 3.6 Flash", value: "gemini-3.6-flash" },
     { label: "Gemini 2.5 Flash", value: "gemini-2.5-flash" },
   ],
   anthropic: [
@@ -56,7 +57,7 @@ export default function Prompts() {
   const [systemPrompt, setSystemPrompt] = useState("");
   const [userPromptTemplate, setUserPromptTemplate] = useState("");
   const [provider, setProvider] = useState("gemini");
-  const [model, setModel] = useState("gemini-2.5-flash");
+  const [model, setModel] = useState("gemini-3.6-flash");
   const [temperature, setTemperature] = useState(0.7);
   const [isSaving, setIsSaving] = useState(false);
 
