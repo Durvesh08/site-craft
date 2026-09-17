@@ -43,6 +43,7 @@ import {
   formatBusinessAnalysisContext,
 } from "./steps/businessAnalysis";
 import { writeProjectFileTree } from "./assembler/fileTreeWriter";
+import { ensureProjectHasReactFiles } from "./assembler/vfsDeconstructor";
 import { resolveAutoCategory } from "../lib/categorization";
 
 // ── Models ────────────────────────────────────────────────────────────────────
@@ -1052,6 +1053,12 @@ ${html.slice(0, 60000)}`;
       })
       .where(eq(projectsTable.id, projectId));
 
+    try {
+      await ensureProjectHasReactFiles(projectId, userId, synthesizedHtml, name);
+    } catch (vfsErr) {
+      logger.warn({ vfsErr, projectId }, "Failed to auto-populate React files on fallback");
+    }
+
     await db.update(aiJobsTable)
       .set({
         status: "completed",
@@ -1565,6 +1572,12 @@ export async function runChatEdit(
     await db.update(projectsTable)
       .set({ generatedHtml: finalStoredHtml, activeJobId: null, updatedAt: new Date() })
       .where(eq(projectsTable.id, projectId));
+
+    try {
+      await ensureProjectHasReactFiles(projectId, userId, finalStoredHtml, proj?.name);
+    } catch (vfsErr) {
+      logger.warn({ vfsErr, projectId }, "Failed to update React files on chat edit");
+    }
 
     await db.update(aiJobsTable)
       .set({ status: "completed", progress: 100, currentStep: "Complete", resultJson: JSON.stringify({ html: finalStoredHtml }), completedAt: new Date(), updatedAt: new Date() })

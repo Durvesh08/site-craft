@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { SmartTerminal } from "@/components/workspace/smart-terminal";
 
 export default function ProjectCode() {
   const { id } = useParams<{ id?: string }>();
@@ -67,6 +68,7 @@ export default function ProjectCode() {
   // Modals state
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [githubModalOpen, setGithubModalOpen] = useState(false);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   // GitHub deploy state
   const [githubToken, setGithubToken] = useState("");
@@ -340,6 +342,18 @@ export default function ProjectCode() {
                 className="h-7 px-2.5 text-xs border-white/10 gap-1 text-muted-foreground hover:text-foreground"
               >
                 <Github className="h-3 w-3" /> <span className="hidden sm:inline">GitHub</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+                className={cn(
+                  "h-7 px-2.5 text-xs border-white/10 gap-1 text-muted-foreground hover:text-foreground",
+                  isTerminalOpen && "bg-primary/20 text-primary border-primary/30"
+                )}
+                title="Toggle Smart Terminal / Shell"
+              >
+                <Terminal className="h-3 w-3 text-primary" /> <span className="hidden sm:inline">Terminal</span>
               </Button>
             </div>
           </div>
@@ -615,6 +629,18 @@ export default function ProjectCode() {
           </div>
         </div>
       )}
+
+      {/* Smart Terminal Drawer */}
+      <SmartTerminal
+        projectId={projectId}
+        projectName={project.name}
+        isOpen={isTerminalOpen}
+        onClose={() => setIsTerminalOpen(false)}
+        onRefreshFiles={async () => {
+          const fresh = await filesService.fetchRemoteFiles(projectId);
+          setFilesTree(fresh);
+        }}
+      />
     </ProjectWorkspaceLayout>
   );
 }

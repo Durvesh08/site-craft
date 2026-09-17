@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import {
   Monitor, Tablet, Smartphone, Sparkles, Send,
   Layers, Paperclip, CheckCircle2, Undo2, Loader2,
-  AlertCircle, Plus, FileText, Trash2, Globe, ArrowRight
+  AlertCircle, Plus, FileText, Trash2, Globe, ArrowRight,
+  Terminal as TerminalIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { SmartTerminal } from "@/components/workspace/smart-terminal";
 
 type Viewport = "desktop" | "tablet" | "mobile";
 type AgentMode = "Build" | "Plan" | "Debug" | "Explain" | "Review";
@@ -124,6 +126,7 @@ export default function ProjectEditor() {
   const [isBuilding, setIsBuilding] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [thinkingIdx, setThinkingIdx] = useState(0);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   // Dynamic sections parsed from the real generated HTML of the active page
   const [sections, setSections] = useState<ParsedSection[]>([]);
@@ -479,16 +482,32 @@ export default function ProjectEditor() {
               </button>
             </div>
 
-            {/* Right: Viewport selector */}
-            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10 text-xs shrink-0">
-              <button onClick={() => setViewport('desktop')} className={`px-2 py-0.5 rounded ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Desktop View">
-                <Monitor className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setViewport('tablet')} className={`px-2 py-0.5 rounded ${viewport === 'tablet' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Tablet View">
-                <Tablet className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={() => setViewport('mobile')} className={`px-2 py-0.5 rounded ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Mobile View">
-                <Smartphone className="h-3.5 w-3.5" />
+            {/* Right: Viewport & Terminal selector */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/5 border border-white/10 text-xs">
+                <button onClick={() => setViewport('desktop')} className={`px-2 py-0.5 rounded ${viewport === 'desktop' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Desktop View">
+                  <Monitor className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => setViewport('tablet')} className={`px-2 py-0.5 rounded ${viewport === 'tablet' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Tablet View">
+                  <Tablet className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => setViewport('mobile')} className={`px-2 py-0.5 rounded ${viewport === 'mobile' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`} title="Mobile View">
+                  <Smartphone className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <button
+                onClick={() => setIsTerminalOpen(!isTerminalOpen)}
+                className={cn(
+                  "p-1.5 px-2.5 rounded-lg text-xs flex items-center gap-1.5 border transition-colors",
+                  isTerminalOpen
+                    ? "bg-primary/20 text-primary border-primary/30"
+                    : "text-muted-foreground border-white/10 hover:text-foreground hover:bg-white/5"
+                )}
+                title="Toggle Smart Terminal / Shell"
+              >
+                <TerminalIcon className="h-3.5 w-3.5 text-primary" />
+                <span className="hidden lg:inline font-mono text-[11px]">Shell</span>
               </button>
             </div>
           </div>
@@ -792,6 +811,14 @@ export default function ProjectEditor() {
           </div>
         </div>
       )}
+
+      {/* Smart Terminal & Autonomous Shell Drawer */}
+      <SmartTerminal
+        projectId={projectId}
+        projectName={project.name}
+        isOpen={isTerminalOpen}
+        onClose={() => setIsTerminalOpen(false)}
+      />
     </ProjectWorkspaceLayout>
   );
 }

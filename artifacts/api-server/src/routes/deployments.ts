@@ -691,7 +691,11 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
 
     if (isEdge) {
       // Use the new DeploymentProvider pattern for Edge CDNs
-      runEdgeDeploy(deployment.id, params.data.id, req.user!.id, protocol, project.generatedHtml);
+      const targetConfig = {
+        token: (body.data as any)?.apiKey || (body.data as any)?.token,
+        siteId: (body.data as any)?.siteId,
+      };
+      runEdgeDeploy(deployment.id, params.data.id, req.user!.id, protocol, project.generatedHtml, targetConfig);
     } else {
       // Fire and forget — client polls for progress
       runUpload(
@@ -712,7 +716,7 @@ router.post("/projects/:id/deploy", async (req: Request, res: Response) => {
   }
 });
 
-async function runEdgeDeploy(deploymentId: string, projectId: string, userId: string, protocol: string, html: string) {
+async function runEdgeDeploy(deploymentId: string, projectId: string, userId: string, protocol: string, html: string, targetConfig: any = {}) {
   try {
     await db.update(deploymentsTable)
       .set({ status: "uploading", uploadProgress: 10 })
@@ -721,7 +725,7 @@ async function runEdgeDeploy(deploymentId: string, projectId: string, userId: st
     await appendLog(deploymentId, `Starting deployment via ${protocol.toUpperCase()}...`);
 
     const provider = DeploymentProviderFactory.getProvider(protocol);
-    const liveUrl = await provider.deploy({ deploymentId, projectId, generatedHtml: html }, {});
+    const liveUrl = await provider.deploy({ deploymentId, projectId, generatedHtml: html }, targetConfig);
 
     await db.update(deploymentsTable)
       .set({

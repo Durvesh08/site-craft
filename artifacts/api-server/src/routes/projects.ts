@@ -23,6 +23,7 @@ import {
 } from "../lib/projectFilesystem";
 import { resolveAutoCategory } from "../lib/categorization";
 import { republishToDefaultSubdomain } from "../lib/publishDefault";
+import { ensureProjectHasReactFiles } from "../ai/assembler/vfsDeconstructor";
 
 // ── Multi-page helpers ─────────────────────────────────────────────────────
 // generatedHtml can be either:
@@ -510,32 +511,16 @@ router.get("/projects/:id/files", async (req: Request, res: Response) => {
     const workspaceId = req.workspaceId || "default-ws";
     let files = await listProjectFiles(workspaceId, projectId);
 
-    if (files.length === 0) {
+    const hasComponents = files.some(f => f.filePath.startsWith("components/") || f.filePath.startsWith("src/components/"));
+
+    if (files.length === 0 || !hasComponents) {
       const [proj] = await db
         .select()
         .from(projectsTable)
         .where(and(eq(projectsTable.id, projectId), eq(projectsTable.userId, req.user!.id)));
 
       if (proj?.generatedHtml) {
-        const rawHtml = proj.generatedHtml.trim();
-        if (rawHtml.startsWith("{")) {
-          try {
-            const pages: Record<string, string> = JSON.parse(rawHtml);
-            for (const [pName, pHtml] of Object.entries(pages)) {
-              await saveProjectFile(workspaceId, projectId, pName, pHtml);
-            }
-          } catch {
-            await saveProjectFile(workspaceId, projectId, "index.html", proj.generatedHtml);
-          }
-        } else {
-          await saveProjectFile(workspaceId, projectId, "index.html", proj.generatedHtml);
-        }
-        await saveProjectFile(
-          workspaceId,
-          projectId,
-          "package.json",
-          JSON.stringify({ name: proj.name.toLowerCase().replace(/[^a-z0-9]/g, "-"), version: "1.0.0", private: true }, null, 2)
-        );
+        await ensureProjectHasReactFiles(projectId, req.user!.id, proj.generatedHtml, proj.name);
         files = await listProjectFiles(workspaceId, projectId);
       }
     }
@@ -1153,13 +1138,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }`);
 
     // 6. app/page.tsx & components
-    const storedFiles = await db
+    let storedFiles = await db
       .select()
       .from(projectFilesTable)
       .where(eq(projectFilesTable.projectId, project.id));
 
-    const componentFiles = storedFiles.filter(f => f.filePath.startsWith("components/") && !f.filePath.endsWith("index.ts"));
-    const styleFiles = storedFiles.filter(f => f.filePath.startsWith("styles/"));
+    let componentFiles = storedFiles.filter(f => (f.filePath.startsWith("components/") || f.filePath.startsWith("src/components/")) && !f.filePath.endsWith("index.ts"));
+
+    if (componentFiles.length === 0) {
+      await ensureProjectHasReactFiles(project.id, req.user!.id, project.generatedHtml, project.name);
+      storedFiles = await db
+        .select()
+        .from(projectFilesTable)
+        .where(eq(projectFilesTable.projectId, project.id));
+      componentFiles = storedFiles.filter(f => (f.filePath.startsWith("components/") || f.filePath.startsWith("src/components/")) && !f.filePath.endsWith("index.ts"));
+    }
+
+    const styleFiles = storedFiles.filter(f => f.filePath.startsWith("styles/") || f.filePath.startsWith("src/styles/"));
 
     if (componentFiles.length > 0) {
       for (const cf of storedFiles.filter(f => f.filePath.startsWith("components/"))) {
@@ -1398,13 +1393,23 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 );`);
 
     // 5. src/App.jsx & components
-    const storedFiles = await db
+    let storedFiles = await db
       .select()
       .from(projectFilesTable)
       .where(eq(projectFilesTable.projectId, project.id));
 
-    const componentFiles = storedFiles.filter(f => f.filePath.startsWith("components/") && !f.filePath.endsWith("index.ts"));
-    const styleFiles = storedFiles.filter(f => f.filePath.startsWith("styles/"));
+    let componentFiles = storedFiles.filter(f => (f.filePath.startsWith("components/") || f.filePath.startsWith("src/components/")) && !f.filePath.endsWith("index.ts"));
+
+    if (componentFiles.length === 0) {
+      await ensureProjectHasReactFiles(project.id, req.user!.id, project.generatedHtml, project.name);
+      storedFiles = await db
+        .select()
+        .from(projectFilesTable)
+        .where(eq(projectFilesTable.projectId, project.id));
+      componentFiles = storedFiles.filter(f => (f.filePath.startsWith("components/") || f.filePath.startsWith("src/components/")) && !f.filePath.endsWith("index.ts"));
+    }
+
+    const styleFiles = storedFiles.filter(f => f.filePath.startsWith("styles/") || f.filePath.startsWith("src/styles/"));
 
     if (componentFiles.length > 0) {
       for (const cf of storedFiles.filter(f => f.filePath.startsWith("components/"))) {
