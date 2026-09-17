@@ -2,6 +2,7 @@ import { logger } from "../lib/logger";
 import { db, projectsTable, projectFilesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import JSZip from "jszip";
+import { injectTelemetryScript } from "../routes/telemetry";
 
 export interface DeploymentConfig {
   deploymentId: string;
@@ -47,11 +48,14 @@ export class VercelDeploymentProvider implements DeploymentProvider {
     if (files.length > 0) {
       for (const f of files) {
         if (!f.isDir && f.content) {
-          vercelFiles.push({ file: f.filePath, data: f.content });
+          const fileData = f.filePath.endsWith(".html")
+            ? injectTelemetryScript(f.content, config.projectId)
+            : f.content;
+          vercelFiles.push({ file: f.filePath, data: fileData });
         }
       }
     } else {
-      vercelFiles.push({ file: "index.html", data: config.generatedHtml });
+      vercelFiles.push({ file: "index.html", data: injectTelemetryScript(config.generatedHtml, config.projectId) });
     }
 
     logger.info({ projectId: config.projectId, fileCount: vercelFiles.length }, "Deploying project to Vercel API");
@@ -104,11 +108,14 @@ export class NetlifyDeploymentProvider implements DeploymentProvider {
     if (files.length > 0) {
       for (const f of files) {
         if (!f.isDir && f.content) {
-          zip.file(f.filePath, f.content);
+          const fileData = f.filePath.endsWith(".html")
+            ? injectTelemetryScript(f.content, config.projectId)
+            : f.content;
+          zip.file(f.filePath, fileData);
         }
       }
     } else {
-      zip.file("index.html", config.generatedHtml);
+      zip.file("index.html", injectTelemetryScript(config.generatedHtml, config.projectId));
     }
 
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });

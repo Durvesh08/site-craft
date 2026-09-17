@@ -12,6 +12,7 @@ import versionsRouter from "./versions";
 import meRouter from "./me";
 import settingsRouter from "./settings";
 import storageRouter from "./storage";
+import telemetryRouter from "./telemetry";
 import domainsRouter from "./domains";
 import workspaceRouter from "./workspace";
 import feedbackRouter from "./feedback";
@@ -26,8 +27,9 @@ router.use(healthRouter);
 router.use(authRouter);
 // meRouter must be before workspace middleware so logout works with expired sessions
 router.use(meRouter);
-// storageRouter serves public assets that don't require workspace tenancy
+// storageRouter & telemetryRouter serve public requests that don't require user workspace auth
 router.use(storageRouter);
+router.use(telemetryRouter);
 
 // Apply workspace tenancy resolution for all authenticated API routes
 router.use(ensureUserWorkspace);

@@ -25,6 +25,7 @@ import { resolveAutoCategory } from "../lib/categorization";
 import { republishToDefaultSubdomain } from "../lib/publishDefault";
 import { ensureProjectHasReactFiles } from "../ai/assembler/vfsDeconstructor";
 import { AIProviderFactory } from "../ai/provider";
+import { injectTelemetryScript } from "./telemetry";
 
 // ── Multi-page helpers ─────────────────────────────────────────────────────
 // generatedHtml can be either:
@@ -883,8 +884,10 @@ router.get("/projects/:id/preview", async (req: Request, res: Response) => {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     // injectPixelCode strips stale blocks then injects fresh from DB column at serve-time
-    const served = injectPixelCode(patchHtml(pageHtml), project.pixelCode);
-    res.send(served ?? pageHtml);
+    const patched = patchHtml(pageHtml);
+    const withPixel = injectPixelCode(patched, project.pixelCode) ?? patched;
+    const served = injectTelemetryScript(withPixel, project.id);
+    res.send(served);
   } catch (err) {
     req.log.error({ err }, "Failed to serve project preview");
     res.status(500).json({ error: "InternalError", message: "Failed to load preview" });

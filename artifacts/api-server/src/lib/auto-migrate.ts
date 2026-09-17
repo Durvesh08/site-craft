@@ -657,8 +657,39 @@ export async function autoMigrate(): Promise<void> {
       END $$;
     `);
 
+    // 20. page_views (real-time telemetry, depends on projects)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS page_views (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        visitor_id TEXT NOT NULL,
+        session_id TEXT,
+        page_path TEXT NOT NULL DEFAULT '/',
+        page_title TEXT,
+        referrer TEXT,
+        referrer_source TEXT NOT NULL DEFAULT 'Direct',
+        device_type TEXT NOT NULL DEFAULT 'desktop',
+        browser TEXT NOT NULL DEFAULT 'Other',
+        os TEXT NOT NULL DEFAULT 'Other',
+        country TEXT DEFAULT 'US',
+        screen_resolution TEXT,
+        duration_seconds INTEGER DEFAULT 0,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS page_views_project_id_idx ON page_views (project_id);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS page_views_project_created_at_idx ON page_views (project_id, created_at);
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS page_views_project_visitor_idx ON page_views (project_id, visitor_id);
+    `);
+
     await client.query("COMMIT");
-    console.log("[auto-migrate] All workspace, user_sessions, audit_logs, and settings tables created successfully.");
+    console.log("[auto-migrate] All workspace, user_sessions, audit_logs, settings, and page_views tables created successfully.");
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("[auto-migrate] Migration failed:", err);

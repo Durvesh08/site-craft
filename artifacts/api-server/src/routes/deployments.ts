@@ -19,6 +19,7 @@ import {
 } from "@workspace/api-zod";
 import { DeploymentProviderFactory } from "../deployments/provider";
 import { republishToDefaultSubdomain } from "../lib/publishDefault";
+import { injectTelemetryScript } from "./telemetry";
 
 const router: IRouter = Router();
 
@@ -152,11 +153,15 @@ function stripGeneratedScriptExports(js: string): string {
     );
 }
 
-function patchHtmlForDeployment(html: string): string {
-  return html.replace(
+function patchHtmlForDeployment(html: string, projectId?: string): string {
+  const stripped = html.replace(
     /(<!-- Generated landing page -->\s*<script\b[^>]*>)([\s\S]*?)(<\/script>)/,
     (_, open, js: string, close) => open + stripGeneratedScriptExports(js) + close,
   );
+  if (projectId) {
+    return injectTelemetryScript(stripped, projectId);
+  }
+  return stripped;
 }
 
 function buildHtaccess(): string {
@@ -182,7 +187,7 @@ AddDefaultCharset UTF-8
 `;
 }
 
-function buildDeployFiles(html: string, siteUrl: string) {
+function buildDeployFiles(html: string, siteUrl: string, projectId?: string) {
   const baseUrl = siteUrl.replace(/\/$/, "");
   const files: Array<{ name: string; content: string }> = [];
 
@@ -192,14 +197,14 @@ function buildDeployFiles(html: string, siteUrl: string) {
     try {
       const pages: Record<string, string> = JSON.parse(html);
       for (const [name, content] of Object.entries(pages)) {
-        files.push({ name, content: patchHtmlForDeployment(content) });
+        files.push({ name, content: patchHtmlForDeployment(content, projectId) });
       }
     } catch {
       // Fallback
-      files.push({ name: "index.html", content: patchHtmlForDeployment(html) });
+      files.push({ name: "index.html", content: patchHtmlForDeployment(html, projectId) });
     }
   } else {
-    files.push({ name: "index.html", content: patchHtmlForDeployment(html) });
+    files.push({ name: "index.html", content: patchHtmlForDeployment(html, projectId) });
   }
 
   // Add utilities

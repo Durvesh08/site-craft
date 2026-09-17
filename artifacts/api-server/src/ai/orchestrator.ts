@@ -551,6 +551,7 @@ export async function runGeneration(
             companyName: branding["company_name"],
             logoUrl: branding["logo_url"],
             pixelCode: project?.pixelCode ?? undefined,
+            projectId: project?.id ?? undefined,
             copywriterOutput: agentOutputs["copywriter"],
           });
 

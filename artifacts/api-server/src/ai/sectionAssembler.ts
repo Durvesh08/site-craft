@@ -1518,6 +1518,7 @@ export async function assembleHTML(
     logoUrl?: string;
     copywriterOutput?: string;
     pixelCode?: string;
+    projectId?: string;
     currentPage?: string;    // e.g. 'index.html'
     allPages?: string[];     // e.g. ['index.html', 'about.html', 'contact.html']
   },
@@ -2117,6 +2118,44 @@ export async function assembleHTML(
   const runtimeScript = safeInlineScript(REACT_RUNTIME_JS);
   const pageScript = safeInlineScript(transpiledJS);
   const pixelScript = `\n  <!-- PIXEL_CODE_START -->${context.pixelCode || ""}<!-- PIXEL_CODE_END -->`;
+  const telemetryScript = context.projectId ? `\n  <!-- ZOAVIX REAL-TIME TELEMETRY TRACKER -->\n  <script data-zvx-telemetry="true">
+    (function() {
+      try {
+        var pid = "${context.projectId}";
+        var vid = localStorage.getItem("_zvx_vid");
+        if (!vid) {
+          vid = "v_" + Math.random().toString(36).substring(2, 11) + "_" + Date.now().toString(36);
+          localStorage.setItem("_zvx_vid", vid);
+        }
+        var sid = sessionStorage.getItem("_zvx_sid");
+        if (!sid) {
+          sid = "s_" + Math.random().toString(36).substring(2, 11);
+          sessionStorage.setItem("_zvx_sid", sid);
+        }
+        var payload = {
+          projectId: pid,
+          visitorId: vid,
+          sessionId: sid,
+          path: window.location.pathname || "/",
+          title: document.title || "",
+          referrer: document.referrer || "",
+          screenWidth: window.innerWidth || screen.width,
+          screenHeight: window.innerHeight || screen.height
+        };
+        var endpoint = (window.__ZOVAIX_API_URL || "") + "/api/telemetry/collect";
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(endpoint, JSON.stringify(payload));
+        } else {
+          fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            keepalive: true
+          }).catch(function() {});
+        }
+      } catch (e) {}
+    })();
+  </script>` : "";
 
   return `<!DOCTYPE html>
 <html lang="en" class="scroll-smooth dark">
@@ -2160,7 +2199,7 @@ ${context.globalCSS}
     #_sc-error p{color:#94a3b8;font-size:.9rem;max-width:520px;line-height:1.6}
     #_sc-error pre{margin-top:1rem;background:#1e1e2e;border-radius:8px;padding:1rem;
       font-size:.75rem;color:#a78bfa;max-width:600px;overflow:auto;text-align:left;white-space:pre-wrap}
-  </style>${pixelScript}
+  </style>${pixelScript}${telemetryScript}
 </head>
 <body>
   <div id="root"></div>
@@ -2250,6 +2289,7 @@ export async function assembleMultiPageHTML(
     logoUrl?: string;
     copywriterOutput?: string;
     pixelCode?: string;
+    projectId?: string;
   },
 ): Promise<string> {
   // Group sections by page (default to index.html)

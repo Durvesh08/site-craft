@@ -13,3 +13,4 @@ export * from "./versions";
 export * from "./settings";
 export * from "./usage";
 export * from "./knowledge";
+export * from "./analytics";
