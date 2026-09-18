@@ -48,10 +48,10 @@ import { resolveAutoCategory } from "../lib/categorization";
 
 // ── Models ────────────────────────────────────────────────────────────────────
 // Thinking budget is configured per call site.
-const FLASH_LITE = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-3.6-flash", "gemini-2.5-flash"]);
-const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-3.6-flash", "gemini-2.5-flash"]);
-const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-3.6-flash", "gemini-2.5-flash"]);
-const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-3.6-flash", "gemini-2.5-flash"]);
+const FLASH_LITE = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-3.6-flash"]);
+const FLASH_FAST = getBestAvailableModel(GEMINI_FAST_MODEL, ["gemini-3.6-flash"]);
+const FLASH      = getBestAvailableModel(GEMINI_FLASH_MODEL, ["gemini-3.6-flash"]);
+const PRO        = getBestAvailableModel(GEMINI_PRO_MODEL, ["gemini-3.6-flash"]);
 
 // ── Pipeline steps ────────────────────────────────────────────────────────────
 // Keep this in sync with generation.ts GENERATION_STEPS name list.
@@ -454,7 +454,7 @@ export async function runGeneration(
                 // Retry once with PRO (verified against registry) specifically for code generation if Flash failed transpilation after retries
                 try {
                   await new Promise(r => setTimeout(r, 2000)); // brief back-off
-                  const PRO_FALLBACK = getBestAvailableModel("gemini-2.5-pro", ["gemini-3.6-flash", "gemini-2.5-flash"]);
+                  const PRO_FALLBACK = getBestAvailableModel("gemini-3.6-pro", ["gemini-3.6-flash"]);
                   let retryCode = await provider.generateContent(PRO_FALLBACK, prompt, { maxTokens: 32768, temperature: 0.8 });
 
                   let flashAttempts = 1;
@@ -2184,14 +2184,19 @@ function stripAllExports(code: string): string {
 
 /** Strip stray import/export statements the model may have emitted despite instructions */
 function cleanComponentCode(raw: string, componentName: string): string {
-  let code = raw
-    // Strip all markdown code fences (``` with any language tag)
-    .replace(/^```(?:jsx?|tsx?|javascript|typescript|html|plaintext)?\s*/gim, "")
-    .replace(/\s*```\s*$/gim, "")
-    .trim();
+  let code = raw;
+  const match = code.match(/```(?:jsx?|tsx?|javascript|typescript|html|plaintext)?\s*([\s\S]*?)```/i);
+  if (match) {
+    code = match[1];
+  } else {
+    code = code
+      .replace(/^```(?:jsx?|tsx?|javascript|typescript|html|plaintext)?\s*/gim, "")
+      .replace(/\s*```\s*$/gim, "");
+  }
+  code = code.trim();
 
   // Remove import statements (single-line and multi-line)
-  code = code.replace(/^\s*import\s[\s\S]*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, "");
+  code = code.replace(/^\s*import\b[\s\S]*?from\s+['"][^'"]+['"]\s*;?\s*$/gm, "");
 
   // Remove ALL ESM export forms properly.
   //

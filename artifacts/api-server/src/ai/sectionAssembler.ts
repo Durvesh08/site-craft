@@ -1981,8 +1981,9 @@ export async function assembleHTML(
         { sectionType: s.plan.type, component: componentName, esbuildError: err?.message },
         "Section JSX transpile failed — using placeholder",
       );
+      const safeErr = (err?.message || "Unknown error").replace(/"/g, "'").replace(/\n/g, " ");
       transpiledSections.push(
-        `function ${componentName}() { return React.createElement("div", { style: { padding: "60px 24px", textAlign: "center", color: "#94a3b8" } }, "[${s.plan.type} — could not render]"); }`
+        `function ${componentName}() { return React.createElement("div", { style: { padding: "60px 24px", textAlign: "center", color: "#f87171", background: "rgba(239,68,68,0.05)", border: "1px dashed rgba(239,68,68,0.3)", borderRadius: "12px" } }, "[${s.plan.type} — could not render: " + ${JSON.stringify(safeErr)} + "]"); }`
       );
     }
   }
