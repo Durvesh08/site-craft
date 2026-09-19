@@ -291,21 +291,17 @@ export default function ProjectEditor() {
     throw new Error('Generation timed out');
   };
 
-  const handleSendPrompt = async () => {
-    if (!editInstruction.trim() || isBuilding) return;
+  const submitPromptToAI = async (promptText: string, displayMessage: string) => {
+    if (!promptText.trim() || isBuilding) return;
 
-    const attachedText = attachments.length > 0 ? ` [Attached: ${attachments.join(', ')}]` : '';
-    const promptText = `[Active Page: ${activePage}] ${editInstruction}${attachedText}`;
     const userMsg: ChatMessage = {
       id: `usr-${Date.now()}`,
       sender: 'user',
-      text: editInstruction + attachedText,
+      text: displayMessage,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     setMessages(prev => [...prev, userMsg]);
-    setEditInstruction("");
-    setAttachments([]);
     setIsBuilding(true);
     setThinkingIdx(0);
 
@@ -313,7 +309,7 @@ export default function ProjectEditor() {
     let lastStepName = "";
 
     try {
-      // 1. Send chat-edit to the real backend with active page context
+      // 1. Send chat-edit to the real backend
       const res = await fetch(`/api/projects/${projectId}/chat-edit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -338,10 +334,9 @@ export default function ProjectEditor() {
         }
       });
 
-      // Mark final step done
       if (realSteps.length > 0) realSteps[realSteps.length - 1].status = 'done';
 
-      // 3. Refetch project to get updated generatedHtml
+      // 3. Refetch project
       const { data: freshProject } = await refetchProject();
       if (freshProject?.generatedHtml) {
         const currentHtml = getPageHtml(freshProject.generatedHtml, activePage);
@@ -349,44 +344,56 @@ export default function ProjectEditor() {
         if (newSections.length > 0) setSections(newSections);
       }
 
-      // 4. Refresh the iframe
-      setIframeKey(k => k + 1);
+      // 4. Force preview reload via WebContainer VFS fetch
+      setIframeKey(Date.now());
+      toast.success("AI changes applied successfully.");
 
-      // 5. Real AI response
       const aiMsg: ChatMessage = {
         id: `ai-${Date.now()}`,
         sender: 'ai',
-        mode: agentMode,
-        text: `Done! I've applied your changes. The preview has been updated.`,
+        text: 'I have updated the code based on your request. The preview should now reflect the changes.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        tasks: realSteps.length > 0 ? realSteps : [
-          { label: 'Understanding your request', status: 'done' },
-          { label: 'Updating your website', status: 'done' },
-          { label: 'Quality Check', status: 'done' },
-        ],
       };
       setMessages(prev => [...prev, aiMsg]);
-      toast.success("AI Agent updated your website successfully.");
-
     } catch (err: any) {
-      if (realSteps.length > 0 && realSteps[realSteps.length - 1].status === 'active') {
-        realSteps[realSteps.length - 1].status = 'failed';
-      }
-      const errorMsg: ChatMessage = {
-        id: `ai-err-${Date.now()}`,
-        sender: 'ai',
-        mode: agentMode,
-        text: `Something went wrong: ${err.message || 'Unknown error'}. Please try again.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        tasks: realSteps.length > 0 ? realSteps : undefined,
-        isError: true,
-      };
-      setMessages(prev => [...prev, errorMsg]);
-      toast.error("AI edit failed. Please try again.");
+      toast.error(err.message || "Failed to edit project.");
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `sys-err-${Date.now()}`,
+          sender: 'system',
+          text: `Error: ${err.message}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+      ]);
+    } finally {
+      setIsBuilding(false);
     }
-
-    setIsBuilding(false);
   };
+
+  const handleSendPrompt = async () => {
+    if (!editInstruction.trim() || isBuilding) return;
+    const attachedText = attachments.length > 0 ? ` [Attached: ${attachments.join(', ')}]` : '';
+    const promptText = `[Active Page: ${activePage}] ${editInstruction}${attachedText}`;
+    const displayMessage = editInstruction + attachedText;
+    
+    setEditInstruction("");
+    setAttachments([]);
+    await submitPromptToAI(promptText, displayMessage);
+  };
+
+  const handleTerminalError = (command: string, log: string) => {
+    const errorPrompt = `[Self-Healing] The command '${command}' crashed in the terminal with this log:\n\n${log}\n\nPlease analyze this error, fix the buggy code in the project files, and write the correct file tree.`;
+    const displayMsg = `[Terminal Error] Auto-triggering bug fix for '${command}'...`;
+    
+    // Only auto-heal if we're not already building to prevent feedback loops
+    if (!isBuilding) {
+       toast.warning(`Terminal error detected! Auto-healing...`);
+       submitPromptToAI(errorPrompt, displayMsg);
+    }
+  };
+
+
 
   return (
     <ProjectWorkspaceLayout activeTab="build">
@@ -820,6 +827,8 @@ export default function ProjectEditor() {
         isOpen={isTerminalOpen}
         onClose={() => setIsTerminalOpen(false)}
         onServerReady={(url) => setLocalPreviewUrl(url)}
+        onError={handleTerminalError}
+        refreshVfsTrigger={iframeKey}
       />
     </ProjectWorkspaceLayout>
   );

@@ -10,9 +10,11 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onServerReady?: (url: string) => void;
+  onError?: (command: string, log: string) => void;
+  refreshVfsTrigger?: number;
 }
 
-export function WebContainerTerminal({ projectId, isOpen, onClose, onServerReady }: Props) {
+export function WebContainerTerminal({ projectId, isOpen, onClose, onServerReady, onError, refreshVfsTrigger }: Props) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const xtermRef = useRef<Terminal | null>(null);
@@ -64,17 +66,40 @@ export function WebContainerTerminal({ projectId, isOpen, onClose, onServerReady
         // 4. Run `npm install`
         term.write('\r\n\x1b[36m$ npm install\x1b[0m\r\n');
         const installProcess = await wc.spawn('npm', ['install']);
-        installProcess.output.pipeTo(new WritableStream({ write(data) { term.write(data); }}));
+        let installLog = '';
+        
+        installProcess.output.pipeTo(new WritableStream({ 
+          write(data) { 
+            term.write(data); 
+            installLog += data;
+            if (installLog.length > 2000) installLog = installLog.slice(-2000);
+          }
+        }));
+        
         const installExitCode = await installProcess.exit;
 
         if (installExitCode !== 0) {
-          throw new Error('npm install failed');
+          if (onError) onError('npm install', installLog);
+          throw new Error(`npm install failed with code ${installExitCode}`);
         }
 
         // 5. Run `npm run dev`
         term.write('\r\n\x1b[36m$ npm run dev\x1b[0m\r\n');
         const devProcess = await wc.spawn('npm', ['run', 'dev']);
-        devProcess.output.pipeTo(new WritableStream({ write(data) { term.write(data); }}));
+        let devLog = '';
+
+        devProcess.output.pipeTo(new WritableStream({ 
+          write(data) { 
+            term.write(data); 
+            devLog += data;
+            if (devLog.length > 2000) devLog = devLog.slice(-2000);
+
+            // Self-healing trigger: watch for Vite crash or syntax errors in the stream
+            if (data.includes('ERR_') || data.includes('SyntaxError:') || data.includes('Failed to parse source')) {
+               if (onError) onError('npm run dev', devLog);
+            }
+          }
+        }));
 
       } catch (err) {
         term.write(`\r\n\x1b[31mError starting shell: ${String(err)}\x1b[0m\r\n`);
@@ -91,7 +116,28 @@ export function WebContainerTerminal({ projectId, isOpen, onClose, onServerReady
       term.dispose();
       xtermRef.current = null;
     };
-  }, [isOpen]);
+  }, [isOpen, projectId]);
+
+  // Handle AI updating files in the background
+  useEffect(() => {
+    if (!refreshVfsTrigger || !hasBootedRef.current || !xtermRef.current) return;
+    
+    async function syncFiles() {
+      try {
+        xtermRef.current?.write('\r\n\x1b[33m[Auto-Sync] Pulling latest AI changes...\x1b[0m\r\n');
+        const res = await fetch(`/api/projects/${projectId}/vfs`);
+        if (!res.ok) throw new Error('VFS fetch failed');
+        const fileTree = await res.json();
+        
+        const wc = await getWebContainer();
+        await wc.mount(fileTree);
+        xtermRef.current?.write('\x1b[32m[Auto-Sync] Files updated via HMR.\x1b[0m\r\n');
+      } catch (err) {
+        xtermRef.current?.write(`\r\n\x1b[31m[Auto-Sync Error] ${String(err)}\x1b[0m\r\n`);
+      }
+    }
+    syncFiles();
+  }, [refreshVfsTrigger, projectId]);
 
   if (!isOpen) return null;
 
