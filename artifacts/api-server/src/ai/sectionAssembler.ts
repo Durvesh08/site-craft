@@ -38,7 +38,8 @@ export interface SectionCode {
 export function toComponentName(id: string): string {
   const base = id
     .replace(/[^a-zA-Z0-9]/g, "-")
-    .replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    .replace(/-([a-zA-Z0-9])/g, (_, c) => c.toUpperCase())
+    .replace(/-/g, ""); // strip any remaining hyphens
   const pascal = base.charAt(0).toUpperCase() + base.slice(1);
   return pascal.endsWith("Section") ? pascal : `${pascal}Section`;
 }

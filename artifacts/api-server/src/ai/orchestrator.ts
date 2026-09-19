@@ -710,13 +710,23 @@ ${html.slice(0, 60000)}`;
           }
 
           // Build component-planner output JSON structure
+          const seenIds = new Set<string>();
           const plannerOutput = {
-            sectionPlan: sections.map((s: any, idx: number) => ({
-              id: s.id || `${s.type.toLowerCase()}-${idx}`,
-              type: s.type || "content-section",
-              order: idx,
-              brief: s.brief || `Conform to archetype's styling with standard conversion elements.`
-            }))
+            sectionPlan: sections.map((s: any, idx: number) => {
+              let rawId = s.id || s.type.toLowerCase();
+              if (seenIds.has(rawId)) {
+                let suffix = 2;
+                while (seenIds.has(`${rawId}-${suffix}`)) suffix++;
+                rawId = `${rawId}-${suffix}`;
+              }
+              seenIds.add(rawId);
+              return {
+                id: rawId,
+                type: s.type || "content-section",
+                order: idx,
+                brief: s.brief || `Conform to archetype's styling with standard conversion elements.`
+              };
+            })
           };
           const outputString = JSON.stringify(plannerOutput);
 
