@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { SmartTerminal } from "@/components/workspace/smart-terminal";
+import { WebContainerTerminal } from "@/components/workspace/webcontainer-terminal";
 
 type Viewport = "desktop" | "tablet" | "mobile";
 type AgentMode = "Build" | "Plan" | "Debug" | "Explain" | "Review";
@@ -812,10 +812,8 @@ export default function ProjectEditor() {
         </div>
       )}
 
-      {/* Smart Terminal & Autonomous Shell Drawer */}
-      <SmartTerminal
-        projectId={projectId}
-        projectName={project.name}
+      {/* WebContainer Shell Drawer */}
+      <WebContainerTerminal
         isOpen={isTerminalOpen}
         onClose={() => setIsTerminalOpen(false)}
       />

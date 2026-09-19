@@ -53,6 +53,10 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
     port,
     strictPort: true,
     host: '0.0.0.0',
