@@ -6,17 +6,21 @@ import 'xterm/css/xterm.css';
 import { Terminal as TerminalIcon, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface Props {
+  projectId: string;
   isOpen: boolean;
   onClose: () => void;
+  onServerReady?: (url: string) => void;
 }
 
-export function WebContainerTerminal({ isOpen, onClose }: Props) {
+export function WebContainerTerminal({ projectId, isOpen, onClose, onServerReady }: Props) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const [isMinimized, setIsMinimized] = useState(false);
   const xtermRef = useRef<Terminal | null>(null);
+  const hasBootedRef = useRef(false);
 
   useEffect(() => {
-    if (!isOpen || !terminalRef.current || xtermRef.current) return;
+    if (!isOpen || !terminalRef.current || hasBootedRef.current) return;
+    hasBootedRef.current = true;
 
     const term = new Terminal({
       theme: {
@@ -35,23 +39,42 @@ export function WebContainerTerminal({ isOpen, onClose }: Props) {
     xtermRef.current = term;
 
     term.write('Welcome to Zovaix WebContainer Shell v1.0\r\n');
-    term.write('Booting micro-OS...\r\n');
+    term.write('Fetching project VFS from cloud...\r\n');
 
     async function startShell() {
       try {
-        const wc = await getWebContainer();
-        const process = await wc.spawn('jsh');
+        // 1. Fetch file tree from the backend API
+        const res = await fetch(`/api/projects/${projectId}/vfs`);
+        if (!res.ok) throw new Error('Failed to fetch Virtual File System');
+        const fileTree = await res.json();
         
-        process.output.pipeTo(new WritableStream({
-          write(data) {
-            term.write(data);
-          }
-        }));
-
-        const input = process.input.getWriter();
-        term.onData(data => {
-          input.write(data);
+        term.write('Booting micro-OS...\r\n');
+        const wc = await getWebContainer();
+        
+        // 2. Mount files
+        term.write('Mounting files...\r\n');
+        await wc.mount(fileTree);
+        
+        // 3. Listen for dev server ready event
+        wc.on('server-ready', (port, url) => {
+          term.write(`\r\n\x1b[32mLocal dev server ready at ${url}\x1b[0m\r\n`);
+          if (onServerReady) onServerReady(url);
         });
+
+        // 4. Run `npm install`
+        term.write('\r\n\x1b[36m$ npm install\x1b[0m\r\n');
+        const installProcess = await wc.spawn('npm', ['install']);
+        installProcess.output.pipeTo(new WritableStream({ write(data) { term.write(data); }}));
+        const installExitCode = await installProcess.exit;
+
+        if (installExitCode !== 0) {
+          throw new Error('npm install failed');
+        }
+
+        // 5. Run `npm run dev`
+        term.write('\r\n\x1b[36m$ npm run dev\x1b[0m\r\n');
+        const devProcess = await wc.spawn('npm', ['run', 'dev']);
+        devProcess.output.pipeTo(new WritableStream({ write(data) { term.write(data); }}));
 
       } catch (err) {
         term.write(`\r\n\x1b[31mError starting shell: ${String(err)}\x1b[0m\r\n`);

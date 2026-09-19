@@ -127,6 +127,7 @@ export default function ProjectEditor() {
   const [iframeKey, setIframeKey] = useState(0);
   const [thinkingIdx, setThinkingIdx] = useState(0);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
 
   // Dynamic sections parsed from the real generated HTML of the active page
   const [sections, setSections] = useState<ParsedSection[]>([]);
@@ -543,9 +544,10 @@ export default function ProjectEditor() {
                 <iframe
                   ref={iframeRef}
                   key={`${iframeKey}-${activePage}`}
-                  src={`/preview-frame/${projectId}?page=${encodeURIComponent(activePage)}&t=${iframeKey}`}
+                  src={localPreviewUrl || `/preview-frame/${projectId}?page=${encodeURIComponent(activePage)}&t=${iframeKey}`}
                   title={`${project.name} - ${activePage}`}
                   className="w-full h-full border-none"
+                  allow="cross-origin-isolated"
                 />
               )}
             </div>
@@ -814,8 +816,10 @@ export default function ProjectEditor() {
 
       {/* WebContainer Shell Drawer */}
       <WebContainerTerminal
+        projectId={projectId}
         isOpen={isTerminalOpen}
         onClose={() => setIsTerminalOpen(false)}
+        onServerReady={(url) => setLocalPreviewUrl(url)}
       />
     </ProjectWorkspaceLayout>
   );
